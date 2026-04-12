@@ -2581,7 +2581,6 @@ static void init_all(void)
 
 static void exit_all(void)
 {
-	mpris_free();
 	write_status_file("exiting", NULL);
 	spawn_status_program_inner("exiting", NULL);
 
@@ -2616,6 +2615,7 @@ static void exit_all(void)
 	filters_exit();
 	help_exit();
 	browser_exit();
+	mpris_free();
 }
 
 enum {
