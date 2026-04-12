@@ -1198,7 +1198,7 @@ replaygain_limit (true)
 replaygain_preamp (0.0)
 	Replay gain preamplification in decibels.
 
-resume (false)
+resume (true)
 	Resume playback on startup.
 
 rewind_offset (5) [-1-9999]
