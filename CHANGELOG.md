@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix `termus: loading ${prefix}/share/termus/rc: No such file or directory`
+  on startup: `configure.ac` was only doing one `eval` pass on `$datadir`,
+  leaving the two-level autoconf chain (`datadir` → `datarootdir` → `prefix`)
+  unresolved so the literal string `${prefix}` was baked into the binary.
+  Added `eval "datarootdir=\"$datarootdir\""` before the `datadir` eval so
+  the full path is expanded at configure time
 - Remove duplicate `man1_MANS` / `nodist_man1_MANS` variable causing `make
   install` to attempt installing generated man pages twice, resulting in an
   "install: will not overwrite just-created" error (exit code 2 in stage

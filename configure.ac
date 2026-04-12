@@ -275,6 +275,7 @@ AC_DEFINE_UNQUOTED([DEBUG],[$debug_level],[Debug level])
 # -----------------------------------------------------------------------
 test "x$prefix"      = xNONE && prefix="$ac_default_prefix"
 test "x$exec_prefix" = xNONE && exec_prefix="$prefix"
+eval "datarootdir=\"$datarootdir\""
 eval "datadir_val=\"$datadir\""
 eval "libdir_val=\"$libdir\""
 AC_DEFINE_UNQUOTED([DATADIR],["$datadir_val"],[Data dir])
