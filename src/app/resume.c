@@ -97,7 +97,6 @@ void resume_load(void)
 		cache_unlock();
 		if (ti) {
 			lib_add_track(ti, NULL);
-			track_info_unref(ti);
 			lib_store_cur_track(ti);
 			track_info_unref(ti);
 			ti = lib_set_track(lib_find_track(ti));
