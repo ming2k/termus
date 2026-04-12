@@ -1,0 +1,116 @@
+#include "common/gbuf.h"
+#include "common/utils.h"
+#include "common/xmalloc.h"
+
+#include <stdio.h>
+#include <stdarg.h>
+
+char gbuf_empty_buffer[1];
+
+static inline void gbuf_init(struct gbuf *buf)
+{
+	buf->buffer = gbuf_empty_buffer;
+	buf->alloc = 0;
+	buf->len = 0;
+}
+
+void gbuf_grow(struct gbuf *buf, size_t more)
+{
+	size_t align = 64 - 1;
+	size_t alloc = (buf->len + more + 1 + align) & ~align;
+
+	if (alloc > buf->alloc) {
+		if (!buf->alloc)
+			buf->buffer = NULL;
+		buf->alloc = alloc;
+		buf->buffer = xrealloc(buf->buffer, buf->alloc);
+		// gbuf is not NUL terminated if this was first alloc
+		buf->buffer[buf->len] = 0;
+	}
+}
+
+void gbuf_used(struct gbuf *buf, size_t used)
+{
+	buf->len += used;
+	buf->buffer[buf->len] = 0;
+}
+
+void gbuf_free(struct gbuf *buf)
+{
+	if (buf->alloc)
+		free(buf->buffer);
+	gbuf_init(buf);
+}
+
+void gbuf_add_ch(struct gbuf *buf, char ch)
+{
+	gbuf_grow(buf, 1);
+	buf->buffer[buf->len] = ch;
+	gbuf_used(buf, 1);
+}
+
+void gbuf_add_uchar(struct gbuf *buf, uchar u)
+{
+	size_t uchar_len = 0;
+	gbuf_grow(buf, 4);
+	u_set_char(buf->buffer + buf->len, &uchar_len, u);
+	gbuf_used(buf, uchar_len);
+}
+
+void gbuf_add_bytes(struct gbuf *buf, const void *data, size_t len)
+{
+	gbuf_grow(buf, len);
+	memcpy(buf->buffer + buf->len, data, len);
+	gbuf_used(buf, len);
+}
+
+void gbuf_add_str(struct gbuf *buf, const char *str)
+{
+	int len = strlen(str);
+
+	if (!len)
+		return;
+	gbuf_grow(buf, len);
+	memcpy(buf->buffer + buf->len, str, len);
+	gbuf_used(buf, len);
+}
+
+void gbuf_addf(struct gbuf *buf, const char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	gbuf_vaddf(buf, fmt, ap);
+	va_end(ap);
+}
+
+void gbuf_vaddf(struct gbuf *buf, const char *fmt, va_list ap)
+{
+	va_list ap2;
+	int slen;
+
+	va_copy(ap2, ap);
+	slen = vsnprintf(buf->buffer + buf->len, buf->alloc - buf->len, fmt, ap);
+
+	if (slen > gbuf_avail(buf)) {
+		gbuf_grow(buf, slen);
+		slen = vsnprintf(buf->buffer + buf->len, buf->alloc - buf->len, fmt, ap2);
+	}
+	va_end(ap2);
+	gbuf_used(buf, slen);
+}
+
+void gbuf_set(struct gbuf *buf, int c, size_t count)
+{
+	gbuf_grow(buf, count);
+	memset(buf->buffer + buf->len, c, count);
+	gbuf_used(buf, count);
+}
+
+char *gbuf_steal(struct gbuf *buf)
+{
+	char *b = buf->buffer;
+	if (!buf->alloc)
+		b = xnew0(char, 1);
+	gbuf_init(buf);
+	return b;
+}

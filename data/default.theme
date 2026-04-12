@@ -1,0 +1,26 @@
+### Default CMus theme: 256-color cyber terminal palette
+set color_cmdline_bg=default
+set color_cmdline_fg=252
+set color_error=203
+set color_info=221
+set color_separator=238
+set color_statusline_bg=234
+set color_statusline_fg=117
+set color_statusline_progress_bg=45
+set color_statusline_progress_fg=234
+set color_titleline_bg=233
+set color_titleline_fg=159
+set color_win_bg=default
+set color_win_cur=213
+set color_win_cur_sel_bg=54
+set color_win_cur_sel_fg=225
+set color_win_dir=117
+set color_win_fg=252
+set color_win_inactive_cur_sel_bg=236
+set color_win_inactive_cur_sel_fg=159
+set color_win_inactive_sel_bg=235
+set color_win_inactive_sel_fg=111
+set color_win_sel_bg=24
+set color_win_sel_fg=231
+set color_win_title_bg=236
+set color_win_title_fg=81
