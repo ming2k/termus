@@ -2600,6 +2600,8 @@ static void exit_all(void)
 	server_exit();
 	termus_exit();
 
+	commands_exit();
+	search_mode_exit();
 	pl_exit();
 	editable_view_free(queue_view);
 	editable_view_free(pl_track_view);
@@ -2609,8 +2611,6 @@ static void exit_all(void)
 	window_free(tree_view);
 	player_exit();
 	op_exit_plugins();
-	commands_exit();
-	search_mode_exit();
 	window_free(filters_get_window());
 	filters_exit();
 	help_exit();
@@ -2712,7 +2712,6 @@ int main(int argc, char *argv[])
 		op_dump_plugins();
 		return 0;
 	}
-	resume_load();
 	init_all();
 	main_loop();
 	exit_all();

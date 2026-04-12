@@ -29,6 +29,7 @@ struct resume {
 	int view;
 	char *live_filter;
 	char *browser_dir;
+	char *browser_sel;
 	char *marked_pl;
 };
 
@@ -60,11 +61,19 @@ static int handle_resume_line(void *data, const char *line)
 	} else if (strcmp(cmd, "browser-dir") == 0) {
 		free(resume->browser_dir);
 		resume->browser_dir = xstrdup(unescape(arg));
+	} else if (strcmp(cmd, "browser-sel") == 0) {
+		free(resume->browser_sel);
+		resume->browser_sel = xstrdup(unescape(arg));
 	} else if (strcmp(cmd, "active-pl") == 0) {
 		free(pl_resume_name);
 		pl_resume_name = xstrdup(unescape(arg));
 	} else if (strcmp(cmd, "active-pl-row") == 0) {
 		str_to_int(arg, &pl_resume_row);
+	} else if (strcmp(cmd, "visible-pl") == 0) {
+		free(pl_visible_resume_name);
+		pl_visible_resume_name = xstrdup(unescape(arg));
+	} else if (strcmp(cmd, "visible-pl-row") == 0) {
+		str_to_int(arg, &pl_visible_resume_row);
 	} else if (strcmp(cmd, "marked-pl") == 0) {
 		free(resume->marked_pl);
 		resume->marked_pl = xstrdup(unescape(arg));
@@ -91,6 +100,7 @@ void resume_load(void)
 	}
 	if (resume.view >= 0 && resume.view != cur_view)
 		set_view(resume.view);
+
 	if (resume.lib_filename) {
 		cache_lock();
 		ti = old = cache_get_ti(resume.lib_filename, 0);
@@ -107,32 +117,43 @@ void resume_load(void)
 				sorted_sel_current();
 			}
 		}
-		free(resume.lib_filename);
 	}
+
 	if (resume.filename) {
 		cache_lock();
 		ti = cache_get_ti(resume.filename, 0);
 		cache_unlock();
 		if (ti) {
 			player_set_file(ti);
+			player_play();
+			player_seek(resume.position, 0, 0);
 			if (resume.status != PLAYER_STATUS_STOPPED)
-				player_seek(resume.position, 0, resume.status == PLAYER_STATUS_PLAYING);
+				player_pause();
 		}
-		free(resume.filename);
 	}
-		if (resume.live_filter) {
-			filters_set_live(resume.live_filter);
-			update_filterline();
-			free(resume.live_filter);
-		}
+
+	if (resume.live_filter) {
+		filters_set_live(resume.live_filter);
+		update_filterline();
+	}
+
 	if (resume.browser_dir) {
 		browser_chdir(resume.browser_dir);
-		free(resume.browser_dir);
+		if (resume.browser_sel) {
+			browser_set_sel_name(resume.browser_sel);
+		}
 	}
+
 	if (resume.marked_pl) {
 		pl_set_marked_pl_by_name(resume.marked_pl);
-		free(resume.marked_pl);
 	}
+
+	free(resume.filename);
+	free(resume.lib_filename);
+	free(resume.live_filter);
+	free(resume.browser_dir);
+	free(resume.browser_sel);
+	free(resume.marked_pl);
 }
 
 void resume_exit(void)
@@ -167,11 +188,19 @@ void resume_exit(void)
 	if (lib_live_filter)
 		fprintf(f, "live-filter %s\n", escape(lib_live_filter));
 	fprintf(f, "browser-dir %s\n", escape(browser_dir));
+	char *browser_sel = browser_get_sel_name();
+	if (browser_sel) {
+		fprintf(f, "browser-sel %s\n", escape(browser_sel));
+		free(browser_sel);
+	}
 
 	if ((pl_name = pl_playing_pl_name())) {
 		fprintf(f, "active-pl %s\n", escape(pl_name));
 		fprintf(f, "active-pl-row %d\n", pl_playing_pl_row());
 	}
+
+	fprintf(f, "visible-pl %s\n", escape(pl_visible_get_name()));
+	fprintf(f, "visible-pl-row %d\n", pl_visible_get_sel_row());
 
 	fprintf(f, "marked-pl %s\n", escape(pl_marked_pl_name()));
 

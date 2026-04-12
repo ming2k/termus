@@ -415,6 +415,31 @@ char *browser_get_sel(void)
 	return fullname(browser_dir, e->name);
 }
 
+char *browser_get_sel_name(void)
+{
+	struct browser_entry *e;
+	struct iter sel;
+
+	if (!window_get_sel(browser_win, &sel))
+		return NULL;
+
+	e = iter_to_browser_entry(&sel);
+	return xstrdup(e->name);
+}
+
+void browser_set_sel_name(const char *name)
+{
+	struct browser_entry *e;
+	list_for_each_entry(e, &browser_head, node) {
+		if (strcmp(e->name, name) == 0) {
+			struct iter iter;
+			browser_entry_to_iter(e, &iter);
+			window_set_sel(browser_win, &iter);
+			break;
+		}
+	}
+}
+
 void browser_delete(void)
 {
 	struct browser_entry *e;

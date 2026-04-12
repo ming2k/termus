@@ -31,6 +31,9 @@ struct playlist {
 char *pl_resume_name;
 unsigned long pl_resume_row;
 
+char *pl_visible_resume_name;
+unsigned long pl_visible_resume_row;
+
 static struct playlist *pl_visible; /* never NULL */
 static struct playlist *pl_marked; /* never NULL */
 struct window *pl_list_win;
@@ -201,19 +204,27 @@ static void pl_add_track(struct playlist *pl, struct track_info *ti)
 
 static void pl_loaded(struct playlist *pl)
 {
-	if (!pl_resume_name || strcmp(pl->name, pl_resume_name) != 0
-			|| pl_resume_row >= pl->editable.nr_tracks)
-		return;
+	if (pl_resume_name && strcmp(pl->name, pl_resume_name) == 0
+			&& pl_resume_row < pl->editable.nr_tracks) {
+		struct list_head *li = pl->editable.head.next;
+		for (int i = 0; i < pl_resume_row; i++)
+			li = li->next;
+		pl_playing_track = to_simple_track(li);
+		pl_playing = pl;
+		pl_select_playing_track();
 
-	struct list_head *li = pl->editable.head.next;
-	for (int i = 0; i < pl_resume_row; i++)
-		li = li->next;
-	pl_playing_track = to_simple_track(li);
-	pl_playing = pl;
-	pl_select_playing_track();
+		free(pl_resume_name);
+		pl_resume_name = NULL;
+	}
 
-	free(pl_resume_name);
-	pl_resume_name = NULL;
+	if (pl_visible_resume_name && strcmp(pl->name, pl_visible_resume_name) == 0) {
+		pl_set_visible_by_name(pl->name);
+		if (pl_visible_resume_row < pl->editable.nr_tracks) {
+			pl_visible_set_sel_row(pl_visible_resume_row);
+		}
+		free(pl_visible_resume_name);
+		pl_visible_resume_name = NULL;
+	}
 }
 
 static void pl_add_cb(struct track_info *ti, void *opaque)
@@ -1008,6 +1019,57 @@ void pl_set_marked_pl_by_name(const char *name)
 			return;
 		}
 	}
+}
+
+void pl_set_visible_by_name(const char *name)
+{
+	struct playlist *pl;
+	list_for_each_entry(pl, &pl_head, node) {
+		if (strcmp(pl->name, name) == 0) {
+			struct iter iter;
+			pl_to_iter(pl, &iter);
+			window_set_sel(pl_list_win, &iter);
+			return;
+		}
+	}
+}
+
+int pl_visible_get_sel_row(void)
+{
+	struct iter sel;
+	int row = 0;
+	struct list_head *li;
+
+	if (!editable_shared_get_sel(&pl_editable_shared, &sel))
+		return -1;
+
+	list_for_each(li, &pl_visible->editable.head) {
+		if (li == sel.data1)
+			return row;
+		row++;
+	}
+	return -1;
+}
+
+void pl_visible_set_sel_row(int row)
+{
+	struct list_head *li;
+	int i = 0;
+
+	if (row < 0 || row >= pl_visible->editable.nr_tracks)
+		return;
+
+	li = pl_visible->editable.head.next;
+	while (i < row) {
+		li = li->next;
+		i++;
+	}
+
+	struct iter iter;
+	iter.data0 = &pl_visible->editable.head;
+	iter.data1 = li;
+	iter.data2 = &pl_visible->node;
+	editable_shared_set_sel(&pl_editable_shared, &iter);
 }
 
 const char *pl_playing_pl_name(void)

@@ -25,6 +25,8 @@ void browser_init(void);
 void browser_exit(void);
 int browser_chdir(const char *dir);
 char *browser_get_sel(void);
+char *browser_get_sel_name(void);
+void browser_set_sel_name(const char *name);
 void browser_up(void);
 void browser_enter(void);
 void browser_delete(void);

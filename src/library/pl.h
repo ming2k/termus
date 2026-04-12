@@ -23,6 +23,9 @@ extern struct editable_shared pl_editable_shared;
 extern char *pl_resume_name;
 extern unsigned long pl_resume_row;
 
+extern char *pl_visible_resume_name;
+extern unsigned long pl_visible_resume_row;
+
 void pl_init(void);
 void pl_track_attach_view(void *view_data,
 		const struct editable_view_ops *view_ops, struct window *win);
@@ -60,6 +63,9 @@ int pl_get_cursor_in_track_window(void);
 int pl_visible_is_marked(void);
 const char *pl_marked_pl_name(void);
 void pl_set_marked_pl_by_name(const char *name);
+void pl_set_visible_by_name(const char *name);
+int pl_visible_get_sel_row(void);
+void pl_visible_set_sel_row(int row);
 const char *pl_playing_pl_name(void);
 int pl_playing_pl_row(void);
 

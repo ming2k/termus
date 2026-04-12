@@ -19,6 +19,9 @@ static void options_persist_write_values(FILE *file)
 		if (save_colorscheme && strncmp(opt->name, "color_", 6) == 0)
 			continue;
 
+		if (opt->get == NULL)
+			continue;
+
 		buf[0] = 0;
 		opt->get(opt->data, buf, OPTION_MAX_SIZE);
 		fprintf(file, "set %s=%s\n", opt->name, buf);
