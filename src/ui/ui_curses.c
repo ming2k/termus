@@ -2587,7 +2587,7 @@ static void exit_all(void)
 
 	termus_save(play_queue_for_each, play_queue_autosave_filename, NULL);
 	termus_save(lib_for_each, lib_autosave_filename, NULL);
-...
+
 	endwin();
 
 	// disable bracketed paste
