@@ -69,9 +69,10 @@ runtime state.
 
 It stores:
 
-- Current option values.
+- Current option values (including `resume` state).
 - Current key bindings.
 - Current filters and active filter state.
+- Playlist and browser selection state.
 
 Load order:
 
