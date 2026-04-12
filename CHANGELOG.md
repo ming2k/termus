@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-04-12
+
+### Fixed
+
+- Fix SIGSEGV on exit: Reordered `exit_all()` to ensure state is saved
+  before system services or plugins are closed.
+- Fix library and command history persistence: Modified the exit sequence
+  to complete pending background jobs before saving the library and history.
+
 ## [1.0.2] - 2026-04-12
 
 ### Fixed
