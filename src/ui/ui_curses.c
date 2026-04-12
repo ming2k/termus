@@ -2712,6 +2712,7 @@ int main(int argc, char *argv[])
 		op_dump_plugins();
 		return 0;
 	}
+	resume_load();
 	init_all();
 	main_loop();
 	exit_all();
