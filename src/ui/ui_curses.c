@@ -2581,12 +2581,13 @@ static void init_all(void)
 
 static void exit_all(void)
 {
+	mpris_free();
 	write_status_file("exiting", NULL);
 	spawn_status_program_inner("exiting", NULL);
 
 	termus_save(play_queue_for_each, play_queue_autosave_filename, NULL);
 	termus_save(lib_for_each, lib_autosave_filename, NULL);
-
+...
 	endwin();
 
 	// disable bracketed paste
@@ -2615,7 +2616,6 @@ static void exit_all(void)
 	filters_exit();
 	help_exit();
 	browser_exit();
-	mpris_free();
 }
 
 enum {
