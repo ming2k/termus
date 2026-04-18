@@ -21,8 +21,8 @@ enum progress_bar_mode {
 	NR_PROGRESS_BAR_MODES
 };
 
-extern const char * const view_names[NR_VIEWS + 1];
-extern const char * const progress_bar_names[NR_PROGRESS_BAR_MODES + 1];
+extern const char *const view_names[NR_VIEWS + 1];
+extern const char *const progress_bar_names[NR_PROGRESS_BAR_MODES + 1];
 
 extern int cur_view;
 extern char *status_display_program;

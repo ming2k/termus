@@ -1,11 +1,11 @@
 #ifndef TERMUS_UI_H
 #define TERMUS_UI_H
 
-#include "common/locale.h"
-#include "common/compiler.h"
-#include "ui/format_print.h"
 #include "app/termus.h"
+#include "common/compiler.h"
+#include "common/locale.h"
 #include "common/msg.h"
+#include "ui/format_print.h"
 
 #include <signal.h>
 

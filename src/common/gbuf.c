@@ -2,8 +2,8 @@
 #include "common/utils.h"
 #include "common/xmalloc.h"
 
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 char gbuf_empty_buffer[1];
 
@@ -89,11 +89,13 @@ void gbuf_vaddf(struct gbuf *buf, const char *fmt, va_list ap)
 	int slen;
 
 	va_copy(ap2, ap);
-	slen = vsnprintf(buf->buffer + buf->len, buf->alloc - buf->len, fmt, ap);
+	slen =
+	    vsnprintf(buf->buffer + buf->len, buf->alloc - buf->len, fmt, ap);
 
 	if (slen > gbuf_avail(buf)) {
 		gbuf_grow(buf, slen);
-		slen = vsnprintf(buf->buffer + buf->len, buf->alloc - buf->len, fmt, ap2);
+		slen = vsnprintf(buf->buffer + buf->len, buf->alloc - buf->len,
+				 fmt, ap2);
 	}
 	va_end(ap2);
 	gbuf_used(buf, slen);

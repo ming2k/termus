@@ -20,38 +20,31 @@ void update_mouse(void)
 {
 	if (options_get_mouse()) {
 		mouseinterval(25);
-		mousemask(BUTTON_CTRL | BUTTON_ALT
-		  | BUTTON1_PRESSED | BUTTON1_RELEASED | BUTTON1_CLICKED
-		  | BUTTON1_DOUBLE_CLICKED | BUTTON1_TRIPLE_CLICKED
-		  | BUTTON2_PRESSED | BUTTON2_RELEASED | BUTTON2_CLICKED
-		  | BUTTON3_PRESSED | BUTTON3_RELEASED | BUTTON3_CLICKED
-		  | BUTTON3_DOUBLE_CLICKED | BUTTON3_TRIPLE_CLICKED
-		  | BUTTON4_PRESSED | BUTTON4_RELEASED | BUTTON4_CLICKED
-		  | BUTTON4_DOUBLE_CLICKED | BUTTON4_TRIPLE_CLICKED
+		mousemask(
+		    BUTTON_CTRL | BUTTON_ALT | BUTTON1_PRESSED |
+			BUTTON1_RELEASED | BUTTON1_CLICKED |
+			BUTTON1_DOUBLE_CLICKED | BUTTON1_TRIPLE_CLICKED |
+			BUTTON2_PRESSED | BUTTON2_RELEASED | BUTTON2_CLICKED |
+			BUTTON3_PRESSED | BUTTON3_RELEASED | BUTTON3_CLICKED |
+			BUTTON3_DOUBLE_CLICKED | BUTTON3_TRIPLE_CLICKED |
+			BUTTON4_PRESSED | BUTTON4_RELEASED | BUTTON4_CLICKED |
+			BUTTON4_DOUBLE_CLICKED | BUTTON4_TRIPLE_CLICKED
 #if NCURSES_MOUSE_VERSION >= 2
-		  | BUTTON5_PRESSED | BUTTON5_RELEASED | BUTTON5_CLICKED
-		  | BUTTON5_DOUBLE_CLICKED | BUTTON5_TRIPLE_CLICKED
+			| BUTTON5_PRESSED | BUTTON5_RELEASED | BUTTON5_CLICKED |
+			BUTTON5_DOUBLE_CLICKED | BUTTON5_TRIPLE_CLICKED
 #endif
-		  , NULL);
+		    ,
+		    NULL);
 	} else {
 		mousemask(0, NULL);
 	}
 }
 
-void options_hooks_reload_browser(void)
-{
-	browser_reload();
-}
+void options_hooks_reload_browser(void) { browser_reload(); }
 
-void options_hooks_mark_library_tree_changed(void)
-{
-	tree_win()->changed = 1;
-}
+void options_hooks_mark_library_tree_changed(void) { tree_win()->changed = 1; }
 
-void options_hooks_refresh_statusline(void)
-{
-	update_statusline();
-}
+void options_hooks_refresh_statusline(void) { update_statusline(); }
 
 void options_hooks_refresh_colors_full(void)
 {
@@ -59,30 +52,18 @@ void options_hooks_refresh_colors_full(void)
 	update_full();
 }
 
-void options_hooks_refresh_full(void)
-{
-	update_full();
-}
+void options_hooks_refresh_full(void) { update_full(); }
 
-void options_hooks_refresh_layout(void)
-{
-	update_size();
-}
+void options_hooks_refresh_layout(void) { update_size(); }
 
 void options_hooks_notify_loop_status_changed(void)
 {
 	mpris_loop_status_changed();
 }
 
-void options_hooks_notify_shuffle_changed(void)
-{
-	mpris_shuffle_changed();
-}
+void options_hooks_notify_shuffle_changed(void) { mpris_shuffle_changed(); }
 
-void options_hooks_update_tree_selection(void)
-{
-	tree_sel_update(0);
-}
+void options_hooks_update_tree_selection(void) { tree_sel_update(0); }
 
 void options_hooks_switch_output_plugin(const char *name)
 {
@@ -114,10 +95,7 @@ void options_hooks_set_playback_speed(double speed)
 	update_statusline();
 }
 
-void options_hooks_set_replaygain(int mode)
-{
-	player_set_rg(mode);
-}
+void options_hooks_set_replaygain(int mode) { player_set_rg(mode); }
 
 void options_hooks_set_replaygain_limit(int enabled)
 {

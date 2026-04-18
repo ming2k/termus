@@ -5,8 +5,8 @@
 
 #if defined(__sun__) || defined(__CYGWIN__)
 /* TIOCGWINSZ */
-#include <termios.h>
 #include <ncurses.h>
+#include <termios.h>
 #else
 #include <curses.h>
 #endif
@@ -39,7 +39,7 @@ struct binding {
 	char cmd[];
 };
 
-extern const char * const key_context_names[NR_CTXS + 1];
+extern const char *const key_context_names[NR_CTXS + 1];
 extern const struct key key_table[];
 extern struct binding *key_bindings[NR_CTXS];
 

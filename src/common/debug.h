@@ -10,8 +10,10 @@
 #include <stdint.h>
 
 void debug_init(void);
-void _debug_bug(const char *function, const char *fmt, ...) TERMUS_FORMAT(2, 3) TERMUS_NORETURN;
-void _debug_print(const char *function, const char *fmt, ...) TERMUS_FORMAT(2, 3);
+void _debug_bug(const char *function, const char *fmt, ...)
+    TERMUS_FORMAT(2, 3) TERMUS_NORETURN;
+void _debug_print(const char *function, const char *fmt, ...)
+    TERMUS_FORMAT(2, 3);
 
 uint64_t timer_get(void);
 void timer_print(const char *what, uint64_t usec);
@@ -20,11 +22,11 @@ void timer_print(const char *what, uint64_t usec);
 
 #define TERMUS_STR(a) #a
 
-#define BUG_ON(a)			\
-do {					\
-	if (unlikely(a))		\
-		BUG("%s\n", TERMUS_STR(a));	\
-} while (0)
+#define BUG_ON(a)                                                              \
+	do {                                                                   \
+		if (unlikely(a))                                               \
+			BUG("%s\n", TERMUS_STR(a));                            \
+	} while (0)
 
 #define d_print(...) _debug_print(__FUNCTION__, __VA_ARGS__)
 

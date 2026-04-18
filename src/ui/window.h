@@ -41,7 +41,8 @@ struct window {
 	void (*sel_changed)(void);
 };
 
-struct window *window_new(int (*get_prev)(struct iter *), int (*get_next)(struct iter *));
+struct window *window_new(int (*get_prev)(struct iter *),
+			  int (*get_next)(struct iter *));
 void window_free(struct window *win);
 void window_set_empty(struct window *win);
 void window_set_contents(struct window *win, void *head);

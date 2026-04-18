@@ -1,7 +1,7 @@
 #ifndef TERMUS_OPTIONS_LIBRARY_STATE_H
 #define TERMUS_OPTIONS_LIBRARY_STATE_H
 
-extern const char * const aaa_mode_names[];
+extern const char *const aaa_mode_names[];
 
 extern int auto_expand_albums_follow;
 extern int auto_expand_albums_search;

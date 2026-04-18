@@ -89,15 +89,37 @@ make install DESTDIR=/tmp/termus-pkg
 
 Required:
 
-- C compiler
-- GNU make
-- pkg-config
-- ncurses
-- iconv
-- autotools
+- C compiler (C11 or newer)
+- GNU make, autotools, pkg-config
+- ncurses, iconv, pthreads
 
-Optional plugins and features are detected by `configure`.
-Use `../configure --help` in the build directory to inspect available options.
+Primary audio format libraries (required by default, disable with `--disable-*`):
+
+| Library | Package (Debian/Ubuntu) | Format |
+|---------|------------------------|--------|
+| libFLAC | `libflac-dev` | FLAC lossless |
+| opusfile | `libopusfile-dev` | Opus in Ogg |
+| faad2 | `libfaad-dev` | Raw AAC |
+| mp4v2 + faad2 | `libmp4v2-dev libfaad-dev` | M4A / MP4 |
+
+Auto-detected (soft dependency):
+
+| Library | Package | Format |
+|---------|---------|--------|
+| libvorbisfile | `libvorbis-dev` | Ogg Vorbis |
+| libmpg123 | `libmpg123-dev` | MP3 (legacy) |
+
+Output backend (auto-detected by platform):
+
+| Library | Platform |
+|---------|----------|
+| PipeWire (`libpipewire-0.3`) | Linux primary |
+| ALSA (`alsa`) | Linux fallback |
+| CoreAudio | macOS |
+| OSS | FreeBSD |
+| sndio | OpenBSD |
+
+Use `../configure --help` in the build directory to see all options.
 
 ## Manuals
 

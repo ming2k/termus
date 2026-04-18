@@ -1,8 +1,8 @@
-#include "core/op.h"
-#include "core/sf.h"
-#include "common/xmalloc.h"
 #include "common/debug.h"
 #include "common/utils.h"
+#include "common/xmalloc.h"
+#include "core/op.h"
+#include "core/sf.h"
 
 #if defined(__OpenBSD__)
 #include <soundcard.h>
@@ -10,8 +10,8 @@
 #include <sys/soundcard.h>
 #endif
 #include <sys/ioctl.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 static sample_format_t oss_sf;
@@ -33,13 +33,13 @@ static int oss_reset(void)
 #if defined(__linux__)
 /* defined only in OSSv4, but seem to work in OSSv3 (Linux) */
 #ifndef AFMT_S32_LE
-#define AFMT_S32_LE	0x00001000
+#define AFMT_S32_LE 0x00001000
 #endif
 #ifndef AFMT_S32_BE
-#define AFMT_S32_BE	0x00002000
+#define AFMT_S32_BE 0x00002000
 #endif
 #ifndef AFMT_S24_PACKED
-#define AFMT_S24_PACKED	0x00040000
+#define AFMT_S24_PACKED 0x00040000
 #endif
 #endif
 
@@ -47,42 +47,38 @@ struct oss_fmt {
 	int fmt, bits, sig, be;
 };
 static struct oss_fmt oss_fmts[] = {
-	{ AFMT_S16_BE, 16, 1, 1 },
-	{ AFMT_S16_LE, 16, 1, 0 },
+    {AFMT_S16_BE, 16, 1, 1},	 {AFMT_S16_LE, 16, 1, 0},
 #ifdef AFMT_S24_PACKED
-	{ AFMT_S24_PACKED, 24, 1, 0 },
+    {AFMT_S24_PACKED, 24, 1, 0},
 #endif
 #ifdef AFMT_S24_BE
-	{ AFMT_S24_BE, 24, 1, 1 },
+    {AFMT_S24_BE, 24, 1, 1},
 #endif
 #ifdef AFMT_S24_LE
-	{ AFMT_S24_LE, 24, 1, 0 },
+    {AFMT_S24_LE, 24, 1, 0},
 #endif
 #ifdef AFMT_S32_BE
-	{ AFMT_S32_BE, 32, 1, 1 },
+    {AFMT_S32_BE, 32, 1, 1},
 #endif
 #ifdef AFMT_S32_LE
-	{ AFMT_S32_LE, 32, 1, 0 },
+    {AFMT_S32_LE, 32, 1, 0},
 #endif
 
-	{ AFMT_U16_BE, 16, 0, 1 },
-	{ AFMT_U16_LE, 16, 0, 0 },
+    {AFMT_U16_BE, 16, 0, 1},	 {AFMT_U16_LE, 16, 0, 0},
 #ifdef AFMT_U24_BE
-	{ AFMT_U24_BE, 24, 0, 1 },
+    {AFMT_U24_BE, 24, 0, 1},
 #endif
 #ifdef AFMT_U24_LE
-	{ AFMT_U24_LE, 24, 0, 0 },
+    {AFMT_U24_LE, 24, 0, 0},
 #endif
 #ifdef AFMT_U32_BE
-	{ AFMT_U32_BE, 32, 0, 1 },
+    {AFMT_U32_BE, 32, 0, 1},
 #endif
 #ifdef AFMT_U32_LE
-	{ AFMT_U32_LE, 32, 0, 0 },
+    {AFMT_U32_LE, 32, 0, 0},
 #endif
-	{ AFMT_S8, 8, 1, 0 },
-	{ AFMT_S8, 8, 1, 1 },
-	{ AFMT_U8, 8, 0, 0 },
-	{ AFMT_U8, 8, 0, 1 },
+    {AFMT_S8, 8, 1, 0},		 {AFMT_S8, 8, 1, 1},
+    {AFMT_U8, 8, 0, 0},		 {AFMT_U8, 8, 0, 1},
 };
 
 static int oss_set_sf(sample_format_t sf)
@@ -217,10 +213,7 @@ static int oss_pause(void)
 	return 0;
 }
 
-static int oss_unpause(void)
-{
-	return 0;
-}
+static int oss_unpause(void) { return 0; }
 
 static int oss_buffer_space(void)
 {
@@ -248,19 +241,19 @@ static int op_oss_get_device(char **val)
 }
 
 const struct output_plugin_ops op_pcm_ops = {
-	.init = oss_init,
-	.exit = oss_exit,
-	.open = oss_open,
-	.close = oss_close,
-	.write = oss_write,
-	.pause = oss_pause,
-	.unpause = oss_unpause,
-	.buffer_space = oss_buffer_space,
+    .init = oss_init,
+    .exit = oss_exit,
+    .open = oss_open,
+    .close = oss_close,
+    .write = oss_write,
+    .pause = oss_pause,
+    .unpause = oss_unpause,
+    .buffer_space = oss_buffer_space,
 };
 
 const struct output_plugin_opt op_pcm_options[] = {
-	OPT(op_oss, device),
-	{ NULL },
+    OPT(op_oss, device),
+    {NULL},
 };
 
 const int op_priority = 1;

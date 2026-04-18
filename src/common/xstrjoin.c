@@ -1,6 +1,6 @@
 #include "common/xstrjoin.h"
-#include "common/xmalloc.h"
 #include "common/utils.h"
+#include "common/xmalloc.h"
 
 char *xstrjoin_slice(struct slice slice)
 {

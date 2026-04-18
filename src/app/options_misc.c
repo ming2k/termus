@@ -18,10 +18,10 @@
 
 #include "app/options_misc.h"
 #include "app/options_library_state.h"
-#include "app/options_playback_state.h"
-#include "app/options_ui_state.h"
-#include "app/options_registry.h"
 #include "app/options_parse.h"
+#include "app/options_playback_state.h"
+#include "app/options_registry.h"
+#include "app/options_ui_state.h"
 #include "common/misc.h"
 #include "common/utils.h"
 #include "common/xmalloc.h"
@@ -100,7 +100,8 @@ static void set_progress_bar(void *data, const char *buf)
 {
 	int value;
 
-	if (parse_enum(buf, 0, NR_PROGRESS_BAR_MODES - 1, progress_bar_names, &value))
+	if (parse_enum(buf, 0, NR_PROGRESS_BAR_MODES - 1, progress_bar_names,
+		       &value))
 		progress_bar = value;
 }
 
@@ -112,22 +113,27 @@ static void toggle_progress_bar(void *data)
 
 void options_add_misc_options(void)
 {
-	option_add_bool("auto_hide_playlists_panel", &auto_hide_playlists_panel, 0);
+	option_add_bool("auto_hide_playlists_panel", &auto_hide_playlists_panel,
+			0);
 	option_add_bool("auto_reshuffle", &auto_reshuffle, 0);
 	option_add_bool("block_key_paste", &block_key_paste, 0);
 	option_add_bool("confirm_run", &confirm_run, 0);
 	option_add_bool("ignore_duplicates", &ignore_duplicates, 0);
-	option_add("lib_add_filter", &lib_add_filter, get_lib_add_filter, set_lib_add_filter, NULL, 0);
+	option_add("lib_add_filter", &lib_add_filter, get_lib_add_filter,
+		   set_lib_add_filter, NULL, 0);
 	option_add("mouse", NULL, NULL, set_mouse, toggle_mouse, 0);
 	option_add_bool("mpris", &mpris, 0);
 	option_add_bool("pause_on_output_change", &pause_on_output_change, 0);
-	option_add("progress_bar", NULL, get_progress_bar, set_progress_bar, toggle_progress_bar, 0);
+	option_add("progress_bar", NULL, get_progress_bar, set_progress_bar,
+		   toggle_progress_bar, 0);
 	option_add_bool("resume", &resume_termus, 0);
 	option_add_bool("search_resets_position", &search_resets_position, 0);
 	option_add_bool("set_term_title", &set_term_title, 0);
 	option_add_bool("skip_track_info", &skip_track_info, 0);
-	option_add("status_display_file", &status_display_file, NULL, set_status_display_file, NULL, OPT_PROGRAM_PATH);
-	option_add("status_display_program", &status_display_program, NULL, set_status_display_program, NULL, OPT_PROGRAM_PATH);
+	option_add("status_display_file", &status_display_file, NULL,
+		   set_status_display_file, NULL, OPT_PROGRAM_PATH);
+	option_add("status_display_program", &status_display_program, NULL,
+		   set_status_display_program, NULL, OPT_PROGRAM_PATH);
 	option_add_bool("stop_after_queue", &stop_after_queue, 0);
 	option_add_bool("wrap_search", &wrap_search, 0);
 }

@@ -18,9 +18,9 @@
 
 #include "app/options_core.h"
 #include "app/options_core_state.h"
+#include "app/options_plugins.h"
 #include "app/options_registry.h"
 #include "app/options_ui_state.h"
-#include "app/options_plugins.h"
 #include "common/misc.h"
 #include "common/msg.h"
 #include "common/utils.h"
@@ -51,23 +51,12 @@ static int options_parse_int(const char *buf, int minval, int maxval, int *val)
 	return 1;
 }
 
-static void get_device(void *data, char *buf, size_t size)
-{
-	strscpy(buf, cdda_device, size);
-}
-
-static void set_device(void *data, const char *buf)
-{
-	free(cdda_device);
-	cdda_device = expand_filename(buf);
-}
-
 #define SECOND_SIZE (44100 * 16 / 8 * 2)
 
 static void get_buffer_seconds(void *data, char *buf, size_t size)
 {
 	int val = (player_get_buffer_chunks() * CHUNK_SIZE + SECOND_SIZE / 2) /
-		SECOND_SIZE;
+		  SECOND_SIZE;
 	options_buf_int(buf, val, size);
 }
 
@@ -76,7 +65,8 @@ static void set_buffer_seconds(void *data, const char *buf)
 	int sec;
 
 	if (options_parse_int(buf, 1, 300, &sec))
-		player_set_buffer_chunks((sec * SECOND_SIZE + CHUNK_SIZE / 2) / CHUNK_SIZE);
+		player_set_buffer_chunks((sec * SECOND_SIZE + CHUNK_SIZE / 2) /
+					 CHUNK_SIZE);
 }
 
 static void get_lib_sort(void *data, char *buf, size_t size)
@@ -92,7 +82,7 @@ static void set_lib_sort(void *data, const char *buf)
 		editable_shared_set_sort_keys(lib_editable.shared, keys);
 		editable_sort(&lib_editable);
 		sort_keys_to_str(keys, lib_editable.shared->sort_str,
-				sizeof(lib_editable.shared->sort_str));
+				 sizeof(lib_editable.shared->sort_str));
 	}
 }
 
@@ -101,10 +91,7 @@ static void get_pl_sort(void *data, char *buf, size_t size)
 	pl_get_sort_str(buf, size);
 }
 
-static void set_pl_sort(void *data, const char *buf)
-{
-	pl_set_sort_str(buf);
-}
+static void set_pl_sort(void *data, const char *buf) { pl_set_sort_str(buf); }
 
 static void get_output_plugin(void *data, char *buf, size_t size)
 {
@@ -218,12 +205,12 @@ static void set_pl_env_vars(void *data, const char *buf)
 	*a = NULL;
 }
 
-#define DN(name) option_add(#name, NULL, get_ ## name, set_ ## name, NULL, 0)
-#define DN_FLAGS(name, flags) option_add(#name, NULL, get_ ## name, set_ ## name, NULL, flags)
+#define DN(name) option_add(#name, NULL, get_##name, set_##name, NULL, 0)
+#define DN_FLAGS(name, flags)                                                  \
+	option_add(#name, NULL, get_##name, set_##name, NULL, flags)
 
 void options_add_core_options(void)
 {
-	DN_FLAGS(device, OPT_PROGRAM_PATH);
 	DN(buffer_seconds);
 	option_add_int("scroll_offset", &scroll_offset, 0, 9999, 0);
 	option_add_int("rewind_offset", &rewind_offset, -1, 9999, 0);

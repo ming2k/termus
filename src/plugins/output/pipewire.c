@@ -1,16 +1,16 @@
+#include <errno.h>
 #include <stdatomic.h>
 #include <string.h>
-#include <errno.h>
 
 #include <pipewire/pipewire.h>
 #include <spa/param/audio/format-utils.h>
 #include <spa/param/props.h>
 
-#include "core/op.h"
-#include "core/mixer.h"
 #include "common/debug.h"
 #include "common/utils.h"
 #include "common/xmalloc.h"
+#include "core/mixer.h"
+#include "core/op.h"
 
 static struct pw_thread_loop *pw_loop;
 static struct pw_stream *pw_s;
@@ -21,9 +21,9 @@ static int pw_frame_size;
 /* ring buffer for audio data */
 static char *pw_buf;
 static size_t pw_buf_size;
-static size_t pw_buf_rpos;   /* read position */
-static size_t pw_buf_wpos;   /* write position */
-static atomic_size_t pw_buf_avail;  /* bytes available for reading */
+static size_t pw_buf_rpos;	   /* read position */
+static size_t pw_buf_wpos;	   /* write position */
+static atomic_size_t pw_buf_avail; /* bytes available for reading */
 
 /* volume */
 static float pw_vol_l = 1.0f;
@@ -36,10 +36,10 @@ static int pw_paused;
 
 #define PW_BUF_SIZE (64 * 1024)
 
-#define RET_PW_ERROR(msg)						\
-	do {								\
-		d_print("PipeWire error: %s\n", msg);			\
-		return -OP_ERROR_INTERNAL;				\
+#define RET_PW_ERROR(msg)                                                      \
+	do {                                                                   \
+		d_print("PipeWire error: %s\n", msg);                          \
+		return -OP_ERROR_INTERNAL;                                     \
 	} while (0)
 
 static enum spa_audio_format convert_sample_format(sample_format_t sf)
@@ -54,11 +54,14 @@ static enum spa_audio_format convert_sample_format(sample_format_t sf)
 	if (_signed) {
 		switch (sample_size) {
 		case 16:
-			return big_endian ? SPA_AUDIO_FORMAT_S16_BE : SPA_AUDIO_FORMAT_S16_LE;
+			return big_endian ? SPA_AUDIO_FORMAT_S16_BE
+					  : SPA_AUDIO_FORMAT_S16_LE;
 		case 24:
-			return big_endian ? SPA_AUDIO_FORMAT_S24_BE : SPA_AUDIO_FORMAT_S24_LE;
+			return big_endian ? SPA_AUDIO_FORMAT_S24_BE
+					  : SPA_AUDIO_FORMAT_S24_LE;
 		case 32:
-			return big_endian ? SPA_AUDIO_FORMAT_S32_BE : SPA_AUDIO_FORMAT_S32_LE;
+			return big_endian ? SPA_AUDIO_FORMAT_S32_BE
+					  : SPA_AUDIO_FORMAT_S32_LE;
 		}
 	}
 
@@ -68,26 +71,46 @@ static enum spa_audio_format convert_sample_format(sample_format_t sf)
 static enum spa_audio_channel convert_channel_position(channel_position_t p)
 {
 	switch (p) {
-	case CHANNEL_POSITION_MONO:		return SPA_AUDIO_CHANNEL_MONO;
-	case CHANNEL_POSITION_FRONT_LEFT:	return SPA_AUDIO_CHANNEL_FL;
-	case CHANNEL_POSITION_FRONT_RIGHT:	return SPA_AUDIO_CHANNEL_FR;
-	case CHANNEL_POSITION_FRONT_CENTER:	return SPA_AUDIO_CHANNEL_FC;
-	case CHANNEL_POSITION_REAR_CENTER:	return SPA_AUDIO_CHANNEL_RC;
-	case CHANNEL_POSITION_REAR_LEFT:	return SPA_AUDIO_CHANNEL_RL;
-	case CHANNEL_POSITION_REAR_RIGHT:	return SPA_AUDIO_CHANNEL_RR;
-	case CHANNEL_POSITION_LFE:		return SPA_AUDIO_CHANNEL_LFE;
-	case CHANNEL_POSITION_FRONT_LEFT_OF_CENTER:  return SPA_AUDIO_CHANNEL_FLC;
-	case CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER: return SPA_AUDIO_CHANNEL_FRC;
-	case CHANNEL_POSITION_SIDE_LEFT:	return SPA_AUDIO_CHANNEL_SL;
-	case CHANNEL_POSITION_SIDE_RIGHT:	return SPA_AUDIO_CHANNEL_SR;
-	case CHANNEL_POSITION_TOP_CENTER:	return SPA_AUDIO_CHANNEL_TC;
-	case CHANNEL_POSITION_TOP_FRONT_LEFT:	return SPA_AUDIO_CHANNEL_TFL;
-	case CHANNEL_POSITION_TOP_FRONT_RIGHT:	return SPA_AUDIO_CHANNEL_TFR;
-	case CHANNEL_POSITION_TOP_FRONT_CENTER:	return SPA_AUDIO_CHANNEL_TFC;
-	case CHANNEL_POSITION_TOP_REAR_LEFT:	return SPA_AUDIO_CHANNEL_TRL;
-	case CHANNEL_POSITION_TOP_REAR_RIGHT:	return SPA_AUDIO_CHANNEL_TRR;
-	case CHANNEL_POSITION_TOP_REAR_CENTER:	return SPA_AUDIO_CHANNEL_TRC;
-	default:				return SPA_AUDIO_CHANNEL_UNKNOWN;
+	case CHANNEL_POSITION_MONO:
+		return SPA_AUDIO_CHANNEL_MONO;
+	case CHANNEL_POSITION_FRONT_LEFT:
+		return SPA_AUDIO_CHANNEL_FL;
+	case CHANNEL_POSITION_FRONT_RIGHT:
+		return SPA_AUDIO_CHANNEL_FR;
+	case CHANNEL_POSITION_FRONT_CENTER:
+		return SPA_AUDIO_CHANNEL_FC;
+	case CHANNEL_POSITION_REAR_CENTER:
+		return SPA_AUDIO_CHANNEL_RC;
+	case CHANNEL_POSITION_REAR_LEFT:
+		return SPA_AUDIO_CHANNEL_RL;
+	case CHANNEL_POSITION_REAR_RIGHT:
+		return SPA_AUDIO_CHANNEL_RR;
+	case CHANNEL_POSITION_LFE:
+		return SPA_AUDIO_CHANNEL_LFE;
+	case CHANNEL_POSITION_FRONT_LEFT_OF_CENTER:
+		return SPA_AUDIO_CHANNEL_FLC;
+	case CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER:
+		return SPA_AUDIO_CHANNEL_FRC;
+	case CHANNEL_POSITION_SIDE_LEFT:
+		return SPA_AUDIO_CHANNEL_SL;
+	case CHANNEL_POSITION_SIDE_RIGHT:
+		return SPA_AUDIO_CHANNEL_SR;
+	case CHANNEL_POSITION_TOP_CENTER:
+		return SPA_AUDIO_CHANNEL_TC;
+	case CHANNEL_POSITION_TOP_FRONT_LEFT:
+		return SPA_AUDIO_CHANNEL_TFL;
+	case CHANNEL_POSITION_TOP_FRONT_RIGHT:
+		return SPA_AUDIO_CHANNEL_TFR;
+	case CHANNEL_POSITION_TOP_FRONT_CENTER:
+		return SPA_AUDIO_CHANNEL_TFC;
+	case CHANNEL_POSITION_TOP_REAR_LEFT:
+		return SPA_AUDIO_CHANNEL_TRL;
+	case CHANNEL_POSITION_TOP_REAR_RIGHT:
+		return SPA_AUDIO_CHANNEL_TRR;
+	case CHANNEL_POSITION_TOP_REAR_CENTER:
+		return SPA_AUDIO_CHANNEL_TRC;
+	default:
+		return SPA_AUDIO_CHANNEL_UNKNOWN;
 	}
 }
 
@@ -98,7 +121,8 @@ static size_t pw_buf_readable(void)
 
 static size_t pw_buf_writable(void)
 {
-	return pw_buf_size - atomic_load_explicit(&pw_buf_avail, memory_order_acquire);
+	return pw_buf_size -
+	       atomic_load_explicit(&pw_buf_avail, memory_order_acquire);
 }
 
 static size_t pw_buf_read(char *dst, size_t count)
@@ -187,23 +211,22 @@ static void on_process(void *userdata)
 }
 
 static void on_state_changed(void *userdata, enum pw_stream_state old,
-		enum pw_stream_state state, const char *error)
+			     enum pw_stream_state state, const char *error)
 {
 	d_print("PipeWire stream state: %s -> %s\n",
-			pw_stream_state_as_string(old),
-			pw_stream_state_as_string(state));
+		pw_stream_state_as_string(old),
+		pw_stream_state_as_string(state));
 
 	if (state == PW_STREAM_STATE_STREAMING ||
-	    state == PW_STREAM_STATE_PAUSED ||
-	    state == PW_STREAM_STATE_ERROR ||
+	    state == PW_STREAM_STATE_PAUSED || state == PW_STREAM_STATE_ERROR ||
 	    state == PW_STREAM_STATE_UNCONNECTED)
 		pw_thread_loop_signal(pw_loop, false);
 }
 
 static const struct pw_stream_events stream_events = {
-	PW_VERSION_STREAM_EVENTS,
-	.process = on_process,
-	.state_changed = on_state_changed,
+    PW_VERSION_STREAM_EVENTS,
+    .process = on_process,
+    .state_changed = on_state_changed,
 };
 
 static int op_pw_init(void)
@@ -243,7 +266,7 @@ static int op_pw_open(sample_format_t sf, const channel_position_t *cmap)
 	uint8_t buffer[1024];
 	struct spa_pod_builder b = SPA_POD_BUILDER_INIT(buffer, sizeof(buffer));
 	const struct spa_pod *params[1];
-	struct spa_audio_info_raw info = { 0 };
+	struct spa_audio_info_raw info = {0};
 	int i, channels;
 
 	fmt = convert_sample_format(sf);
@@ -281,20 +304,13 @@ static int op_pw_open(sample_format_t sf, const channel_position_t *cmap)
 	pw_thread_loop_lock(pw_loop);
 
 	struct pw_properties *props = pw_properties_new(
-		PW_KEY_MEDIA_TYPE, "Audio",
-		PW_KEY_MEDIA_CATEGORY, "Playback",
-		PW_KEY_MEDIA_ROLE, "Music",
-		PW_KEY_APP_NAME, "C* Music Player",
-		PW_KEY_APP_ID, "termus",
-		PW_KEY_NODE_NAME, "termus",
-		NULL);
+	    PW_KEY_MEDIA_TYPE, "Audio", PW_KEY_MEDIA_CATEGORY, "Playback",
+	    PW_KEY_MEDIA_ROLE, "Music", PW_KEY_APP_NAME, "C* Music Player",
+	    PW_KEY_APP_ID, "termus", PW_KEY_NODE_NAME, "termus", NULL);
 
-	pw_s = pw_stream_new_simple(
-		pw_thread_loop_get_loop(pw_loop),
-		"termus-playback",
-		props,
-		&stream_events,
-		NULL);
+	pw_s = pw_stream_new_simple(pw_thread_loop_get_loop(pw_loop),
+				    "termus-playback", props, &stream_events,
+				    NULL);
 
 	if (!pw_s) {
 		pw_thread_loop_unlock(pw_loop);
@@ -305,13 +321,11 @@ static int op_pw_open(sample_format_t sf, const channel_position_t *cmap)
 
 	params[0] = spa_format_audio_raw_build(&b, SPA_PARAM_EnumFormat, &info);
 
-	int rc = pw_stream_connect(pw_s,
-		PW_DIRECTION_OUTPUT,
-		PW_ID_ANY,
-		PW_STREAM_FLAG_AUTOCONNECT |
-		PW_STREAM_FLAG_MAP_BUFFERS |
-		PW_STREAM_FLAG_RT_PROCESS,
-		params, 1);
+	int rc = pw_stream_connect(pw_s, PW_DIRECTION_OUTPUT, PW_ID_ANY,
+				   PW_STREAM_FLAG_AUTOCONNECT |
+				       PW_STREAM_FLAG_MAP_BUFFERS |
+				       PW_STREAM_FLAG_RT_PROCESS,
+				   params, 1);
 
 	if (rc < 0) {
 		pw_stream_destroy(pw_s);
@@ -450,10 +464,7 @@ static int op_pw_mixer_open(int *volume_max)
 	return OP_ERROR_SUCCESS;
 }
 
-static int op_pw_mixer_close(void)
-{
-	return OP_ERROR_SUCCESS;
-}
+static int op_pw_mixer_close(void) { return OP_ERROR_SUCCESS; }
 
 static int op_pw_mixer_get_fds(int what, int *fds)
 {
@@ -474,15 +485,17 @@ static int op_pw_mixer_set_volume(int l, int r)
 	pw_vol_l = (float)l / 100.0f;
 	pw_vol_r = (float)r / 100.0f;
 
-	float values[2] = { pw_vol_l, pw_vol_r };
+	float values[2] = {pw_vol_l, pw_vol_r};
 	int channels = sf_get_channels(pw_sf);
 
 	pw_thread_loop_lock(pw_loop);
 
 	if (channels <= 1)
-		pw_stream_set_control(pw_s, SPA_PROP_channelVolumes, 1, values, 0);
+		pw_stream_set_control(pw_s, SPA_PROP_channelVolumes, 1, values,
+				      0);
 	else
-		pw_stream_set_control(pw_s, SPA_PROP_channelVolumes, 2, values, 0);
+		pw_stream_set_control(pw_s, SPA_PROP_channelVolumes, 2, values,
+				      0);
 
 	pw_thread_loop_unlock(pw_loop);
 
@@ -500,33 +513,33 @@ static int op_pw_mixer_get_volume(int *l, int *r)
 }
 
 const struct output_plugin_ops op_pcm_ops = {
-	.init		= op_pw_init,
-	.exit		= op_pw_exit,
-	.open		= op_pw_open,
-	.close		= op_pw_close,
-	.drop		= op_pw_drop,
-	.write		= op_pw_write,
-	.buffer_space	= op_pw_buffer_space,
-	.pause		= op_pw_pause,
-	.unpause	= op_pw_unpause,
+    .init = op_pw_init,
+    .exit = op_pw_exit,
+    .open = op_pw_open,
+    .close = op_pw_close,
+    .drop = op_pw_drop,
+    .write = op_pw_write,
+    .buffer_space = op_pw_buffer_space,
+    .pause = op_pw_pause,
+    .unpause = op_pw_unpause,
 };
 
 const struct mixer_plugin_ops op_mixer_ops = {
-	.init		= op_pw_mixer_init,
-	.exit		= op_pw_mixer_exit,
-	.open		= op_pw_mixer_open,
-	.close		= op_pw_mixer_close,
-	.get_fds.abi_2	= op_pw_mixer_get_fds,
-	.set_volume	= op_pw_mixer_set_volume,
-	.get_volume	= op_pw_mixer_get_volume,
+    .init = op_pw_mixer_init,
+    .exit = op_pw_mixer_exit,
+    .open = op_pw_mixer_open,
+    .close = op_pw_mixer_close,
+    .get_fds.abi_2 = op_pw_mixer_get_fds,
+    .set_volume = op_pw_mixer_set_volume,
+    .get_volume = op_pw_mixer_get_volume,
 };
 
 const struct output_plugin_opt op_pcm_options[] = {
-	{ NULL },
+    {NULL},
 };
 
 const struct mixer_plugin_opt op_mixer_options[] = {
-	{ NULL },
+    {NULL},
 };
 
 const int op_priority = -3;

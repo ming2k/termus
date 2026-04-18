@@ -15,55 +15,44 @@
  * loaded. The intended default palette lives in data/default.theme.
  */
 int colors[NR_COLORS] = {
-	-1,
-	-1,
-	COLOR_RED | BRIGHT,
-	COLOR_YELLOW | BRIGHT,
+    -1,
+    -1,
+    COLOR_RED | BRIGHT,
+    COLOR_YELLOW | BRIGHT,
 
-	COLOR_BLACK | BRIGHT,
-	COLOR_BLACK | BRIGHT,
-	COLOR_WHITE,
-	COLOR_CYAN,
+    COLOR_BLACK | BRIGHT,
+    COLOR_BLACK | BRIGHT,
+    COLOR_WHITE,
+    COLOR_CYAN,
 
-	COLOR_BLACK,
-	COLOR_GREEN | BRIGHT,
-	COLOR_GREEN | BRIGHT,
-	-1,
+    COLOR_BLACK,
+    COLOR_GREEN | BRIGHT,
+    COLOR_GREEN | BRIGHT,
+    -1,
 
-	COLOR_GREEN | BRIGHT,
-	COLOR_GREEN,
-	COLOR_BLACK,
-	COLOR_CYAN | BRIGHT,
+    COLOR_GREEN | BRIGHT,
+    COLOR_GREEN,
+    COLOR_BLACK,
+    COLOR_CYAN | BRIGHT,
 
-	-1,
-	COLOR_BLACK | BRIGHT,
-	COLOR_GREEN | BRIGHT,
-	COLOR_BLACK | BRIGHT,
+    -1,
+    COLOR_BLACK | BRIGHT,
+    COLOR_GREEN | BRIGHT,
+    COLOR_BLACK | BRIGHT,
 
-	COLOR_WHITE,
-	COLOR_CYAN,
-	COLOR_BLACK,
-	COLOR_BLACK | BRIGHT,
+    COLOR_WHITE,
+    COLOR_CYAN,
+    COLOR_BLACK,
+    COLOR_BLACK | BRIGHT,
 
-	COLOR_CYAN | BRIGHT,
-	-1,
-	-1,
+    COLOR_CYAN | BRIGHT,
+    -1,
+    -1,
 };
 
 int attrs[NR_ATTRS] = {
-	A_NORMAL,
-	A_NORMAL,
-	A_NORMAL,
-	A_NORMAL,
-	A_NORMAL,
-	A_NORMAL,
-	A_NORMAL,
-	A_NORMAL,
-	A_NORMAL,
-	A_NORMAL,
-	A_NORMAL,
-	A_BOLD,
-	A_NORMAL,
+    A_NORMAL, A_NORMAL, A_NORMAL, A_NORMAL, A_NORMAL, A_NORMAL, A_NORMAL,
+    A_NORMAL, A_NORMAL, A_NORMAL, A_NORMAL, A_BOLD,   A_NORMAL,
 };
 
 char *tree_win_format = NULL;
@@ -86,8 +75,8 @@ char *statusline_format = NULL;
 char *window_title_format = NULL;
 char *window_title_alt_format = NULL;
 
-void options_ui_apply_ascii_clipped_text_fallback(int using_utf8,
-		const char *default_clipped_text)
+void options_ui_apply_ascii_clipped_text_fallback(
+    int using_utf8, const char *default_clipped_text)
 {
 	if (using_utf8)
 		return;

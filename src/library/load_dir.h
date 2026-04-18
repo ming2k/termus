@@ -1,9 +1,9 @@
 #ifndef TERMUS_LOAD_DIR_H
 #define TERMUS_LOAD_DIR_H
 
-#include <sys/stat.h>
-#include <stdlib.h>
 #include <dirent.h>
+#include <stdlib.h>
+#include <sys/stat.h>
 
 struct directory {
 	DIR *d;
@@ -19,7 +19,6 @@ int dir_open(struct directory *dir, const char *name);
 void dir_close(struct directory *dir);
 const char *dir_read(struct directory *dir);
 
-
 struct ptr_array {
 	/* allocated with malloc(). contains pointers */
 	void *ptrs;
@@ -33,7 +32,7 @@ struct dir_entry {
 	char name[];
 };
 
-#define PTR_ARRAY(name) struct ptr_array name = { NULL, 0, 0 }
+#define PTR_ARRAY(name) struct ptr_array name = {NULL, 0, 0}
 
 void ptr_array_add(struct ptr_array *array, void *ptr);
 
@@ -44,7 +43,7 @@ static inline void ptr_array_plug(struct ptr_array *array)
 }
 
 static inline void ptr_array_sort(struct ptr_array *array,
-		int (*cmp)(const void *a, const void *b))
+				  int (*cmp)(const void *a, const void *b))
 {
 	int count = array->count;
 	if (count)
@@ -52,11 +51,12 @@ static inline void ptr_array_sort(struct ptr_array *array,
 }
 
 static inline int ptr_array_bsearch(const void *key, struct ptr_array *array,
-		int (*cmp)(const void *a, const void *b))
+				    int (*cmp)(const void *a, const void *b))
 {
 	if (array->count) {
 		const void **p;
-		p = bsearch(key, array->ptrs, array->count, sizeof(void *), cmp);
+		p = bsearch(key, array->ptrs, array->count, sizeof(void *),
+			    cmp);
 		if (p)
 			return p - (const void **)array->ptrs;
 	}
@@ -64,7 +64,7 @@ static inline int ptr_array_bsearch(const void *key, struct ptr_array *array,
 }
 
 static inline void ptr_array_unique(struct ptr_array *array,
-		int (*cmp)(const void *a, const void *b))
+				    int (*cmp)(const void *a, const void *b))
 {
 	if (array->count < 2)
 		return;
@@ -73,7 +73,7 @@ static inline void ptr_array_unique(struct ptr_array *array,
 	void **ptrs = array->ptrs;
 
 	for (i = 1; i < array->count; i++) {
-		if (cmp(&ptrs[i-1], &ptrs[i]) != 0)
+		if (cmp(&ptrs[i - 1], &ptrs[i]) != 0)
 			j++;
 		else
 			free(ptrs[j]);

@@ -13,7 +13,8 @@ static void options_persist_write_values(FILE *file)
 	struct termus_opt *opt;
 	int save_colorscheme = options_get_colorscheme()[0] != '\0';
 
-	list_for_each_entry(opt, &option_head, node) {
+	list_for_each_entry(opt, &option_head, node)
+	{
 		char buf[OPTION_MAX_SIZE];
 
 		if (save_colorscheme && strncmp(opt->name, "color_", 6) == 0)
@@ -34,10 +35,8 @@ static void options_persist_write_bindings(FILE *file)
 		struct binding *binding = key_bindings[i];
 
 		while (binding) {
-			fprintf(file, "bind %s %s %s\n",
-					key_context_names[i],
-					binding->key->name,
-					binding->cmd);
+			fprintf(file, "bind %s %s %s\n", key_context_names[i],
+				binding->key->name, binding->cmd);
 			binding = binding->next;
 		}
 	}
@@ -48,10 +47,11 @@ static void options_persist_write_filters(FILE *file)
 	struct filter_entry *filter;
 
 	list_for_each_entry(filter, &filters_head, node)
-		fprintf(file, "fset %s=%s\n", filter->name, filter->filter);
+	    fprintf(file, "fset %s=%s\n", filter->name, filter->filter);
 
 	fprintf(file, "factivate");
-	list_for_each_entry(filter, &filters_head, node) {
+	list_for_each_entry(filter, &filters_head, node)
+	{
 		switch (filter->act_stat) {
 		case FS_YES:
 			fprintf(file, " %s", filter->name);
@@ -70,7 +70,8 @@ void options_exit(void)
 	char filename[512];
 	FILE *file;
 
-	snprintf(filename_tmp, sizeof(filename_tmp), "%s/autosave.tmp", termus_state_dir);
+	snprintf(filename_tmp, sizeof(filename_tmp), "%s/autosave.tmp",
+		 termus_state_dir);
 	file = fopen(filename_tmp, "w");
 	if (file == NULL) {
 		warn_errno("creating %s", filename_tmp);

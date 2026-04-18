@@ -1,25 +1,25 @@
 #include "core/output.h"
-#include "core/op.h"
-#include "core/mixer.h"
-#include "core/sf.h"
-#include "common/utils.h"
-#include "common/xmalloc.h"
-#include "common/list.h"
-#include "common/debug.h"
-#include "common/msg.h"
 #include "app/options_registry.h"
 #include "app/options_ui_state.h"
-#include "common/xstrjoin.h"
+#include "common/debug.h"
+#include "common/list.h"
 #include "common/misc.h"
+#include "common/msg.h"
+#include "common/utils.h"
+#include "common/xmalloc.h"
+#include "common/xstrjoin.h"
+#include "core/mixer.h"
+#include "core/op.h"
+#include "core/sf.h"
 
-#include <string.h>
-#include <strings.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <sys/types.h>
 #include <dirent.h>
 #include <dlfcn.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <sys/types.h>
 
 struct output_plugin {
 	struct list_head node;
@@ -52,7 +52,8 @@ static void add_plugin(struct output_plugin *plugin)
 	struct list_head *item = op_head.next;
 
 	while (item != &op_head) {
-		struct output_plugin *o = container_of(item, struct output_plugin, node);
+		struct output_plugin *o =
+		    container_of(item, struct output_plugin, node);
 
 		if (plugin->priority < o->priority)
 			break;
@@ -71,10 +72,11 @@ void op_load_plugins(void)
 	plugin_dir = xstrjoin(termus_lib_dir, "/output");
 	dir = opendir(plugin_dir);
 	if (dir == NULL) {
-		error_msg("couldn't open directory `%s': %s", plugin_dir, strerror(errno));
+		error_msg("couldn't open directory `%s': %s", plugin_dir,
+			  strerror(errno));
 		return;
 	}
-	while ((d = (struct dirent *) readdir(dir)) != NULL) {
+	while ((d = (struct dirent *)readdir(dir)) != NULL) {
 		char filename[512];
 		struct output_plugin *plug;
 		void *so, *symptr;
@@ -89,7 +91,8 @@ void op_load_plugins(void)
 		if (strcmp(ext, ".so"))
 			continue;
 
-		snprintf(filename, sizeof(filename), "%s/%s", plugin_dir, d->d_name);
+		snprintf(filename, sizeof(filename), "%s/%s", plugin_dir,
+			 d->d_name);
 
 		so = dlopen(filename, RTLD_NOW);
 		if (so == NULL) {
@@ -107,7 +110,8 @@ void op_load_plugins(void)
 			error_msg("%s: missing symbol", filename);
 			err = true;
 		}
-		if (!plug->abi_version_ptr || *plug->abi_version_ptr != OP_ABI_VERSION) {
+		if (!plug->abi_version_ptr ||
+		    *plug->abi_version_ptr != OP_ABI_VERSION) {
 			error_msg("%s: incompatible plugin version", filename);
 			err = true;
 		}
@@ -160,7 +164,8 @@ void op_exit_plugins(void)
 {
 	struct output_plugin *o;
 
-	list_for_each_entry(o, &op_head, node) {
+	list_for_each_entry(o, &op_head, node)
+	{
 		if (o->mixer_initialized && o->mixer_ops)
 			o->mixer_ops->exit();
 		if (o->pcm_initialized)
@@ -212,7 +217,8 @@ int op_select(const char *name)
 {
 	struct output_plugin *o;
 
-	list_for_each_entry(o, &op_head, node) {
+	list_for_each_entry(o, &op_head, node)
+	{
 		if (strcasecmp(name, o->name) == 0)
 			return select_plugin(o);
 	}
@@ -223,9 +229,11 @@ int op_select_any(void)
 {
 	struct output_plugin *o;
 	int rc = -OP_ERROR_NO_PLUGIN;
-	sample_format_t sf = sf_channels(2) | sf_rate(44100) | sf_bits(16) | sf_signed(1);
+	sample_format_t sf =
+	    sf_channels(2) | sf_rate(44100) | sf_bits(16) | sf_signed(1);
 
-	list_for_each_entry(o, &op_head, node) {
+	list_for_each_entry(o, &op_head, node)
+	{
 		rc = select_plugin(o);
 		if (rc != 0)
 			continue;
@@ -252,10 +260,7 @@ int op_drop(void)
 	return op->pcm_ops->drop();
 }
 
-int op_close(void)
-{
-	return op->pcm_ops->close();
-}
+int op_close(void) { return op->pcm_ops->close(); }
 
 int op_write(const char *buffer, int count)
 {
@@ -276,10 +281,7 @@ int op_unpause(void)
 	return op->pcm_ops->unpause();
 }
 
-int op_buffer_space(void)
-{
-	return op->pcm_ops->buffer_space();
-}
+int op_buffer_space(void) { return op->pcm_ops->buffer_space(); }
 
 int mixer_set_volume(int left, int right)
 {
@@ -399,18 +401,19 @@ void op_add_options(void)
 	const struct mixer_plugin_opt *mpo;
 	char key[64];
 
-	list_for_each_entry(o, &op_head, node) {
+	list_for_each_entry(o, &op_head, node)
+	{
 		for (opo = o->pcm_options; opo->name; opo++) {
 			snprintf(key, sizeof(key), "dsp.%s.%s", o->name,
-					opo->name);
+				 opo->name);
 			option_add(xstrdup(key), opo, get_dsp_option,
-					set_dsp_option, NULL, 0);
+				   set_dsp_option, NULL, 0);
 		}
 		for (mpo = o->mixer_options; mpo && mpo->name; mpo++) {
 			snprintf(key, sizeof(key), "mixer.%s.%s", o->name,
-					mpo->name);
+				 mpo->name);
 			option_add(xstrdup(key), mpo, get_mixer_option,
-					set_mixer_option, NULL, 0);
+				   set_mixer_option, NULL, 0);
 		}
 	}
 }
@@ -421,31 +424,29 @@ char *op_get_error_msg(int rc, const char *arg)
 
 	switch (-rc) {
 	case OP_ERROR_ERRNO:
-		snprintf(buffer, sizeof(buffer), "%s: %s", arg, strerror(errno));
+		snprintf(buffer, sizeof(buffer), "%s: %s", arg,
+			 strerror(errno));
 		break;
 	case OP_ERROR_NO_PLUGIN:
-		snprintf(buffer, sizeof(buffer),
-				"%s: no such plugin", arg);
+		snprintf(buffer, sizeof(buffer), "%s: no such plugin", arg);
 		break;
 	case OP_ERROR_NOT_INITIALIZED:
 		snprintf(buffer, sizeof(buffer),
-				"%s: couldn't initialize required output plugin", arg);
+			 "%s: couldn't initialize required output plugin", arg);
 		break;
 	case OP_ERROR_NOT_SUPPORTED:
-		snprintf(buffer, sizeof(buffer),
-				"%s: function not supported", arg);
+		snprintf(buffer, sizeof(buffer), "%s: function not supported",
+			 arg);
 		break;
 	case OP_ERROR_NOT_OPEN:
-		snprintf(buffer, sizeof(buffer),
-				"%s: mixer is not open", arg);
+		snprintf(buffer, sizeof(buffer), "%s: mixer is not open", arg);
 		break;
 	case OP_ERROR_SAMPLE_FORMAT:
 		snprintf(buffer, sizeof(buffer),
-				"%s: sample format not supported", arg);
+			 "%s: sample format not supported", arg);
 		break;
 	case OP_ERROR_NOT_OPTION:
-		snprintf(buffer, sizeof(buffer),
-				"%s: no such option", arg);
+		snprintf(buffer, sizeof(buffer), "%s: no such option", arg);
 		break;
 	case OP_ERROR_INTERNAL:
 		snprintf(buffer, sizeof(buffer), "%s: internal error", arg);
@@ -453,8 +454,8 @@ char *op_get_error_msg(int rc, const char *arg)
 	case OP_ERROR_SUCCESS:
 	default:
 		snprintf(buffer, sizeof(buffer),
-				"%s: this is not an error (%d), this is a bug",
-				arg, rc);
+			 "%s: this is not an error (%d), this is a bug", arg,
+			 rc);
 		break;
 	}
 	return xstrdup(buffer);
@@ -465,9 +466,7 @@ void op_dump_plugins(void)
 	struct output_plugin *o;
 
 	printf("\nOutput Plugins: %s\n", plugin_dir);
-	list_for_each_entry(o, &op_head, node) {
-		printf("  %s\n", o->name);
-	}
+	list_for_each_entry(o, &op_head, node) { printf("  %s\n", o->name); }
 }
 
 const char *op_get_current(void)

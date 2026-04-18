@@ -1,11 +1,11 @@
 #include "library/load_dir.h"
 #include "common/xmalloc.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <dirent.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 int dir_open(struct directory *dir, const char *name)
 {
@@ -27,10 +27,7 @@ int dir_open(struct directory *dir, const char *name)
 	return 0;
 }
 
-void dir_close(struct directory *dir)
-{
-	closedir(dir->d);
-}
+void dir_close(struct directory *dir) { closedir(dir->d); }
 
 const char *dir_read(struct directory *dir)
 {
@@ -47,7 +44,7 @@ const char *dir_read(struct directory *dir)
 		full++;
 #endif
 
-	while ((de = (struct dirent *) readdir(d))) {
+	while ((de = (struct dirent *)readdir(d))) {
 		const char *name = de->d_name;
 		int nlen = strlen(name);
 

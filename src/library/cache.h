@@ -1,8 +1,8 @@
 #ifndef TERMUS_CACHE_H
 #define TERMUS_CACHE_H
 
-#include "core/track_info.h"
 #include "common/locking.h"
+#include "core/track_info.h"
 
 extern struct fifo_mutex cache_mutex;
 

@@ -44,7 +44,8 @@ static int handle_resume_line(void *data, const char *line)
 		goto out;
 
 	if (strcmp(cmd, "status") == 0) {
-		parse_enum(arg, 0, NR_PLAYER_STATUS, player_status_names, (int *)&resume->status);
+		parse_enum(arg, 0, NR_PLAYER_STATUS, player_status_names,
+			   (int *)&resume->status);
 	} else if (strcmp(cmd, "file") == 0) {
 		free(resume->filename);
 		resume->filename = xstrdup(unescape(arg));
@@ -89,7 +90,7 @@ void resume_load(void)
 {
 	char filename[512];
 	struct track_info *ti, *old;
-	struct resume resume = { .status = PLAYER_STATUS_STOPPED, .view = -1 };
+	struct resume resume = {.status = PLAYER_STATUS_STOPPED, .view = -1};
 
 	snprintf(filename, sizeof(filename), "%s/resume", termus_state_dir);
 	if (file_for_each_line(filename, handle_resume_line, &resume) == -1) {
@@ -113,7 +114,8 @@ void resume_load(void)
 			if (ti) {
 				BUG_ON(ti != old);
 				track_info_unref(ti);
-				tree_sel_current(options_get_auto_expand_albums_follow());
+				tree_sel_current(
+				    options_get_auto_expand_albums_follow());
 				sorted_sel_current();
 			}
 		}
@@ -165,7 +167,8 @@ void resume_exit(void)
 	FILE *f;
 	int rc;
 
-	snprintf(filename_tmp, sizeof(filename_tmp), "%s/resume.tmp", termus_state_dir);
+	snprintf(filename_tmp, sizeof(filename_tmp), "%s/resume.tmp",
+		 termus_state_dir);
 	f = fopen(filename_tmp, "w");
 	if (!f) {
 		warn_errno("creating %s", filename_tmp);

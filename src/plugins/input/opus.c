@@ -1,8 +1,8 @@
-#include "core/ip.h"
-#include "common/xmalloc.h"
-#include "common/read_wrapper.h"
 #include "common/debug.h"
+#include "common/read_wrapper.h"
+#include "common/xmalloc.h"
 #include "core/comment.h"
+#include "core/ip.h"
 
 #include <opusfile.h>
 
@@ -48,12 +48,10 @@ static opus_int64 tell_func(void *datasource)
 	return lseek(ip_data->fd, 0, SEEK_CUR);
 }
 
-static OpusFileCallbacks callbacks = {
-	.read = read_func,
-	.seek = seek_func,
-	.tell = tell_func,
-	.close = close_func
-};
+static OpusFileCallbacks callbacks = {.read = read_func,
+				      .seek = seek_func,
+				      .tell = tell_func,
+				      .close = close_func};
 
 static int opus_open(struct input_plugin_data *ip_data)
 {
@@ -81,10 +79,8 @@ static int opus_open(struct input_plugin_data *ip_data)
 	}
 	ip_data->private = priv;
 
-	ip_data->sf = sf_rate(SAMPLING_RATE)
-		| sf_channels(CHANNELS)
-		| sf_bits(16)
-		| sf_signed(1);
+	ip_data->sf = sf_rate(SAMPLING_RATE) | sf_channels(CHANNELS) |
+		      sf_bits(16) | sf_signed(1);
 	ip_data->sf |= sf_host_endian();
 	return 0;
 }
@@ -116,8 +112,8 @@ static int opus_read(struct input_plugin_data *ip_data, char *buffer, int count)
 	priv = ip_data->private;
 
 	/* samples = number of samples read per channel */
-	samples = op_read_stereo(priv->of, (void*)buffer,
-							 count / sizeof(opus_int16));
+	samples = op_read_stereo(priv->of, (void *)buffer,
+				 count / sizeof(opus_int16));
 	if (samples < 0) {
 		switch (samples) {
 		case OP_HOLE:
@@ -172,7 +168,8 @@ static int opus_read(struct input_plugin_data *ip_data, char *buffer, int count)
 			d_print("error: %d\n", current_link);
 			rc = -1;
 		} else {
-			if (ip_data->remote && current_link != priv->current_link) {
+			if (ip_data->remote &&
+			    current_link != priv->current_link) {
 				ip_data->metadata_changed = 1;
 				priv->current_link = current_link;
 			}
@@ -209,7 +206,7 @@ static int opus_seek(struct input_plugin_data *ip_data, double offset)
 }
 
 static int opus_read_comments(struct input_plugin_data *ip_data,
-							  struct keyval **comments)
+			      struct keyval **comments)
 {
 	GROWING_KEYVALS(c);
 	struct opus_private *priv;
@@ -220,7 +217,7 @@ static int opus_read_comments(struct input_plugin_data *ip_data,
 	priv = ip_data->private;
 
 	head = op_head(priv->of, -1);
-	if(head != NULL) {
+	if (head != NULL) {
 		char *val = xmalloc0(12); // 11 max int digits + NULL
 
 		snprintf(val, 12, "%d", head->output_gain);
@@ -306,21 +303,19 @@ static char *opus_codec_profile(struct input_plugin_data *ip_data)
 	return NULL;
 }
 
-const struct input_plugin_ops ip_ops = {
-	.open = opus_open,
-	.close = opus_close,
-	.read = opus_read,
-	.seek = opus_seek,
-	.read_comments = opus_read_comments,
-	.duration = opus_duration,
-	.bitrate = opus_bitrate,
-	.bitrate_current = opus_current_bitrate,
-	.codec = opus_codec,
-	.codec_profile = opus_codec_profile
-};
+const struct input_plugin_ops ip_ops = {.open = opus_open,
+					.close = opus_close,
+					.read = opus_read,
+					.seek = opus_seek,
+					.read_comments = opus_read_comments,
+					.duration = opus_duration,
+					.bitrate = opus_bitrate,
+					.bitrate_current = opus_current_bitrate,
+					.codec = opus_codec,
+					.codec_profile = opus_codec_profile};
 
 const int ip_priority = 50;
-const char * const ip_extensions[] = { "opus", NULL };
-const char * const ip_mime_types[] = { NULL };
-const struct input_plugin_opt ip_options[] = { { NULL } };
+const char *const ip_extensions[] = {"opus", NULL};
+const char *const ip_mime_types[] = {NULL};
+const struct input_plugin_opt ip_options[] = {{NULL}};
 const unsigned ip_abi_version = IP_ABI_VERSION;

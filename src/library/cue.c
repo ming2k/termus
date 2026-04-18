@@ -1,21 +1,21 @@
-#include <stdlib.h>
-#include <stdbool.h>
 #include <ctype.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
 #include <fcntl.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
-#include "library/cue.h"
-#include "common/xmalloc.h"
 #include "common/file.h"
+#include "common/xmalloc.h"
+#include "library/cue.h"
 
 #define ASCII_LOWER_TO_UPPER(c) ((c) & ~0x20)
 
 struct cue_track_proto {
 	struct list_head node;
 
-	char *file;	/* owned by cue_parser */
+	char *file; /* owned by cue_parser */
 	uint32_t nr;
 	int32_t pregap;
 	int32_t postgap;
@@ -55,10 +55,7 @@ static inline void cue_consume(struct cue_parser *p)
 	p->src++;
 }
 
-static void cue_set_err(struct cue_parser *p)
-{
-	p->err = true;
-}
+static void cue_set_err(struct cue_parser *p) { p->err = true; }
 
 static bool cue_str_eq(const char *a, size_t a_len, const char *b, size_t b_len)
 {
@@ -132,7 +129,8 @@ static char *cue_strdup(const char *start, size_t len)
 	return s;
 }
 
-static uint32_t cue_parse_int(struct cue_parser *p, const char *start, size_t len)
+static uint32_t cue_parse_int(struct cue_parser *p, const char *start,
+			      size_t len)
 {
 	uint32_t val = 0;
 	for (size_t i = 0; i < len; i++) {
@@ -153,14 +151,14 @@ static void cue_parse_str(struct cue_parser *p, char **dst)
 		*dst = cue_strdup(start, len);
 }
 
-#define CUE_PARSE_STR(field) \
-	static void cue_parse_##field(struct cue_parser *p) \
-	{ \
-		struct cue_track_proto *t = cue_last_proto(p); \
-		if (t) \
-			cue_parse_str(p, &t->meta.field); \
-		else \
-			cue_parse_str(p, &p->meta.field); \
+#define CUE_PARSE_STR(field)                                                   \
+	static void cue_parse_##field(struct cue_parser *p)                    \
+	{                                                                      \
+		struct cue_track_proto *t = cue_last_proto(p);                 \
+		if (t)                                                         \
+			cue_parse_str(p, &t->meta.field);                      \
+		else                                                           \
+			cue_parse_str(p, &p->meta.field);                      \
 	}
 
 CUE_PARSE_STR(performer)
@@ -210,22 +208,23 @@ static void cue_parse_track(struct cue_parser *p)
 		return;
 
 	struct cue_track_proto *t = xnew(struct cue_track_proto, 1);
-	*t = (struct cue_track_proto) {
-		.nr = d,
-		.pregap = -1,
-		.postgap = -1,
-		.index0 = -1,
-		.index1 = -1,
-		.file = curr_file,
+	*t = (struct cue_track_proto){
+	    .nr = d,
+	    .pregap = -1,
+	    .postgap = -1,
+	    .index0 = -1,
+	    .index1 = -1,
+	    .file = curr_file,
 	};
 
 	list_add_tail(&t->node, &p->tracks);
 	p->num_tracks++;
 }
 
-static uint32_t cue_parse_time(struct cue_parser *p, const char *start, size_t len)
+static uint32_t cue_parse_time(struct cue_parser *p, const char *start,
+			       size_t len)
 {
-	uint32_t vals[] = { 0, 0, 0 };
+	uint32_t vals[] = {0, 0, 0};
 	uint32_t *val = vals;
 	for (size_t i = 0; i < len; i++) {
 		if (start[i] == ':') {
@@ -287,16 +286,16 @@ static void cue_parse_cmd(struct cue_parser *p, struct cue_switch *s)
 static void cue_parse_rem(struct cue_parser *p)
 {
 	struct cue_switch cmds[] = {
-		{ "DATE",        cue_parse_date        },
-		{ "GENRE",       cue_parse_genre       },
-		{ "COMMENT",     cue_parse_comment     },
-		{ "COMPILATION", cue_parse_compilation },
-		{ "DISCNUMBER",  cue_parse_discnumber  },
-		{ "REPLAYGAIN_ALBUM_GAIN", cue_parse_rg_gain  },
-		{ "REPLAYGAIN_TRACK_GAIN", cue_parse_rg_gain  },
-		{ "REPLAYGAIN_ALBUM_PEAK", cue_parse_rg_peak  },
-		{ "REPLAYGAIN_TRACK_PEAK", cue_parse_rg_peak  },
-		{ 0 },
+	    {"DATE", cue_parse_date},
+	    {"GENRE", cue_parse_genre},
+	    {"COMMENT", cue_parse_comment},
+	    {"COMPILATION", cue_parse_compilation},
+	    {"DISCNUMBER", cue_parse_discnumber},
+	    {"REPLAYGAIN_ALBUM_GAIN", cue_parse_rg_gain},
+	    {"REPLAYGAIN_TRACK_GAIN", cue_parse_rg_gain},
+	    {"REPLAYGAIN_ALBUM_PEAK", cue_parse_rg_peak},
+	    {"REPLAYGAIN_TRACK_PEAK", cue_parse_rg_peak},
+	    {0},
 	};
 
 	cue_parse_cmd(p, cmds);
@@ -321,29 +320,23 @@ static void cue_parse_gap(struct cue_parser *p, bool post)
 		last->pregap = gap;
 }
 
-static void cue_parse_pregap(struct cue_parser *p)
-{
-	cue_parse_gap(p, false);
-}
+static void cue_parse_pregap(struct cue_parser *p) { cue_parse_gap(p, false); }
 
-static void cue_parse_postgap(struct cue_parser *p)
-{
-	cue_parse_gap(p, true);
-}
+static void cue_parse_postgap(struct cue_parser *p) { cue_parse_gap(p, true); }
 
 static void cue_parse_line(struct cue_parser *p)
 {
 	struct cue_switch cmds[] = {
-		{ "FILE",       cue_parse_file       },
-		{ "PERFORMER",  cue_parse_performer  },
-		{ "SONGWRITER", cue_parse_songwriter },
-		{ "TITLE",      cue_parse_title      },
-		{ "TRACK",      cue_parse_track      },
-		{ "INDEX",      cue_parse_index      },
-		{ "REM",        cue_parse_rem        },
-		{ "PREGAP",     cue_parse_pregap     },
-		{ "POSTGAP",    cue_parse_postgap    },
-		{ 0 },
+	    {"FILE", cue_parse_file},
+	    {"PERFORMER", cue_parse_performer},
+	    {"SONGWRITER", cue_parse_songwriter},
+	    {"TITLE", cue_parse_title},
+	    {"TRACK", cue_parse_track},
+	    {"INDEX", cue_parse_index},
+	    {"REM", cue_parse_rem},
+	    {"PREGAP", cue_parse_pregap},
+	    {"POSTGAP", cue_parse_postgap},
+	    {0},
 	};
 
 	cue_parse_cmd(p, cmds);
@@ -357,7 +350,8 @@ static void cue_post_process(struct cue_parser *p)
 
 	struct cue_track_proto *t;
 	struct cue_track_proto *prev = NULL;
-	list_for_each_entry(t, &p->tracks, node) {
+	list_for_each_entry(t, &p->tracks, node)
+	{
 		if (prev && prev->nr >= t->nr)
 			goto err;
 
@@ -389,7 +383,7 @@ err:
 static void cue_meta_move(struct cue_meta *l, struct cue_meta *r)
 {
 	*l = *r;
-	*r = (struct cue_meta) { 0 };
+	*r = (struct cue_meta){0};
 }
 
 static struct cue_sheet *cue_parser_to_sheet(struct cue_parser *p)
@@ -408,7 +402,8 @@ static struct cue_sheet *cue_parser_to_sheet(struct cue_parser *p)
 	size_t i = 0;
 	struct cue_track_proto *tp = NULL;
 	struct cue_track_proto *prev_tp = NULL;
-	list_for_each_entry(tp, &p->tracks, node) {
+	list_for_each_entry(tp, &p->tracks, node)
+	{
 		struct cue_track *t = &s->tracks[i];
 		t->file = tp->file;
 		t->offset = tp->index1 / 75.0;
@@ -416,7 +411,8 @@ static struct cue_sheet *cue_parser_to_sheet(struct cue_parser *p)
 		t->number = tp->nr;
 
 		if (i > 0 && t->file == s->tracks[i - 1].file) {
-			s->tracks[i - 1].length = (tp->index0 - prev_tp->index1) / 75.0;
+			s->tracks[i - 1].length =
+			    (tp->index0 - prev_tp->index1) / 75.0;
 		}
 
 		cue_meta_move(&t->meta, &tp->meta);
@@ -445,7 +441,8 @@ static void cue_meta_free(struct cue_meta *m)
 static void cue_free_files(struct list_head *files)
 {
 	struct cue_track_file *tf, *next;
-	list_for_each_entry_safe(tf, next, files, node) {
+	list_for_each_entry_safe(tf, next, files, node)
+	{
 		free(tf->file);
 		free(tf);
 	}
@@ -454,7 +451,8 @@ static void cue_free_files(struct list_head *files)
 static void cue_parser_free(struct cue_parser *p)
 {
 	struct cue_track_proto *t, *next;
-	list_for_each_entry_safe(t, next, &p->tracks, node) {
+	list_for_each_entry_safe(t, next, &p->tracks, node)
+	{
 		cue_meta_free(&t->meta);
 		free(t);
 	}
@@ -469,8 +467,8 @@ struct cue_sheet *cue_parse(const char *src, size_t len)
 	struct cue_sheet *res = NULL;
 
 	struct cue_parser p = {
-		.src = src,
-		.len = len,
+	    .src = src,
+	    .len = len,
 	};
 	list_init(&p.tracks);
 	list_init(&p.files);

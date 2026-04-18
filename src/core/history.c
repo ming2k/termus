@@ -1,14 +1,14 @@
 #include "core/history.h"
-#include "common/xmalloc.h"
 #include "common/file.h"
-#include "common/uchar.h"
 #include "common/list.h"
 #include "common/prog.h"
+#include "common/uchar.h"
+#include "common/xmalloc.h"
 
-#include <sys/types.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 struct history_entry {
 	struct list_head node;
@@ -32,7 +32,8 @@ static void history_entry_free(struct history_entry *history)
 void history_free(struct history *history)
 {
 	struct list_head *item, *temp;
-	list_for_each_safe(item, temp, &history->head) {
+	list_for_each_safe(item, temp, &history->head)
+	{
 		struct history_entry *history_entry;
 		history_entry = list_entry(item, struct history_entry, node);
 		history_entry_free(history_entry);
@@ -70,17 +71,20 @@ void history_save(struct history *history)
 	int fd;
 	ssize_t rc;
 
-	snprintf(filename_tmp, sizeof(filename_tmp), "%s.tmp", history->filename);
+	snprintf(filename_tmp, sizeof(filename_tmp), "%s.tmp",
+		 history->filename);
 	fd = open(filename_tmp, O_CREAT | O_WRONLY | O_TRUNC, 0666);
 	if (fd == -1)
 		return;
-	list_for_each(item, &history->head) {
+	list_for_each(item, &history->head)
+	{
 		struct history_entry *history_entry;
 		const char nl = '\n';
 
 		history_entry = list_entry(item, struct history_entry, node);
 
-		rc = write(fd, history_entry->text, strlen(history_entry->text));
+		rc =
+		    write(fd, history_entry->text, strlen(history_entry->text));
 		if (rc == -1)
 			goto out;
 
@@ -93,7 +97,8 @@ out:
 
 	rc = rename(filename_tmp, history->filename);
 	if (rc)
-		warn_errno("renaming %s to %s", filename_tmp, history->filename);
+		warn_errno("renaming %s to %s", filename_tmp,
+			   history->filename);
 }
 
 void history_add_line(struct history *history, const char *line)

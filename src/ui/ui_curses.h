@@ -1,14 +1,10 @@
 #ifndef TERMUS_UI_CURSES_H
 #define TERMUS_UI_CURSES_H
 
-#include "ui/ui.h"
 #include "library/search.h"
+#include "ui/ui.h"
 
-enum ui_input_mode {
-	NORMAL_MODE,
-	COMMAND_MODE,
-	SEARCH_MODE
-};
+enum ui_input_mode { NORMAL_MODE, COMMAND_MODE, SEARCH_MODE };
 extern enum ui_input_mode input_mode;
 extern int prev_view;
 extern struct searchable *searchable;

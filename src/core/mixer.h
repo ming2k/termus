@@ -8,10 +8,10 @@
 #define NR_MIXER_FDS 4
 
 enum {
-    /* volume changes */
-    MIXER_FDS_VOLUME,
-    /* output changes */
-    MIXER_FDS_OUTPUT
+	/* volume changes */
+	MIXER_FDS_VOLUME,
+	/* output changes */
+	MIXER_FDS_OUTPUT
 };
 
 struct mixer_plugin_ops {
@@ -20,8 +20,8 @@ struct mixer_plugin_ops {
 	int (*open)(int *volume_max);
 	int (*close)(void);
 	union {
-	    int (*abi_1)(int *fds); // MIXER_FDS_VOLUME
-	    int (*abi_2)(int what, int *fds);
+		int (*abi_1)(int *fds); // MIXER_FDS_VOLUME
+		int (*abi_2)(int what, int *fds);
 	} get_fds;
 	int (*set_volume)(int l, int r);
 	int (*get_volume)(int *l, int *r);

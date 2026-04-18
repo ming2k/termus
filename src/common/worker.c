@@ -1,12 +1,12 @@
 #include "common/worker.h"
-#include "common/locking.h"
-#include "common/list.h"
-#include "common/xmalloc.h"
 #include "common/debug.h"
+#include "common/list.h"
+#include "common/locking.h"
+#include "common/xmalloc.h"
 
-#include <stdlib.h>
-#include <stdint.h>
 #include <pthread.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 struct worker_job {
 	struct list_head node;
@@ -54,7 +54,8 @@ static void *worker_loop(void *arg)
 
 			rc = pthread_cond_wait(&worker_cond, &worker_mutex);
 			if (rc)
-				d_print("pthread_cond_wait: %s\n", strerror(rc));
+				d_print("pthread_cond_wait: %s\n",
+					strerror(rc));
 		} else {
 			struct list_head *item = worker_job_head.next;
 			uint64_t t;
@@ -98,10 +99,7 @@ static void worker_set_state(enum worker_state s)
 	worker_unlock();
 }
 
-void worker_start(void)
-{
-	worker_set_state(WORKER_RUNNING);
-}
+void worker_start(void) { worker_set_state(WORKER_RUNNING); }
 
 void worker_exit(void)
 {
@@ -110,7 +108,7 @@ void worker_exit(void)
 }
 
 void worker_add_job(uint32_t type, void (*job_cb)(void *data),
-		void (*free_cb)(void *data), void *data)
+		    void (*free_cb)(void *data), void *data)
 {
 	struct worker_job *job;
 
@@ -126,8 +124,7 @@ void worker_add_job(uint32_t type, void (*job_cb)(void *data),
 	worker_unlock();
 }
 
-static int worker_matches_type(uint32_t type, void *job_data,
-		void *opaque)
+static int worker_matches_type(uint32_t type, void *job_data, void *opaque)
 {
 	uint32_t *pat = opaque;
 	return !!(type & *pat);
@@ -146,8 +143,8 @@ void worker_remove_jobs_by_cb(worker_match_cb cb, void *opaque)
 
 	item = worker_job_head.next;
 	while (item != &worker_job_head) {
-		struct worker_job *job = container_of(item, struct worker_job,
-				node);
+		struct worker_job *job =
+		    container_of(item, struct worker_job, node);
 		struct list_head *next = item->next;
 
 		if (cb(job->type, job->data, opaque)) {
@@ -185,7 +182,8 @@ int worker_has_job_by_cb(worker_match_cb cb, void *opaque)
 	int has_job = 0;
 
 	worker_lock();
-	list_for_each_entry(job, &worker_job_head, node) {
+	list_for_each_entry(job, &worker_job_head, node)
+	{
 		if (cb(job->type, job->data, opaque)) {
 			has_job = 1;
 			break;
@@ -201,7 +199,4 @@ int worker_has_job_by_cb(worker_match_cb cb, void *opaque)
  * this is only called from the worker thread
  * cur_job is guaranteed to be non-NULL
  */
-int worker_cancelling(void)
-{
-	return cancel_current;
-}
+int worker_cancelling(void) { return cancel_current; }

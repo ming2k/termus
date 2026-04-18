@@ -1,15 +1,15 @@
 #include "core/discid.h"
-#include "common/xmalloc.h"
+#include "common/debug.h"
 #include "common/path.h"
 #include "common/utils.h"
-#include "common/debug.h"
+#include "common/xmalloc.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
-#include <limits.h>
 
 #ifdef HAVE_DISCID
 #include <discid/discid.h>
@@ -26,7 +26,8 @@ char *get_default_cdda_device(void)
 	return xstrdup(dev);
 }
 
-int parse_cdda_url(const char *url, char **disc_id, int *start_track, int *end_track)
+int parse_cdda_url(const char *url, char **disc_id, int *start_track,
+		   int *end_track)
 {
 	char *slash, *dash;
 	long int t;
@@ -64,9 +65,11 @@ char *gen_cdda_url(const char *disc_id, int start_track, int end_track)
 {
 	char buf[256];
 	if (end_track != -1)
-		snprintf(buf, sizeof(buf), "cdda://%s/%d-%d", disc_id, start_track, end_track);
+		snprintf(buf, sizeof(buf), "cdda://%s/%d-%d", disc_id,
+			 start_track, end_track);
 	else
-		snprintf(buf, sizeof(buf), "cdda://%s/%d", disc_id, start_track);
+		snprintf(buf, sizeof(buf), "cdda://%s/%d", disc_id,
+			 start_track);
 	return xstrdup(buf);
 }
 
@@ -76,7 +79,8 @@ char *complete_cdda_url(const char *device, const char *url)
 	int is_range, start_track = -1, end_track = -1, num_tracks = -1;
 
 	parse_cdda_url(url, &url_disc_id, &start_track, &end_track);
-	is_range = (start_track == -1 && end_track == -1) || end_track == INT_MAX;
+	is_range =
+	    (start_track == -1 && end_track == -1) || end_track == INT_MAX;
 	if (!url_disc_id || is_range) {
 		if (url_disc_id && strchr(url_disc_id, '/'))
 			device = url_disc_id;
@@ -95,7 +99,8 @@ char *complete_cdda_url(const char *device, const char *url)
 	return new_url;
 }
 
-static int get_device_disc_id(const char *device, char **disc_id, int *num_tracks)
+static int get_device_disc_id(const char *device, char **disc_id,
+			      int *num_tracks)
 {
 #ifdef HAVE_DISCID
 	DiscId *disc = discid_new();

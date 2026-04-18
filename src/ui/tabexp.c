@@ -1,17 +1,14 @@
 #include "ui/tabexp.h"
+#include "common/debug.h"
 #include "common/xmalloc.h"
 #include "common/xstrjoin.h"
-#include "common/debug.h"
 
 #include <stdlib.h>
 
-struct tabexp tabexp = {
-	.head = NULL,
-	.tails = NULL,
-	.count = 0
-};
+struct tabexp tabexp = {.head = NULL, .tails = NULL, .count = 0};
 
-char *tabexp_expand(const char *src, void (*load_matches)(const char *src), int direction)
+char *tabexp_expand(const char *src, void (*load_matches)(const char *src),
+		    int direction)
 {
 	static int idx = -1;
 	char *expanded;

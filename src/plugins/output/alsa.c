@@ -29,11 +29,11 @@
  * SND_PCM_STATE_DISCONNECTED = 8,
  */
 
-#include "core/op.h"
+#include "common/debug.h"
 #include "common/utils.h"
 #include "common/xmalloc.h"
+#include "core/op.h"
 #include "core/sf.h"
-#include "common/debug.h"
 
 #define ALSA_PCM_NEW_HW_PARAMS_API
 #define ALSA_PCM_NEW_SW_PARAMS_API
@@ -53,10 +53,13 @@ static int alsa_frame_size;
 static char *alsa_dsp_device = NULL;
 
 #if 0
-#define debug_ret(func, ret) \
-	d_print("%s returned %d %s\n", func, ret, ret < 0 ? snd_strerror(ret) : "")
+#define debug_ret(func, ret)                                                   \
+	d_print("%s returned %d %s\n", func, ret,                              \
+		ret < 0 ? snd_strerror(ret) : "")
 #else
-#define debug_ret(func, ret) do { } while (0)
+#define debug_ret(func, ret)                                                   \
+	do {                                                                   \
+	} while (0)
 #endif
 
 static int alsa_error_to_op_error(int err)
@@ -72,7 +75,8 @@ static int alsa_error_to_op_error(int err)
 }
 
 /* we don't want error messages to stderr */
-static void error_handler(const char *file, int line, const char *function, int err, const char *fmt, ...)
+static void error_handler(const char *file, int line, const char *function,
+			  int err, const char *fmt, ...)
 {
 }
 
@@ -120,7 +124,7 @@ static int alsa_set_hw_params(void)
 
 	cmd = "snd_pcm_hw_params_set_buffer_time_max";
 	rc = snd_pcm_hw_params_set_buffer_time_max(alsa_handle, hwparams,
-	                                           &buffer_time_max, &dir);
+						   &buffer_time_max, &dir);
 	if (rc < 0)
 		goto error;
 
@@ -129,27 +133,29 @@ static int alsa_set_hw_params(void)
 
 	cmd = "snd_pcm_hw_params_set_access";
 	rc = snd_pcm_hw_params_set_access(alsa_handle, hwparams,
-			SND_PCM_ACCESS_RW_INTERLEAVED);
+					  SND_PCM_ACCESS_RW_INTERLEAVED);
 	if (rc < 0)
 		goto error;
 
-	alsa_fmt = snd_pcm_build_linear_format(sf_get_bits(alsa_sf), sf_get_bits(alsa_sf),
-			sf_get_signed(alsa_sf) ? 0 : 1,
-			sf_get_bigendian(alsa_sf));
+	alsa_fmt = snd_pcm_build_linear_format(
+	    sf_get_bits(alsa_sf), sf_get_bits(alsa_sf),
+	    sf_get_signed(alsa_sf) ? 0 : 1, sf_get_bigendian(alsa_sf));
 	cmd = "snd_pcm_hw_params_set_format";
 	rc = snd_pcm_hw_params_set_format(alsa_handle, hwparams, alsa_fmt);
 	if (rc < 0)
 		goto error;
 
 	cmd = "snd_pcm_hw_params_set_channels";
-	rc = snd_pcm_hw_params_set_channels(alsa_handle, hwparams, sf_get_channels(alsa_sf));
+	rc = snd_pcm_hw_params_set_channels(alsa_handle, hwparams,
+					    sf_get_channels(alsa_sf));
 	if (rc < 0)
 		goto error;
 
 	cmd = "snd_pcm_hw_params_set_rate";
 	rate = sf_get_rate(alsa_sf);
 	dir = 0;
-	rc = snd_pcm_hw_params_set_rate_near(alsa_handle, hwparams, &rate, &dir);
+	rc =
+	    snd_pcm_hw_params_set_rate_near(alsa_handle, hwparams, &rate, &dir);
 	if (rc < 0)
 		goto error;
 	d_print("rate=%d\n", rate);
@@ -166,14 +172,16 @@ out:
 	return rc;
 }
 
-static int op_alsa_open(sample_format_t sf, const channel_position_t *channel_map)
+static int op_alsa_open(sample_format_t sf,
+			const channel_position_t *channel_map)
 {
 	int rc;
 
 	alsa_sf = sf;
 	alsa_frame_size = sf_get_frame_size(alsa_sf);
 
-	rc = snd_pcm_open(&alsa_handle, alsa_dsp_device, SND_PCM_STREAM_PLAYBACK, 0);
+	rc = snd_pcm_open(&alsa_handle, alsa_dsp_device,
+			  SND_PCM_STREAM_PLAYBACK, 0);
 	if (rc < 0)
 		goto error;
 
@@ -194,9 +202,15 @@ error:
 static int op_alsa_close(void)
 {
 	int rc;
+	snd_pcm_state_t state = snd_pcm_state(alsa_handle);
 
-	rc = snd_pcm_drain(alsa_handle);
-	debug_ret("snd_pcm_drain", rc);
+	/* Only drain when audio is actually playing; skip drain when the device
+	 * was already dropped (PREPARED/SETUP) to avoid noise on rate changes.
+	 */
+	if (state == SND_PCM_STATE_RUNNING || state == SND_PCM_STATE_DRAINING) {
+		rc = snd_pcm_drain(alsa_handle);
+		debug_ret("snd_pcm_drain", rc);
+	}
 
 	rc = snd_pcm_close(alsa_handle);
 	debug_ret("snd_pcm_close", rc);
@@ -231,9 +245,11 @@ again:
 	rc = snd_pcm_writei(alsa_handle, buffer, len);
 	if (rc < 0) {
 		// rc _should_ be either -EBADFD, -EPIPE or -ESTRPIPE
-		if (!recovered && (rc == -EINTR || rc == -EPIPE || rc == -ESTRPIPE)) {
-			d_print("snd_pcm_writei failed: %s, trying to recover\n",
-					snd_strerror(rc));
+		if (!recovered &&
+		    (rc == -EINTR || rc == -EPIPE || rc == -ESTRPIPE)) {
+			d_print(
+			    "snd_pcm_writei failed: %s, trying to recover\n",
+			    snd_strerror(rc));
 			recovered++;
 			// this handles -EINTR, -EPIPE and -ESTRPIPE
 			// for other errors it just returns the error code
@@ -329,20 +345,20 @@ static int op_alsa_get_device(char **val)
 }
 
 const struct output_plugin_ops op_pcm_ops = {
-	.init = op_alsa_init,
-	.exit = op_alsa_exit,
-	.open = op_alsa_open,
-	.close = op_alsa_close,
-	.drop = op_alsa_drop,
-	.write = op_alsa_write,
-	.buffer_space = op_alsa_buffer_space,
-	.pause = op_alsa_pause,
-	.unpause = op_alsa_unpause,
+    .init = op_alsa_init,
+    .exit = op_alsa_exit,
+    .open = op_alsa_open,
+    .close = op_alsa_close,
+    .drop = op_alsa_drop,
+    .write = op_alsa_write,
+    .buffer_space = op_alsa_buffer_space,
+    .pause = op_alsa_pause,
+    .unpause = op_alsa_unpause,
 };
 
 const struct output_plugin_opt op_pcm_options[] = {
-	OPT(op_alsa, device),
-	{ NULL },
+    OPT(op_alsa, device),
+    {NULL},
 };
 
 const int op_priority = 0;

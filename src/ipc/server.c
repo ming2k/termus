@@ -1,38 +1,37 @@
 #include "ipc/server.h"
-#include "common/prog.h"
 #include "app/commands.h"
-#include "app/search_state.h"
-#include "app/termus.h"
 #include "app/options_core_state.h"
 #include "app/options_playback_state.h"
 #include "app/options_registry.h"
-#include "core/output.h"
-#include "common/utils.h"
-#include "common/xmalloc.h"
-#include "core/player.h"
-#include "common/file.h"
+#include "app/search_state.h"
+#include "app/termus.h"
 #include "common/compiler.h"
 #include "common/debug.h"
+#include "common/file.h"
 #include "common/gbuf.h"
 #include "common/misc.h"
-#include "core/keyval.h"
+#include "common/prog.h"
+#include "common/utils.h"
+#include "common/xmalloc.h"
 #include "core/convert.h"
+#include "core/keyval.h"
+#include "core/output.h"
+#include "core/player.h"
 
-#include <stdarg.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netdb.h>
-#include <errno.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
+#include <unistd.h>
 
 int server_socket;
 LIST_HEAD(client_head);
@@ -49,21 +48,19 @@ static union {
 
 static int cmd_status(struct client *client)
 {
-	const char *export_options[] = {
-		"aaa_mode",
-		"continue",
-		"play_library",
-		"play_sorted",
-		"replaygain",
-		"replaygain_limit",
-		"replaygain_preamp",
-		"repeat",
-		"repeat_current",
-		"shuffle",
-		"speed",
-		"softvol",
-		NULL
-	};
+	const char *export_options[] = {"aaa_mode",
+					"continue",
+					"play_library",
+					"play_sorted",
+					"replaygain",
+					"replaygain_limit",
+					"replaygain_preamp",
+					"repeat",
+					"repeat_current",
+					"shuffle",
+					"speed",
+					"softvol",
+					NULL};
 	const struct track_info *ti;
 	struct termus_opt *opt;
 	char optbuf[OPTION_MAX_SIZE];
@@ -79,19 +76,20 @@ static int cmd_status(struct client *client)
 		gbuf_addf(&buf, "duration %d\n", ti->duration);
 		gbuf_addf(&buf, "position %d\n", player_info.pos);
 		for (i = 0; ti->comments[i].key; i++)
-			gbuf_addf(&buf, "tag %s %s\n",
-					ti->comments[i].key,
-					escape(ti->comments[i].val));
+			gbuf_addf(&buf, "tag %s %s\n", ti->comments[i].key,
+				  escape(ti->comments[i].val));
 	}
 
 	/* add track metadata to termus-status */
 	status = player_info.status;
-	if (status == PLAYER_STATUS_PLAYING && ti && is_http_url(player_info.ti->filename)) {
+	if (status == PLAYER_STATUS_PLAYING && ti &&
+	    is_http_url(player_info.ti->filename)) {
 		const char *title = player_get_stream_title();
 		if (title != NULL) {
 			free(title_buf);
 			title_buf = to_utf8(title, icecast_default_charset);
-			// we have a stream title (probably artist/track/album info)
+			// we have a stream title (probably artist/track/album
+			// info)
 			gbuf_addf(&buf, "stream %s\n", escape(title_buf));
 		} else if (ti->comment != NULL) {
 			// fallback to the radio station name
@@ -178,21 +176,26 @@ static void read_commands(struct client *client)
 			s = i + 1;
 
 			if (!client->authenticated) {
-				const char *server_password = options_get_server_password();
+				const char *server_password =
+				    options_get_server_password();
 
 				if (!server_password) {
-					msg = "password is unset, tcp/ip disabled";
+					msg = "password is unset, tcp/ip "
+					      "disabled";
 					d_print("%s\n", msg);
-					ret = send_answer(client->fd, "%s\n\n", msg);
+					ret = send_answer(client->fd, "%s\n\n",
+							  msg);
 					goto close;
 				}
 				if (strncmp(line, "passwd ", 7) == 0)
 					line += 7;
-				client->authenticated = !strcmp(line, server_password);
+				client->authenticated =
+				    !strcmp(line, server_password);
 				if (!client->authenticated) {
 					msg = "authentication failed";
 					d_print("%s\n", msg);
-					ret = send_answer(client->fd, "%s\n\n", msg);
+					ret = send_answer(client->fd, "%s\n\n",
+							  msg);
 					goto close;
 				}
 				ret = write_all(client->fd, "\n", 1);
@@ -227,7 +230,8 @@ static void read_commands(struct client *client)
 					ret = cmd_status(client);
 				} else {
 					if (strcmp(cmd, "passwd") != 0) {
-						termus_set_client_fd(client->fd);
+						termus_set_client_fd(
+						    client->fd);
 						run_parsed_command(cmd, arg);
 						termus_set_client_fd(-1);
 					}
@@ -288,13 +292,12 @@ void server_init(char *address)
 
 	if (strchr(address, '/')) {
 		addr.sa.sa_family = AF_UNIX;
-		strncpy(addr.un.sun_path, address, sizeof(addr.un.sun_path) - 1);
+		strncpy(addr.un.sun_path, address,
+			sizeof(addr.un.sun_path) - 1);
 
 		addrlen = sizeof(struct sockaddr_un);
 	} else {
-		const struct addrinfo hints = {
-			.ai_socktype = SOCK_STREAM
-		};
+		const struct addrinfo hints = {.ai_socktype = SOCK_STREAM};
 		struct addrinfo *result;
 		char *s = strrchr(address, ':');
 		int rc;
@@ -324,7 +327,8 @@ void server_init(char *address)
 
 		/* address already in use */
 		if (addr.sa.sa_family != AF_UNIX)
-			die("termus is already listening on %s:%s\n", address, port);
+			die("termus is already listening on %s:%s\n", address,
+			    port);
 
 		/* try to connect to server */
 		sock = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -344,7 +348,8 @@ void server_init(char *address)
 				die_errno("bind");
 		} else {
 			/* server already running */
-			die("termus is already listening on socket %s\n", address);
+			die("termus is already listening on socket %s\n",
+			    address);
 		}
 		close(sock);
 	}

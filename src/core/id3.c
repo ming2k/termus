@@ -1,27 +1,27 @@
 #include "core/id3.h"
-#include "common/xmalloc.h"
-#include "core/convert.h"
-#include "common/uchar.h"
 #include "app/options_core_state.h"
 #include "common/debug.h"
-#include "common/utils.h"
 #include "common/file.h"
+#include "common/uchar.h"
+#include "common/utils.h"
+#include "common/xmalloc.h"
+#include "core/convert.h"
 
-#include <unistd.h>
-#include <stdint.h>
 #include <errno.h>
+#include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
-#include <limits.h>
+#include <unistd.h>
 
 enum {
 	ID3_ENCODING_ISO_8859_1 = 0x00,
-	ID3_ENCODING_UTF_16     = 0x01,
-	ID3_ENCODING_UTF_16_BE  = 0x02,
-	ID3_ENCODING_UTF_8      = 0x03,
+	ID3_ENCODING_UTF_16 = 0x01,
+	ID3_ENCODING_UTF_16_BE = 0x02,
+	ID3_ENCODING_UTF_8 = 0x03,
 
-	ID3_ENCODING_MAX        = 0x03
+	ID3_ENCODING_MAX = 0x03
 };
 
 /*
@@ -52,201 +52,199 @@ struct v2_frame_header {
 	uint16_t flags;
 };
 
-#define V2_HEADER_UNSYNC	(1 << 7)
-#define V2_HEADER_EXTENDED	(1 << 6)
-#define V2_HEADER_EXPERIMENTAL	(1 << 5)
-#define V2_HEADER_FOOTER	(1 << 4)
+#define V2_HEADER_UNSYNC (1 << 7)
+#define V2_HEADER_EXTENDED (1 << 6)
+#define V2_HEADER_EXPERIMENTAL (1 << 5)
+#define V2_HEADER_FOOTER (1 << 4)
 
-#define V2_FRAME_COMPRESSED	(1 << 3) /* great idea!!1 */
-#define V2_FRAME_ENCRYPTHED	(1 << 2) /* wow, this is very neat! */
-#define V2_FRAME_UNSYNC		(1 << 1)
-#define V2_FRAME_LEN_INDICATOR	(1 << 0)
+#define V2_FRAME_COMPRESSED (1 << 3) /* great idea!!1 */
+#define V2_FRAME_ENCRYPTHED (1 << 2) /* wow, this is very neat! */
+#define V2_FRAME_UNSYNC (1 << 1)
+#define V2_FRAME_LEN_INDICATOR (1 << 0)
 
 #define NR_GENRES 148
 /* genres {{{ */
-static const char *genres[NR_GENRES] = {
-	"Blues",
-	"Classic Rock",
-	"Country",
-	"Dance",
-	"Disco",
-	"Funk",
-	"Grunge",
-	"Hip-Hop",
-	"Jazz",
-	"Metal",
-	"New Age",
-	"Oldies",
-	"Other",
-	"Pop",
-	"R&B",
-	"Rap",
-	"Reggae",
-	"Rock",
-	"Techno",
-	"Industrial",
-	"Alternative",
-	"Ska",
-	"Death Metal",
-	"Pranks",
-	"Soundtrack",
-	"Euro-Techno",
-	"Ambient",
-	"Trip-Hop",
-	"Vocal",
-	"Jazz+Funk",
-	"Fusion",
-	"Trance",
-	"Classical",
-	"Instrumental",
-	"Acid",
-	"House",
-	"Game",
-	"Sound Clip",
-	"Gospel",
-	"Noise",
-	"Alt",
-	"Bass",
-	"Soul",
-	"Punk",
-	"Space",
-	"Meditative",
-	"Instrumental Pop",
-	"Instrumental Rock",
-	"Ethnic",
-	"Gothic",
-	"Darkwave",
-	"Techno-Industrial",
-	"Electronic",
-	"Pop-Folk",
-	"Eurodance",
-	"Dream",
-	"Southern Rock",
-	"Comedy",
-	"Cult",
-	"Gangsta Rap",
-	"Top 40",
-	"Christian Rap",
-	"Pop/Funk",
-	"Jungle",
-	"Native American",
-	"Cabaret",
-	"New Wave",
-	"Psychedelic",
-	"Rave",
-	"Showtunes",
-	"Trailer",
-	"Lo-Fi",
-	"Tribal",
-	"Acid Punk",
-	"Acid Jazz",
-	"Polka",
-	"Retro",
-	"Musical",
-	"Rock & Roll",
-	"Hard Rock",
-	"Folk",
-	"Folk/Rock",
-	"National Folk",
-	"Swing",
-	"Fast-Fusion",
-	"Bebob",
-	"Latin",
-	"Revival",
-	"Celtic",
-	"Bluegrass",
-	"Avantgarde",
-	"Gothic Rock",
-	"Progressive Rock",
-	"Psychedelic Rock",
-	"Symphonic Rock",
-	"Slow Rock",
-	"Big Band",
-	"Chorus",
-	"Easy Listening",
-	"Acoustic",
-	"Humour",
-	"Speech",
-	"Chanson",
-	"Opera",
-	"Chamber Music",
-	"Sonata",
-	"Symphony",
-	"Booty Bass",
-	"Primus",
-	"Porn Groove",
-	"Satire",
-	"Slow Jam",
-	"Club",
-	"Tango",
-	"Samba",
-	"Folklore",
-	"Ballad",
-	"Power Ballad",
-	"Rhythmic Soul",
-	"Freestyle",
-	"Duet",
-	"Punk Rock",
-	"Drum Solo",
-	"A Cappella",
-	"Euro-House",
-	"Dance Hall",
-	"Goa",
-	"Drum & Bass",
-	"Club-House",
-	"Hardcore",
-	"Terror",
-	"Indie",
-	"BritPop",
-	"Negerpunk",
-	"Polsk Punk",
-	"Beat",
-	"Christian Gangsta Rap",
-	"Heavy Metal",
-	"Black Metal",
-	"Crossover",
-	"Contemporary Christian",
-	"Christian Rock",
-	"Merengue",
-	"Salsa",
-	"Thrash Metal",
-	"Anime",
-	"JPop",
-	"Synthpop"
-};
+static const char *genres[NR_GENRES] = {"Blues",
+					"Classic Rock",
+					"Country",
+					"Dance",
+					"Disco",
+					"Funk",
+					"Grunge",
+					"Hip-Hop",
+					"Jazz",
+					"Metal",
+					"New Age",
+					"Oldies",
+					"Other",
+					"Pop",
+					"R&B",
+					"Rap",
+					"Reggae",
+					"Rock",
+					"Techno",
+					"Industrial",
+					"Alternative",
+					"Ska",
+					"Death Metal",
+					"Pranks",
+					"Soundtrack",
+					"Euro-Techno",
+					"Ambient",
+					"Trip-Hop",
+					"Vocal",
+					"Jazz+Funk",
+					"Fusion",
+					"Trance",
+					"Classical",
+					"Instrumental",
+					"Acid",
+					"House",
+					"Game",
+					"Sound Clip",
+					"Gospel",
+					"Noise",
+					"Alt",
+					"Bass",
+					"Soul",
+					"Punk",
+					"Space",
+					"Meditative",
+					"Instrumental Pop",
+					"Instrumental Rock",
+					"Ethnic",
+					"Gothic",
+					"Darkwave",
+					"Techno-Industrial",
+					"Electronic",
+					"Pop-Folk",
+					"Eurodance",
+					"Dream",
+					"Southern Rock",
+					"Comedy",
+					"Cult",
+					"Gangsta Rap",
+					"Top 40",
+					"Christian Rap",
+					"Pop/Funk",
+					"Jungle",
+					"Native American",
+					"Cabaret",
+					"New Wave",
+					"Psychedelic",
+					"Rave",
+					"Showtunes",
+					"Trailer",
+					"Lo-Fi",
+					"Tribal",
+					"Acid Punk",
+					"Acid Jazz",
+					"Polka",
+					"Retro",
+					"Musical",
+					"Rock & Roll",
+					"Hard Rock",
+					"Folk",
+					"Folk/Rock",
+					"National Folk",
+					"Swing",
+					"Fast-Fusion",
+					"Bebob",
+					"Latin",
+					"Revival",
+					"Celtic",
+					"Bluegrass",
+					"Avantgarde",
+					"Gothic Rock",
+					"Progressive Rock",
+					"Psychedelic Rock",
+					"Symphonic Rock",
+					"Slow Rock",
+					"Big Band",
+					"Chorus",
+					"Easy Listening",
+					"Acoustic",
+					"Humour",
+					"Speech",
+					"Chanson",
+					"Opera",
+					"Chamber Music",
+					"Sonata",
+					"Symphony",
+					"Booty Bass",
+					"Primus",
+					"Porn Groove",
+					"Satire",
+					"Slow Jam",
+					"Club",
+					"Tango",
+					"Samba",
+					"Folklore",
+					"Ballad",
+					"Power Ballad",
+					"Rhythmic Soul",
+					"Freestyle",
+					"Duet",
+					"Punk Rock",
+					"Drum Solo",
+					"A Cappella",
+					"Euro-House",
+					"Dance Hall",
+					"Goa",
+					"Drum & Bass",
+					"Club-House",
+					"Hardcore",
+					"Terror",
+					"Indie",
+					"BritPop",
+					"Negerpunk",
+					"Polsk Punk",
+					"Beat",
+					"Christian Gangsta Rap",
+					"Heavy Metal",
+					"Black Metal",
+					"Crossover",
+					"Contemporary Christian",
+					"Christian Rock",
+					"Merengue",
+					"Salsa",
+					"Thrash Metal",
+					"Anime",
+					"JPop",
+					"Synthpop"};
 /* }}} */
 
 #define id3_debug(...) d_print(__VA_ARGS__)
 
-const char * const id3_key_names[NUM_ID3_KEYS] = {
-	"artist",
-	"album",
-	"title",
-	"date",
-	"originaldate",
-	"genre",
-	"discnumber",
-	"tracknumber",
-	"albumartist",
-	"artistsort",
-	"albumartistsort",
-	"albumsort",
-	"compilation",
-	"replaygain_track_gain",
-	"replaygain_track_peak",
-	"replaygain_album_gain",
-	"replaygain_album_peak",
-	"composer",
-	"conductor",
-	"lyricist",
-	"remixer",
-	"label",
-	"publisher",
-	"subtitle",
-	"comment",
-	"musicbrainz_trackid",
-	"media",
-	"bpm",
+const char *const id3_key_names[NUM_ID3_KEYS] = {
+    "artist",
+    "album",
+    "title",
+    "date",
+    "originaldate",
+    "genre",
+    "discnumber",
+    "tracknumber",
+    "albumartist",
+    "artistsort",
+    "albumartistsort",
+    "albumsort",
+    "compilation",
+    "replaygain_track_gain",
+    "replaygain_track_peak",
+    "replaygain_album_gain",
+    "replaygain_album_peak",
+    "composer",
+    "conductor",
+    "lyricist",
+    "remixer",
+    "label",
+    "publisher",
+    "subtitle",
+    "comment",
+    "musicbrainz_trackid",
+    "media",
+    "bpm",
 };
 
 static int utf16_is_lsurrogate(uchar uch)
@@ -259,14 +257,12 @@ static int utf16_is_hsurrogate(uchar uch)
 	return 0xd800 <= uch && 0xdbff >= uch;
 }
 
-static int utf16_is_bom(uchar uch)
-{
-	return uch == 0xfeff;
-}
+static int utf16_is_bom(uchar uch) { return uch == 0xfeff; }
 
 static int utf16_is_special(uchar uch)
 {
-	return utf16_is_hsurrogate(uch) || utf16_is_lsurrogate(uch) || utf16_is_bom(uch);
+	return utf16_is_hsurrogate(uch) || utf16_is_lsurrogate(uch) ||
+	       utf16_is_bom(uch);
 }
 
 static char *utf16_to_utf8(const unsigned char *buf, size_t buf_size)
@@ -396,7 +392,8 @@ static int v2_footer_parse(struct v2_header *header, const char *buf)
 	return v2_header_footer_parse(header, buf);
 }
 
-static int v2_extended_header_parse(struct v2_extended_header *header, const char *buf)
+static int v2_extended_header_parse(struct v2_extended_header *header,
+				    const char *buf)
 {
 	return u32_unsync((const unsigned char *)buf, &header->size);
 }
@@ -414,7 +411,8 @@ static int is_frame_id_char(char ch)
  * XXX is frame
  * YYY is frame size excluding this 6 byte header
  */
-static int v2_2_0_frame_header_parse(struct v2_frame_header *header, const char *buf)
+static int v2_2_0_frame_header_parse(struct v2_frame_header *header,
+				     const char *buf)
 {
 	int i;
 
@@ -428,7 +426,8 @@ static int v2_2_0_frame_header_parse(struct v2_frame_header *header, const char 
 	header->flags = 0;
 	if (header->size == 0)
 		return 0;
-	id3_debug("%c%c%c %d\n", header->id[0], header->id[1], header->id[2], header->size);
+	id3_debug("%c%c%c %d\n", header->id[0], header->id[1], header->id[2],
+		  header->size);
 	return 1;
 }
 
@@ -442,7 +441,8 @@ static int v2_2_0_frame_header_parse(struct v2_frame_header *header, const char 
  * YYYY is frame size excluding this 10 byte header
  * ZZ   is flags
  */
-static int v2_3_0_frame_header_parse(struct v2_frame_header *header, const char *buf)
+static int v2_3_0_frame_header_parse(struct v2_frame_header *header,
+				     const char *buf)
 {
 	int i;
 
@@ -456,12 +456,13 @@ static int v2_3_0_frame_header_parse(struct v2_frame_header *header, const char 
 	if (header->size == 0)
 		return 0;
 	id3_debug("%c%c%c%c %d\n", header->id[0], header->id[1], header->id[2],
-			header->id[3], header->size);
+		  header->id[3], header->size);
 	return 1;
 }
 
 /* same as 2.3 but header size is sync safe */
-static int v2_4_0_frame_header_parse(struct v2_frame_header *header, const char *buf)
+static int v2_4_0_frame_header_parse(struct v2_frame_header *header,
+				     const char *buf)
 {
 	int i;
 
@@ -476,7 +477,7 @@ static int v2_4_0_frame_header_parse(struct v2_frame_header *header, const char 
 	if (header->size == 0)
 		return 0;
 	id3_debug("%c%c%c%c %d\n", header->id[0], header->id[1], header->id[2],
-			header->id[3], header->size);
+		  header->id[3], header->size);
 	return 1;
 }
 
@@ -526,33 +527,33 @@ static struct {
 	const char name[8];
 	enum id3_key key;
 } frame_tab[] = {
-	/* 2.4.0 */
-	{ "TDRC", ID3_DATE }, // recording date
-	{ "TDRL", ID3_DATE }, // release date
-	{ "TDOR", ID3_ORIGINALDATE }, // original release date
-	{ "TSOP", ID3_ARTISTSORT },
-	{ "TSOA", ID3_ALBUMSORT },
+    /* 2.4.0 */
+    {"TDRC", ID3_DATE},		// recording date
+    {"TDRL", ID3_DATE},		// release date
+    {"TDOR", ID3_ORIGINALDATE}, // original release date
+    {"TSOP", ID3_ARTISTSORT},
+    {"TSOA", ID3_ALBUMSORT},
 
-	/* >= 2.3.0 */
-	{ "TPE1", ID3_ARTIST },
-	{ "TALB", ID3_ALBUM },
-	{ "TIT2", ID3_TITLE },
-	{ "TYER", ID3_DATE },
-	{ "TCON", ID3_GENRE },
-	{ "TPOS", ID3_DISC },
-	{ "TRCK", ID3_TRACK },
-	{ "TPE2", ID3_ALBUMARTIST },
-	{ "TSO2", ID3_ALBUMARTISTSORT },
-	{ "TCMP", ID3_COMPILATION },
-	{ "TORY", ID3_ORIGINALDATE },
-	{ "TCOM", ID3_COMPOSER },
-	{ "TPE3", ID3_CONDUCTOR },
-	{ "TEXT", ID3_LYRICIST },
-	{ "TPE4", ID3_REMIXER },
-	{ "TPUB", ID3_PUBLISHER }, // TPUB can be both publisher or label
-	{ "TIT3", ID3_SUBTITLE },
-	{ "TMED", ID3_MEDIA },
-	{ "TBPM", ID3_BPM},
+    /* >= 2.3.0 */
+    {"TPE1", ID3_ARTIST},
+    {"TALB", ID3_ALBUM},
+    {"TIT2", ID3_TITLE},
+    {"TYER", ID3_DATE},
+    {"TCON", ID3_GENRE},
+    {"TPOS", ID3_DISC},
+    {"TRCK", ID3_TRACK},
+    {"TPE2", ID3_ALBUMARTIST},
+    {"TSO2", ID3_ALBUMARTISTSORT},
+    {"TCMP", ID3_COMPILATION},
+    {"TORY", ID3_ORIGINALDATE},
+    {"TCOM", ID3_COMPOSER},
+    {"TPE3", ID3_CONDUCTOR},
+    {"TEXT", ID3_LYRICIST},
+    {"TPE4", ID3_REMIXER},
+    {"TPUB", ID3_PUBLISHER}, // TPUB can be both publisher or label
+    {"TIT3", ID3_SUBTITLE},
+    {"TMED", ID3_MEDIA},
+    {"TBPM", ID3_BPM},
 };
 
 static int frame_tab_index(const char *id)
@@ -663,7 +664,8 @@ static void add_v2(struct id3tag *id3, enum id3_key key, char *value)
 	id3->has_v2 = 1;
 }
 
-static void decode_normal(struct id3tag *id3, const char *buf, int len, int encoding, enum id3_key key)
+static void decode_normal(struct id3tag *id3, const char *buf, int len,
+			  int encoding, enum id3_key key)
 {
 	char *out = decode_str(buf, len, encoding);
 
@@ -699,7 +701,7 @@ static void decode_normal(struct id3tag *id3, const char *buf, int len, int enco
 			return;
 		}
 	} else if (key == ID3_PUBLISHER) {
-		 add_v2(id3, ID3_LABEL, xstrdup(out));
+		add_v2(id3, ID3_LABEL, xstrdup(out));
 	}
 
 	add_v2(id3, key, out);
@@ -707,7 +709,8 @@ static void decode_normal(struct id3tag *id3, const char *buf, int len, int enco
 
 static size_t id3_skiplen(const char *buf, size_t len, int encoding)
 {
-	if (encoding == ID3_ENCODING_ISO_8859_1 || encoding == ID3_ENCODING_UTF_8) {
+	if (encoding == ID3_ENCODING_ISO_8859_1 ||
+	    encoding == ID3_ENCODING_UTF_8) {
 		return strlen(buf) + 1;
 	} else {
 		int i = 0;
@@ -723,7 +726,8 @@ static size_t id3_skiplen(const char *buf, size_t len, int encoding)
 	}
 }
 
-static void decode_txxx(struct id3tag *id3, const char *buf, int len, int encoding)
+static void decode_txxx(struct id3tag *id3, const char *buf, int len,
+			int encoding)
 {
 	const char ql_prefix[] = "QuodLibet::";
 	enum id3_key key = NUM_ID3_KEYS;
@@ -779,7 +783,8 @@ static void decode_txxx(struct id3tag *id3, const char *buf, int len, int encodi
 	add_v2(id3, key, out);
 }
 
-static void decode_comment(struct id3tag *id3, const char *buf, int len, int encoding)
+static void decode_comment(struct id3tag *id3, const char *buf, int len,
+			   int encoding)
 {
 	int slen;
 	char *out;
@@ -797,7 +802,8 @@ static void decode_comment(struct id3tag *id3, const char *buf, int len, int enc
 	if (!out)
 		return;
 
-	valid_description = strcmp(out, "") == 0 || strcmp(out, "description") == 0;
+	valid_description =
+	    strcmp(out, "") == 0 || strcmp(out, "description") == 0;
 	free(out);
 
 	if (!valid_description)
@@ -820,11 +826,11 @@ static void decode_comment(struct id3tag *id3, const char *buf, int len, int enc
 /*
  * From http://id3.org/id3v2.4.0-frames:
  *
- * The volume adjustment is encoded as a fixed point decibel value, 16 bit signed
- * integer representing (adjustment*512), giving +/- 64 dB with a precision of
- * 0.001953125 dB. E.g. +2 dB is stored as $04 00 and -2 dB is $FC 00. There may
- * be more than one "RVA2" frame in each tag, but only one with the same
- * identification string.
+ * The volume adjustment is encoded as a fixed point decibel value, 16 bit
+ * signed integer representing (adjustment*512), giving +/- 64 dB with a
+ * precision of 0.001953125 dB. E.g. +2 dB is stored as $04 00 and -2 dB is $FC
+ * 00. There may be more than one "RVA2" frame in each tag, but only one with
+ * the same identification string.
  *
  * 	<Header for 'Relative volume adjustment (2)', ID: "RVA2">
  * 	Identification          <text string> $00
@@ -848,24 +854,24 @@ static void decode_comment(struct id3tag *id3, const char *buf, int len, int enc
  * 			$07 Back centre
  * 			$08 Subwoofer
  *
- * Bits representing peak can be any number between 0 and 255. 0 means that there
- * is no peak volume field. The peak volume field is always padded to whole
- * bytes, setting the most significant bits to zero.
+ * Bits representing peak can be any number between 0 and 255. 0 means that
+ * there is no peak volume field. The peak volume field is always padded to
+ * whole bytes, setting the most significant bits to zero.
  */
 static void decode_rva2(struct id3tag *id3, const char *buf, int len)
 {
-	const int rva2_min_len	= 6 + 1 + 2 + 1;
+	const int rva2_min_len = 6 + 1 + 2 + 1;
 
-	int audiophile_rg	= 0;
-	int channel		= 0;
-	int16_t volume_adj	= 0;
-	int peak_bits		= 0;
-	int peak_bytes		= 0;
-	int peak_shift		= 0;
-	uint32_t peak		= 0;
+	int audiophile_rg = 0;
+	int channel = 0;
+	int16_t volume_adj = 0;
+	int peak_bits = 0;
+	int peak_bytes = 0;
+	int peak_shift = 0;
+	uint32_t peak = 0;
 
-	char *gain_str		= NULL;
-	char *peak_str		= NULL;
+	char *gain_str = NULL;
+	char *peak_str = NULL;
 
 	int i;
 
@@ -904,7 +910,8 @@ static void decode_rva2(struct id3tag *id3, const char *buf, int len)
 	peak_shift = ((8 - (peak_bits & 7)) & 7) + (4 - peak_bytes) * 8;
 
 	if (len < rva2_min_len + peak_bytes) {
-		id3_debug("peak data %d does not fit frame with length %d\n", peak_bytes, len);
+		id3_debug("peak data %d does not fit frame with length %d\n",
+			  peak_bytes, len);
 		return;
 	}
 
@@ -916,13 +923,17 @@ static void decode_rva2(struct id3tag *id3, const char *buf, int len)
 	gain_str = xnew(char, 32);
 	snprintf(gain_str, 32, "%lf dB", volume_adj / 512.0);
 
-	add_v2(id3, audiophile_rg ? ID3_RG_ALBUM_GAIN : ID3_RG_TRACK_GAIN, gain_str);
+	add_v2(id3, audiophile_rg ? ID3_RG_ALBUM_GAIN : ID3_RG_TRACK_GAIN,
+	       gain_str);
 
 	if (peak_bytes) {
 		peak_str = xnew(char, 32);
-		snprintf(peak_str, 32, "%lf", ((double)peak * (1 << peak_shift)) / INT_MAX);
+		snprintf(peak_str, 32, "%lf",
+			 ((double)peak * (1 << peak_shift)) / INT_MAX);
 
-		add_v2(id3, audiophile_rg ? ID3_RG_ALBUM_PEAK : ID3_RG_TRACK_PEAK, peak_str);
+		add_v2(id3,
+		       audiophile_rg ? ID3_RG_ALBUM_PEAK : ID3_RG_TRACK_PEAK,
+		       peak_str);
 	}
 
 	id3_debug("gain %s, peak %s\n", gain_str, peak_str ? peak_str : "none");
@@ -944,8 +955,8 @@ static void decode_ufid(struct id3tag *id3, const char *buf, int len)
 	add_v2(id3, ID3_MUSICBRAINZ_TRACKID, ufid);
 }
 
-
-static void v2_add_frame(struct id3tag *id3, struct v2_frame_header *fh, const char *buf)
+static void v2_add_frame(struct id3tag *id3, struct v2_frame_header *fh,
+			 const char *buf)
 {
 	int encoding;
 	int len;
@@ -1024,7 +1035,8 @@ static int v2_read(struct id3tag *id3, int fd, const struct v2_header *header)
 	if (header->flags & V2_HEADER_EXTENDED) {
 		struct v2_extended_header ext;
 
-		if (!v2_extended_header_parse(&ext, buf) || ext.size > buf_size) {
+		if (!v2_extended_header_parse(&ext, buf) ||
+		    ext.size > buf_size) {
 			id3_debug("extended header corrupted\n");
 			free(buf);
 			return -2;
@@ -1065,13 +1077,14 @@ static int v2_read(struct id3tag *id3, int fd, const struct v2_header *header)
 			/*
 			 * Ignore the frame length 4-byte field
 			 */
-			i	+= 4;
-			fh.size	-= 4;
+			i += 4;
+			fh.size -= 4;
 		}
 
 		len_unsync = fh.size;
 
-		if ((fh.flags & V2_FRAME_UNSYNC) || (header->flags & V2_HEADER_UNSYNC))
+		if ((fh.flags & V2_FRAME_UNSYNC) ||
+		    (header->flags & V2_HEADER_UNSYNC))
 			unsync((unsigned char *)(buf + i), (int *)&fh.size);
 
 		v2_add_frame(id3, &fh, buf + i);
@@ -1083,32 +1096,9 @@ static int v2_read(struct id3tag *id3, int fd, const struct v2_header *header)
 	return 0;
 }
 
-int id3_tag_size(const char *buf, int buf_size)
-{
-	struct v2_header header;
-
-	if (buf_size < 10)
-		return 0;
-	if (v2_header_parse(&header, buf)) {
-		if (header.flags & V2_HEADER_FOOTER) {
-			/* header + data + footer */
-			id3_debug("v2.%d.%d with footer\n", header.ver_major, header.ver_minor);
-			return 10 + header.size + 10;
-		}
-		/* header */
-		id3_debug("v2.%d.%d\n", header.ver_major, header.ver_minor);
-		return 10 + header.size;
-	}
-	if (buf_size >= 3 && is_v1(buf)) {
-		id3_debug("v1\n");
-		return 128;
-	}
-	return 0;
-}
-
 void id3_init(struct id3tag *id3)
 {
-	const struct id3tag t = { .has_v1 = 0, .has_v2 = 0 };
+	const struct id3tag t = {.has_v2 = 0};
 	*id3 = t;
 }
 
@@ -1120,67 +1110,51 @@ void id3_free(struct id3tag *id3)
 		free(id3->v2[i]);
 }
 
-int id3_read_tags(struct id3tag *id3, int fd, unsigned int flags)
+int id3_read_tags(struct id3tag *id3, int fd)
 {
+	struct v2_header header;
+	char buf[138];
 	off_t off;
 	int rc;
 
-	if (flags & ID3_V2) {
-		struct v2_header header;
-		char buf[138];
-
-		rc = read_all(fd, buf, 10);
+	rc = read_all(fd, buf, 10);
+	if (rc == -1)
+		goto rc_error;
+	if (v2_header_parse(&header, buf)) {
+		rc = v2_read(id3, fd, &header);
+		if (rc)
+			goto rc_error;
+	} else {
+		/* ID3v2 tag may be at the end of the file.
+		 * Read the last 138 bytes: potentially [footer(10)][ID3v1(128)]
+		 * or [tag-data][footer(10)][EOF]. is_v1 detects the layout. */
+		off = lseek(fd, -138, SEEK_END);
+		if (off == -1)
+			goto error;
+		rc = read_all(fd, buf, 138);
 		if (rc == -1)
 			goto rc_error;
-		if (v2_header_parse(&header, buf)) {
-			rc = v2_read(id3, fd, &header);
-			if (rc)
-				goto rc_error;
-			/* get v1 if needed */
-		} else {
-			/* get v2 from end and optionally v1 */
 
-			off = lseek(fd, -138, SEEK_END);
-			if (off == -1)
-				goto error;
-			rc = read_all(fd, buf, 138);
-			if (rc == -1)
-				goto rc_error;
-
-			if (is_v1(buf + 10)) {
-				if (flags & ID3_V1) {
-					memcpy(id3->v1, buf + 10, 128);
-					id3->has_v1 = 1;
-				}
-				if (v2_footer_parse(&header, buf)) {
-					/* footer at end of file - 128 */
-					off = lseek(fd, -((off_t) header.size + 138), SEEK_END);
-					if (off == -1)
-						goto error;
-					rc = v2_read(id3, fd, &header);
-					if (rc)
-						goto rc_error;
-				}
-			} else if (v2_footer_parse(&header, buf + 128)) {
-				/* footer at end of file */
-				off = lseek(fd, -((off_t) header.size + 10), SEEK_END);
+		if (is_v1(buf + 10)) {
+			/* ID3v1 tag present: look for ID3v2 footer before it */
+			if (v2_footer_parse(&header, buf)) {
+				off = lseek(fd, -((off_t)header.size + 138),
+					    SEEK_END);
 				if (off == -1)
 					goto error;
 				rc = v2_read(id3, fd, &header);
 				if (rc)
 					goto rc_error;
 			}
-			return 0;
+		} else if (v2_footer_parse(&header, buf + 128)) {
+			/* ID3v2 footer at end of file, no ID3v1 tag */
+			off = lseek(fd, -((off_t)header.size + 10), SEEK_END);
+			if (off == -1)
+				goto error;
+			rc = v2_read(id3, fd, &header);
+			if (rc)
+				goto rc_error;
 		}
-	}
-	if (flags & ID3_V1) {
-		off = lseek(fd, -128, SEEK_END);
-		if (off == -1)
-			goto error;
-		rc = read_all(fd, id3->v1, 128);
-		if (rc == -1)
-			goto rc_error;
-		id3->has_v1 = is_v1(id3->v1);
 	}
 	return 0;
 error:
@@ -1189,65 +1163,10 @@ rc_error:
 	return rc;
 }
 
-static char *v1_get_str(const char *buf, int len)
-{
-	char in[32];
-	char *out;
-	int i;
-
-	for (i = len - 1; i >= 0; i--) {
-		if (buf[i] != 0 && buf[i] != ' ')
-			break;
-	}
-	if (i == -1)
-		return NULL;
-	memcpy(in, buf, i + 1);
-	in[i + 1] = 0;
-	if (u_is_valid(in))
-		return xstrdup(in);
-	if (utf8_encode(in, id3_default_charset, &out))
-		return NULL;
-	return out;
-}
-
 char *id3_get_comment(struct id3tag *id3, enum id3_key key)
 {
-	if (id3->has_v2) {
-		if (id3->v2[key])
-			return xstrdup(id3->v2[key]);
-	}
-	if (id3->has_v1) {
-		switch (key) {
-		case ID3_ARTIST:
-			return v1_get_str(id3->v1 + 33, 30);
-		case ID3_ALBUM:
-			return v1_get_str(id3->v1 + 63, 30);
-		case ID3_TITLE:
-			return v1_get_str(id3->v1 + 3, 30);
-		case ID3_DATE:
-			return v1_get_str(id3->v1 + 93, 4);
-		case ID3_GENRE:
-			{
-				unsigned char idx = id3->v1[127];
-
-				if (idx >= NR_GENRES)
-					return NULL;
-				return xstrdup(genres[idx]);
-			}
-		case ID3_TRACK:
-			{
-				char *t;
-
-				if (id3->v1[125] != 0)
-					return NULL;
-				t = xnew(char, 4);
-				snprintf(t, 4, "%d", ((unsigned char *)id3->v1)[126]);
-				return t;
-			}
-		default:
-			return NULL;
-		}
-	}
+	if (id3->has_v2 && id3->v2[key])
+		return xstrdup(id3->v2[key]);
 	return NULL;
 }
 

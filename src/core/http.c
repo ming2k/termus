@@ -1,21 +1,21 @@
 #include "core/http.h"
-#include "common/file.h"
 #include "common/debug.h"
-#include "common/xmalloc.h"
+#include "common/file.h"
 #include "common/gbuf.h"
+#include "common/xmalloc.h"
 
-#include <stdio.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <netinet/in.h>
-#include <netdb.h>
 #include <arpa/inet.h>
-#include <string.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 /*
  * @uri is http://[user[:pass]@]host[:port][/path][?query]
@@ -29,7 +29,7 @@ int http_parse_uri(const char *uri, struct http_uri *u)
 	const char *str, *colon, *at, *slash, *host_start;
 
 	/* initialize all fields */
-	u->uri  = xstrdup(uri);
+	u->uri = xstrdup(uri);
 	u->user = NULL;
 	u->pass = NULL;
 	u->host = NULL;
@@ -107,7 +107,7 @@ void http_free_uri(struct http_uri *u)
 	free(u->host);
 	free(u->path);
 
-	u->uri  = NULL;
+	u->uri = NULL;
 	u->user = NULL;
 	u->pass = NULL;
 	u->host = NULL;
@@ -116,9 +116,7 @@ void http_free_uri(struct http_uri *u)
 
 int http_open(struct http_get *hg, int timeout_ms)
 {
-	const struct addrinfo hints = {
-		.ai_socktype = SOCK_STREAM
-	};
+	const struct addrinfo hints = {.ai_socktype = SOCK_STREAM};
 	struct addrinfo *result;
 	union {
 		struct sockaddr sa;
@@ -140,8 +138,10 @@ int http_open(struct http_get *hg, int timeout_ms)
 		hg->proxy = NULL;
 	}
 
-	snprintf(port, sizeof(port), "%d", hg->proxy ? hg->proxy->port : hg->uri.port);
-	rc = getaddrinfo(hg->proxy ? hg->proxy->host : hg->uri.host, port, &hints, &result);
+	snprintf(port, sizeof(port), "%d",
+		 hg->proxy ? hg->proxy->port : hg->uri.port);
+	rc = getaddrinfo(hg->proxy ? hg->proxy->host : hg->uri.host, port,
+			 &hints, &result);
 	if (rc != 0) {
 		d_print("getaddrinfo: %s\n", gai_strerror(rc));
 		return -1;
@@ -163,7 +163,8 @@ int http_open(struct http_get *hg, int timeout_ms)
 	while (1) {
 		fd_set wfds;
 
-		d_print("connecting. timeout=%lld s %lld us\n", (long long)tv.tv_sec, (long long)tv.tv_usec);
+		d_print("connecting. timeout=%lld s %lld us\n",
+			(long long)tv.tv_sec, (long long)tv.tv_usec);
 		if (connect(hg->fd, &addr.sa, addrlen) == 0)
 			break;
 		if (errno == EISCONN)
@@ -214,7 +215,8 @@ static int http_write(int fd, const char *buf, int count, int timeout_ms)
 		fd_set wfds;
 		int rc;
 
-		d_print("timeout=%lld s %lld us\n", (long long)tv.tv_sec, (long long)tv.tv_usec);
+		d_print("timeout=%lld s %lld us\n", (long long)tv.tv_sec,
+			(long long)tv.tv_usec);
 
 		FD_ZERO(&wfds);
 		FD_SET(fd, &wfds);
@@ -435,7 +437,8 @@ void http_get_free(struct http_get *hg)
 
 char *base64_encode(const char *str)
 {
-	static const char t[64] TERMUS_NONSTRING = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	static const char t[64] TERMUS_NONSTRING =
+	    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	int str_len, buf_len, i, s, d;
 	char *buf;
 	unsigned char b0, b1, b2;

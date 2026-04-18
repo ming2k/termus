@@ -1,10 +1,10 @@
 #include "common/prog.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
 #include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 char *program_name = NULL;
 
@@ -58,7 +58,7 @@ static int short_option(int ch, const struct option *options)
 {
 	int i;
 
-	for (i = 0; ; i++) {
+	for (i = 0;; i++) {
 		if (!options[i].short_opt) {
 			if (!options[i].long_opt)
 				die("unrecognized option `-%c'\n", ch);
@@ -78,7 +78,8 @@ static int long_option(const char *opt, const struct option *options)
 	idx = -1;
 	num = 0;
 	for (i = 0; options[i].short_opt || options[i].long_opt; i++) {
-		if (options[i].long_opt && strncmp(opt, options[i].long_opt, len) == 0) {
+		if (options[i].long_opt &&
+		    strncmp(opt, options[i].long_opt, len) == 0) {
 			idx = i;
 			num++;
 			if (options[i].long_opt[len] == 0) {

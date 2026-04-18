@@ -1,21 +1,20 @@
-#include "app/options_registry.h"
 #include "app/options_parse.h"
+#include "app/options_registry.h"
 #include "common/gbuf.h"
 #include "common/msg.h"
 #include "common/utils.h"
 
 #include <strings.h>
 
-const char * const options_bool_names[] = {
-	"false", "true", NULL
-};
+const char *const options_bool_names[] = {"false", "true", NULL};
 
 int options_parse_bool(const char *buf, int *val)
 {
 	return parse_enum(buf, 0, 1, options_bool_names, val);
 }
 
-int parse_enum(const char *buf, int minval, int maxval, const char * const names[], int *val)
+int parse_enum(const char *buf, int minval, int maxval,
+	       const char *const names[], int *val)
 {
 	long int tmp;
 	int i;
@@ -40,7 +39,8 @@ err:
 			gbuf_add_str(&names_buf, ", ");
 		gbuf_add_str(&names_buf, names[i]);
 	}
-	error_msg("expected [%d..%d] or [%s]", minval, maxval, names_buf.buffer);
+	error_msg("expected [%d..%d] or [%s]", minval, maxval,
+		  names_buf.buffer);
 	gbuf_free(&names_buf);
 	return 0;
 }

@@ -1,3 +1,5 @@
+ACLOCAL_AMFLAGS = -I m4
+
 SUBDIRS = src src/plugins/input src/plugins/output tests man data
 
 EXTRA_DIST = \

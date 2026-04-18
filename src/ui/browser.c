@@ -1,20 +1,20 @@
 #include "ui/browser.h"
-#include "library/load_dir.h"
+#include "app/options_library_state.h"
 #include "app/termus.h"
-#include "common/xmalloc.h"
-#include "ui/ui_curses.h"
 #include "common/file.h"
 #include "common/misc.h"
-#include "app/options_library_state.h"
 #include "common/uchar.h"
+#include "common/xmalloc.h"
+#include "library/load_dir.h"
+#include "ui/ui_curses.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <dirent.h>
-#include <string.h>
 #include <errno.h>
+#include <string.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 struct window *browser_win;
 struct searchable *browser_searchable;
@@ -22,7 +22,8 @@ char *browser_dir;
 
 static LIST_HEAD(browser_head);
 
-static inline void browser_entry_to_iter(struct browser_entry *e, struct iter *iter)
+static inline void browser_entry_to_iter(struct browser_entry *e,
+					 struct iter *iter)
 {
 	iter->data0 = &browser_head;
 	iter->data1 = e;
@@ -51,7 +52,8 @@ static int hidden_filter(const char *name, const struct stat *s)
 }
 
 /* only works for BROWSER_ENTRY_DIR and BROWSER_ENTRY_FILE */
-static int entry_cmp(const struct browser_entry *a, const struct browser_entry *b)
+static int entry_cmp(const struct browser_entry *a,
+		     const struct browser_entry *b)
 {
 	if (a->type == BROWSER_ENTRY_DIR) {
 		if (b->type == BROWSER_ENTRY_FILE)
@@ -129,16 +131,19 @@ static int do_browser_load(const char *name)
 		free_browser_list();
 
 		if (buf) {
-			struct browser_entry *parent_dir_e = xmalloc(sizeof(struct browser_entry) + 4);
+			struct browser_entry *parent_dir_e =
+			    xmalloc(sizeof(struct browser_entry) + 4);
 			strcpy(parent_dir_e->name, "../");
 			parent_dir_e->type = BROWSER_ENTRY_DIR;
 			list_add_tail(&parent_dir_e->node, &browser_head);
 
-			termus_playlist_for_each(buf, size, 0, add_pl_line, NULL);
+			termus_playlist_for_each(buf, size, 0, add_pl_line,
+						 NULL);
 			munmap(buf, size);
 		}
 	} else if (S_ISDIR(st.st_mode)) {
-		int (*filter)(const char *, const struct stat *) = normal_filter;
+		int (*filter)(const char *, const struct stat *) =
+		    normal_filter;
 		struct directory dir;
 		const char *str;
 		int root = !strcmp(name, "/");
@@ -176,7 +181,8 @@ static int do_browser_load(const char *name)
 			while (item != &browser_head) {
 				struct browser_entry *other;
 
-				other = container_of(item, struct browser_entry, node);
+				other = container_of(item, struct browser_entry,
+						     node);
 				if (entry_cmp(e, other) >= 0)
 					break;
 				item = item->prev;
@@ -210,15 +216,19 @@ static int browser_load(const char *name)
 	return 0;
 }
 
-static GENERIC_ITER_PREV(browser_get_prev, struct browser_entry, node)
-static GENERIC_ITER_NEXT(browser_get_next, struct browser_entry, node)
+static GENERIC_ITER_PREV(browser_get_prev, struct browser_entry,
+			 node) static GENERIC_ITER_NEXT(browser_get_next,
+							struct browser_entry,
+							node)
 
-static int browser_search_get_current(void *data, struct iter *iter, enum search_direction dir)
+    static int browser_search_get_current(void *data, struct iter *iter,
+					  enum search_direction dir)
 {
 	return window_get_sel(browser_win, iter);
 }
 
-static int browser_search_matches(void *data, struct iter *iter, const char *text)
+static int browser_search_matches(void *data, struct iter *iter,
+				  const char *text)
 {
 	char **words = get_words(text);
 	int matched = 0;
@@ -228,7 +238,7 @@ static int browser_search_matches(void *data, struct iter *iter, const char *tex
 		int i;
 
 		e = iter_to_browser_entry(iter);
-		for (i = 0; ; i++) {
+		for (i = 0;; i++) {
 			if (words[i] == NULL) {
 				window_set_sel(browser_win, iter);
 				matched = 1;
@@ -243,11 +253,10 @@ static int browser_search_matches(void *data, struct iter *iter, const char *tex
 }
 
 static const struct searchable_ops browser_search_ops = {
-	.get_prev = browser_get_prev,
-	.get_next = browser_get_next,
-	.get_current = browser_search_get_current,
-	.matches = browser_search_matches
-};
+    .get_prev = browser_get_prev,
+    .get_next = browser_get_next,
+    .get_current = browser_search_get_current,
+    .matches = browser_search_matches};
 
 void browser_init(void)
 {
@@ -323,7 +332,8 @@ void browser_up(void)
 			browser_up();
 			return;
 		}
-		error_msg("could not open directory '%s': %s\n", new, strerror(errno));
+		error_msg("could not open directory '%s': %s\n", new,
+			  strerror(errno));
 		free(new);
 		free(pos);
 		return;
@@ -331,7 +341,8 @@ void browser_up(void)
 	free(new);
 
 	/* select old position */
-	list_for_each_entry(e, &browser_head, node) {
+	list_for_each_entry(e, &browser_head, node)
+	{
 		if (strncmp(e->name, pos, len) == 0 &&
 		    (e->name[len] == '/' || e->name[len] == '\0')) {
 			struct iter iter;
@@ -359,14 +370,16 @@ static void browser_cd(const char *dir)
 	if (new[len - 1] == '/')
 		new[len - 1] = 0;
 	if (browser_load(new))
-		error_msg("could not open directory '%s': %s\n", dir, strerror(errno));
+		error_msg("could not open directory '%s': %s\n", dir,
+			  strerror(errno));
 	free(new);
 }
 
 static void browser_cd_playlist(const char *filename)
 {
 	if (browser_load(filename))
-		error_msg("could not read playlist '%s': %s\n", filename, strerror(errno));
+		error_msg("could not read playlist '%s': %s\n", filename,
+			  strerror(errno));
 }
 
 void browser_enter(void)
@@ -430,7 +443,8 @@ char *browser_get_sel_name(void)
 void browser_set_sel_name(const char *name)
 {
 	struct browser_entry *e;
-	list_for_each_entry(e, &browser_head, node) {
+	list_for_each_entry(e, &browser_head, node)
+	{
 		if (strcmp(e->name, name) == 0) {
 			struct iter iter;
 			browser_entry_to_iter(e, &iter);
@@ -456,9 +470,11 @@ void browser_delete(void)
 		char *name;
 
 		name = fullname(browser_dir, e->name);
-		if (yes_no_query("Delete file '%s'? [y/N]", e->name) == QUERY_ANSWER_YES) {
+		if (yes_no_query("Delete file '%s'? [y/N]", e->name) ==
+		    QUERY_ANSWER_YES) {
 			if (unlink(name) == -1) {
-				error_msg("deleting '%s': %s", e->name, strerror(errno));
+				error_msg("deleting '%s': %s", e->name,
+					  strerror(errno));
 			} else {
 				window_row_vanishes(browser_win, &sel);
 				list_del(&e->node);
@@ -484,7 +500,8 @@ void browser_reload(void)
 
 	/* have to use tmp  */
 	if (browser_load(tmp)) {
-		error_msg("could not update contents '%s': %s\n", tmp, strerror(errno));
+		error_msg("could not update contents '%s': %s\n", tmp,
+			  strerror(errno));
 		free(tmp);
 		free(sel);
 		return;
@@ -492,7 +509,8 @@ void browser_reload(void)
 
 	if (sel) {
 		/* set selection */
-		list_for_each_entry(e, &browser_head, node) {
+		list_for_each_entry(e, &browser_head, node)
+		{
 			if (strcmp(e->name, sel) == 0) {
 				browser_entry_to_iter(e, &iter);
 				window_set_sel(browser_win, &iter);

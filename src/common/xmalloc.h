@@ -11,11 +11,11 @@
 
 void malloc_fail(void) TERMUS_NORETURN;
 
-#define xnew(type, n)		(type *)xmalloc(sizeof(type) * (n))
-#define xnew0(type, n)		(type *)xmalloc0(sizeof(type) * (n))
-#define xrenew(type, mem, n)	(type *)xrealloc(mem, sizeof(type) * (n))
+#define xnew(type, n) (type *)xmalloc(sizeof(type) * (n))
+#define xnew0(type, n) (type *)xmalloc0(sizeof(type) * (n))
+#define xrenew(type, mem, n) (type *)xrealloc(mem, sizeof(type) * (n))
 
-static inline void * TERMUS_MALLOC xmalloc(size_t size)
+static inline void *TERMUS_MALLOC xmalloc(size_t size)
 {
 	void *ptr = malloc(size);
 
@@ -24,7 +24,7 @@ static inline void * TERMUS_MALLOC xmalloc(size_t size)
 	return ptr;
 }
 
-static inline void * TERMUS_MALLOC xmalloc0(size_t size)
+static inline void *TERMUS_MALLOC xmalloc0(size_t size)
 {
 	void *ptr = calloc(1, size);
 
@@ -33,7 +33,7 @@ static inline void * TERMUS_MALLOC xmalloc0(size_t size)
 	return ptr;
 }
 
-static inline void * TERMUS_MALLOC xrealloc(void *ptr, size_t size)
+static inline void *TERMUS_MALLOC xrealloc(void *ptr, size_t size)
 {
 	ptr = realloc(ptr, size);
 	if (unlikely(ptr == NULL))
@@ -41,7 +41,7 @@ static inline void * TERMUS_MALLOC xrealloc(void *ptr, size_t size)
 	return ptr;
 }
 
-static inline char * TERMUS_MALLOC xstrdup(const char *str)
+static inline char *TERMUS_MALLOC xstrdup(const char *str)
 {
 #ifdef HAVE_STRDUP
 	char *s = strdup(str);
@@ -51,12 +51,12 @@ static inline char * TERMUS_MALLOC xstrdup(const char *str)
 #else
 	size_t size = strlen(str) + 1;
 	void *ptr = xmalloc(size);
-	return (char *) memcpy(ptr, str, size);
+	return (char *)memcpy(ptr, str, size);
 #endif
 }
 
 #ifdef HAVE_STRNDUP
-static inline char * TERMUS_MALLOC xstrndup(const char *str, size_t n)
+static inline char *TERMUS_MALLOC xstrndup(const char *str, size_t n)
 {
 	char *s = strndup(str, n);
 	if (unlikely(s == NULL))
@@ -64,7 +64,7 @@ static inline char * TERMUS_MALLOC xstrndup(const char *str, size_t n)
 	return s;
 }
 #else
-char * TERMUS_MALLOC xstrndup(const char *str, size_t n);
+char *TERMUS_MALLOC xstrndup(const char *str, size_t n);
 #endif
 
 static inline void free_str_array(char **array)

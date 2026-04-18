@@ -4,7 +4,6 @@
 
 #include <stddef.h>
 
-char *cdda_device = NULL;
 char *output_plugin = NULL;
 static char *server_password;
 int scroll_offset = 2;
@@ -14,10 +13,7 @@ char *id3_default_charset = NULL;
 char *icecast_default_charset = NULL;
 char **pl_env_vars;
 
-const char *options_get_server_password(void)
-{
-	return server_password;
-}
+const char *options_get_server_password(void) { return server_password; }
 
 void options_set_server_password(const char *password)
 {

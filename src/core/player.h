@@ -15,7 +15,7 @@ enum {
 	PLAYER_ERROR_NOT_SUPPORTED
 };
 
-extern const char * const player_status_names[];
+extern const char *const player_status_names[];
 enum player_status {
 	PLAYER_STATUS_STOPPED,
 	PLAYER_STATUS_PLAYING,
@@ -97,8 +97,8 @@ void player_set_rg_limit(int limit);
 void player_set_rg_preamp(double db);
 void player_set_speed(double speed);
 
-#define VF_RELATIVE	0x01
-#define VF_PERCENTAGE	0x02
+#define VF_RELATIVE 0x01
+#define VF_PERCENTAGE 0x02
 int player_set_vol(int l, int lf, int r, int rf);
 
 void player_metadata_lock(void);

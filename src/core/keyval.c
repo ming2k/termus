@@ -1,5 +1,5 @@
-#include "common/debug.h"
 #include "core/keyval.h"
+#include "common/debug.h"
 #include "common/xmalloc.h"
 
 #include <strings.h>
@@ -84,7 +84,8 @@ void keyvals_add(struct growing_keyvals *c, const char *key, char *val)
 	c->count++;
 }
 
-const char *keyvals_get_val_growing(const struct growing_keyvals *c, const char *key)
+const char *keyvals_get_val_growing(const struct growing_keyvals *c,
+				    const char *key)
 {
 	int i;
 

@@ -1,9 +1,9 @@
 #ifndef TERMUS_IP_H
 #define TERMUS_IP_H
 
+#include "core/channelmap.h"
 #include "core/keyval.h"
 #include "core/sf.h"
-#include "core/channelmap.h"
 
 #ifndef __GNUC__
 #include <fcntl.h>
@@ -74,7 +74,7 @@ struct input_plugin_ops {
 	int (*read)(struct input_plugin_data *ip_data, char *buffer, int count);
 	int (*seek)(struct input_plugin_data *ip_data, double offset);
 	int (*read_comments)(struct input_plugin_data *ip_data,
-			struct keyval **comments);
+			     struct keyval **comments);
 	int (*duration)(struct input_plugin_data *ip_data);
 	long (*bitrate)(struct input_plugin_data *ip_data);
 	long (*bitrate_current)(struct input_plugin_data *ip_data);
@@ -91,8 +91,8 @@ struct input_plugin_opt {
 /* symbols exported by plugin */
 extern const struct input_plugin_ops ip_ops;
 extern const int ip_priority;
-extern const char * const ip_extensions[];
-extern const char * const ip_mime_types[];
+extern const char *const ip_extensions[];
+extern const char *const ip_mime_types[];
 extern const struct input_plugin_opt ip_options[];
 extern const unsigned ip_abi_version;
 

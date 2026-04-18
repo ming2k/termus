@@ -1,31 +1,28 @@
-#include "common/utils.h"
 #include "ui/job.h"
-#include "common/worker.h"
-#include "library/cache.h"
-#include "common/xmalloc.h"
-#include "common/debug.h"
-#include "library/load_dir.h"
-#include "common/path.h"
-#include "library/editable.h"
-#include "library/pl.h"
-#include "library/play_queue.h"
-#include "library/lib.h"
-#include "common/utils.h"
-#include "common/file.h"
-#include "library/cache.h"
-#include "core/player.h"
-#include "core/discid.h"
-#include "common/xstrjoin.h"
-#include "ui/ui_curses.h"
-#include "core/cue_utils.h"
-#include "library/pl_env.h"
 #include "app/options_core_state.h"
+#include "common/debug.h"
+#include "common/file.h"
 #include "common/misc.h"
+#include "common/path.h"
+#include "common/utils.h"
+#include "common/worker.h"
+#include "common/xmalloc.h"
+#include "common/xstrjoin.h"
+#include "core/cue_utils.h"
+#include "core/player.h"
+#include "library/cache.h"
+#include "library/editable.h"
+#include "library/lib.h"
+#include "library/load_dir.h"
+#include "library/pl.h"
+#include "library/pl_env.h"
+#include "library/play_queue.h"
+#include "ui/ui_curses.h"
 
-#include <string.h>
-#include <unistd.h>
 #include <errno.h>
+#include <string.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 enum job_result_var {
 	JOB_RES_ADD,
@@ -153,7 +150,8 @@ static void add_file(const char *filename, int force)
 	struct track_info *ti;
 
 	if (!is_cue_url(filename)) {
-		if (force || lookup_cache_entry(filename, hash_str(filename)) == NULL) {
+		if (force ||
+		    lookup_cache_entry(filename, hash_str(filename)) == NULL) {
 			int done = add_file_cue(filename);
 			if (done)
 				return;
@@ -188,29 +186,7 @@ static int add_file_cue(const char *filename)
 	return 1;
 }
 
-static void add_url(const char *url)
-{
-	add_file(url, 0);
-}
-
-static void add_cdda(const char *url)
-{
-	char *disc_id = NULL;
-	int start_track = 1, end_track = -1;
-
-	parse_cdda_url(url, &disc_id, &start_track, &end_track);
-
-	if (end_track != -1) {
-		int i;
-		for (i = start_track; i <= end_track; i++) {
-			char *new_url = gen_cdda_url(disc_id, i, -1);
-			add_file(new_url, 0);
-			free(new_url);
-		}
-	} else
-		add_file(url, 0);
-	free(disc_id);
-}
+static void add_url(const char *url) { add_file(url, 0); }
 
 struct dir_list_entry {
 	struct list_head node;
@@ -218,7 +194,8 @@ struct dir_list_entry {
 	char *path;
 };
 
-static void dir_list_truncate(struct list_head *head, struct list_head *new_tail)
+static void dir_list_truncate(struct list_head *head,
+			      struct list_head *new_tail)
 {
 	if (head->prev == new_tail)
 		return;
@@ -233,14 +210,15 @@ static void dir_list_truncate(struct list_head *head, struct list_head *new_tail
 	new_tail->next = head;
 
 	struct dir_list_entry *d, *next;
-	list_for_each_entry_safe(d, next, &to_remove, node) {
+	list_for_each_entry_safe(d, next, &to_remove, node)
+	{
 		free(d->path);
 		free(d);
 	}
 }
 
 static void dir_list(const char *dirname, const char *root,
-		struct ptr_array *files, struct list_head *dirs)
+		     struct ptr_array *files, struct list_head *dirs)
 {
 	struct directory dir;
 	const char *name;
@@ -252,7 +230,8 @@ static void dir_list(const char *dirname, const char *root,
 		return;
 	}
 	while ((name = dir_read(&dir))) {
-		if (strcmp(name, ".nomusic") == 0 || strcmp(name, ".nomedia") == 0) {
+		if (strcmp(name, ".nomusic") == 0 ||
+		    strcmp(name, ".nomedia") == 0) {
 			ptr_array_truncate(files, files_backup);
 			dir_list_truncate(dirs, dirs_backup);
 			break;
@@ -277,7 +256,7 @@ static void dir_list(const char *dirname, const char *root,
 }
 
 static void dir_list_recursive(const char *dirname, const char *root,
-		struct ptr_array *files)
+			       struct ptr_array *files)
 {
 	struct list_head dirs;
 	list_init(&dirs);
@@ -311,12 +290,13 @@ static void handle_cue_files(struct ptr_array *files)
 
 		char **files_in_cue;
 		int n = cue_get_files(ents[i], &files_in_cue);
-		if (n == -1) 
+		if (n == -1)
 			continue;
 		char *cue_dir = path_dirname(ents[i]);
 
 		for (j = 0; j < n; j++) {
-			char *path = path_absolute_cwd(files_in_cue[j], cue_dir);
+			char *path =
+			    path_absolute_cwd(files_in_cue[j], cue_dir);
 			k = ptr_array_bsearch(&path, files, strptrcmp);
 			if (k >= 0)
 				to_remove[k] = true;
@@ -370,7 +350,8 @@ static int handle_line(void *data, const char *line)
 	if (is_http_url(line) || is_cue_url(line)) {
 		add_url(line);
 	} else {
-		char *absolute = (pl_env_vars && *pl_env_vars && pl_env_var(line, NULL))
+		char *absolute =
+		    (pl_env_vars && *pl_env_vars && pl_env_var(line, NULL))
 			? pl_env_expand(line)
 			: path_absolute_cwd(line, data);
 		add_file(absolute, 0);
@@ -408,9 +389,6 @@ static void do_add_job(void *data)
 	switch (jd->type) {
 	case FILE_TYPE_URL:
 		add_url(jd->name);
-		break;
-	case FILE_TYPE_CDDA:
-		add_cdda(jd->name);
 		break;
 	case FILE_TYPE_PL:
 		add_pl(jd->name);
@@ -465,9 +443,11 @@ static void do_update_job(void *data)
 		int rc;
 
 		rc = stat(ti->filename, &s);
-		if (rc || d->force || ti->mtime != s.st_mtime || ti->duration == 0) {
+		if (rc || d->force || ti->mtime != s.st_mtime ||
+		    ti->duration == 0) {
 			kind[i] = UPDATE_NONE;
-			if (!is_cue_url(ti->filename) && !is_http_url(ti->filename) && rc)
+			if (!is_cue_url(ti->filename) &&
+			    !is_http_url(ti->filename) && rc)
 				kind[i] |= UPDATE_REMOVE;
 			else if (ti->mtime != s.st_mtime)
 				kind[i] |= UPDATE_MTIME_CHANGED;
@@ -523,7 +503,7 @@ static void job_handle_update_result(struct job_result *res)
 				d_print("mtime changed: %s\n", ti->filename);
 			force = ti->duration == 0;
 			termus_add(lib_add_track, ti->filename, FILE_TYPE_FILE,
-					JOB_TYPE_LIB, force, NULL);
+				   JOB_TYPE_LIB, force, NULL);
 		}
 
 		track_info_unref(ti);
@@ -536,7 +516,7 @@ static void job_handle_update_result(struct job_result *res)
 void job_schedule_update(struct update_data *data)
 {
 	worker_add_job(JOB_TYPE_LIB | JOB_TYPE_UPDATE, do_update_job,
-			free_update_job, data);
+		       free_update_job, data);
 }
 
 static void do_update_cache_job(void *data)
@@ -557,10 +537,7 @@ static void do_update_cache_job(void *data)
 	job_push_result(res);
 }
 
-static void free_update_cache_job(void *data)
-{
-	free(data);
-}
+static void free_update_cache_job(void *data) { free(data); }
 
 static void job_handle_update_cache_result(struct job_result *res)
 {
@@ -590,7 +567,7 @@ static void job_handle_update_cache_result(struct job_result *res)
 void job_schedule_update_cache(int type, struct update_cache_data *data)
 {
 	worker_add_job(type | JOB_TYPE_UPDATE_CACHE, do_update_cache_job,
-			free_update_cache_job, data);
+		       free_update_cache_job, data);
 }
 
 static void do_pl_delete_job(void *data)
@@ -623,7 +600,7 @@ static void job_handle_pl_delete_result(struct job_result *res)
 void job_schedule_pl_delete(struct pl_delete_data *data)
 {
 	worker_add_job(JOB_TYPE_PL | JOB_TYPE_DELETE, do_pl_delete_job,
-			free_pl_delete_job, data);
+		       free_pl_delete_job, data);
 }
 
 static void job_handle_result(struct job_result *res)

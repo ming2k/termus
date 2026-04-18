@@ -1,6 +1,6 @@
 #include "app/options_loader.h"
-#include "app/options_registry.h"
 #include "app/options_defaults.h"
+#include "app/options_registry.h"
 #include "common/misc.h"
 #include "common/msg.h"
 #include "common/prog.h"

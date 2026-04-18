@@ -1,6 +1,6 @@
+#include "core/cue_utils.h"
 #include "common/path.h"
 #include "common/utils.h"
-#include "core/cue_utils.h"
 #include "common/xmalloc.h"
 #include "library/cue.h"
 
@@ -11,7 +11,6 @@ int is_cue(const char *filename)
 	const char *ext = get_extension(filename);
 	return ext != NULL && strcmp(ext, "cue") == 0;
 }
-
 
 int cue_get_track_nums(const char *filename, int **out_nums)
 {
@@ -30,7 +29,6 @@ int cue_get_track_nums(const char *filename, int **out_nums)
 	return n;
 }
 
-
 int cue_get_files(const char *filename, char ***out_files)
 {
 	struct cue_sheet *cd = cue_from_file(filename);
@@ -42,7 +40,8 @@ int cue_get_files(const char *filename, char ***out_files)
 
 	int i = 0;
 	struct cue_track_file *tf;
-	list_for_each_entry(tf, &cd->files, node) {
+	list_for_each_entry(tf, &cd->files, node)
+	{
 		(*out_files)[i] = tf->file;
 		tf->file = NULL;
 		i++;
@@ -51,7 +50,6 @@ int cue_get_files(const char *filename, char ***out_files)
 	cue_free(cd);
 	return n;
 }
-
 
 char *construct_cue_url(const char *cue_filename, int track_n)
 {

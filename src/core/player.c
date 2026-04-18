@@ -1,63 +1,53 @@
 #include "core/player.h"
-#include "core/buffer.h"
-#include "core/input.h"
-#include "core/output.h"
-#include "core/sf.h"
-#include "core/op.h"
+#include "app/options_playback_state.h"
+#include "app/termus.h"
+#include "common/compiler.h"
+#include "common/debug.h"
 #include "common/utils.h"
 #include "common/xmalloc.h"
-#include "common/debug.h"
-#include "common/compiler.h"
-#include "app/options_playback_state.h"
+#include "core/buffer.h"
+#include "core/input.h"
+#include "core/op.h"
+#include "core/output.h"
+#include "core/sf.h"
 #include "ipc/mpris.h"
-#include "app/termus.h"
 #include "library/lib.h"
 #include "library/pl_env.h"
 
+#include <errno.h>
+#include <math.h>
+#include <pthread.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
-#include <errno.h>
 #include <string.h>
 #include <sys/time.h>
-#include <stdarg.h>
-#include <math.h>
 
-const char * const player_status_names[] = {
-	"stopped", "playing", "paused", NULL
-};
+const char *const player_status_names[] = {"stopped", "playing", "paused",
+					   NULL};
 
-enum producer_status {
-	PS_UNLOADED,
-	PS_STOPPED,
-	PS_PLAYING,
-	PS_PAUSED
-};
+enum producer_status { PS_UNLOADED, PS_STOPPED, PS_PLAYING, PS_PAUSED };
 
-enum consumer_status {
-	CS_STOPPED,
-	CS_PLAYING,
-	CS_PAUSED
-};
+enum consumer_status { CS_STOPPED, CS_PLAYING, CS_PAUSED };
 
 /* protects player_info_priv and player_metadata */
 static pthread_mutex_t player_info_mutex = TERMUS_MUTEX_INITIALIZER;
 struct player_info player_info;
 char player_metadata[255 * 16 + 1];
 static struct player_info player_info_priv = {
-	.ti = NULL,
-	.status = PLAYER_STATUS_STOPPED,
-	.pos = 0,
-	.current_bitrate = -1,
-	.buffer_fill = 0,
-	.buffer_size = 0,
-	.error_msg = NULL,
-	.file_changed = 0,
-	.metadata_changed = 0,
-	.status_changed = 0,
-	.position_changed = 0,
-	.buffer_fill_changed = 0,
-	.speed_changed = 0,
+    .ti = NULL,
+    .status = PLAYER_STATUS_STOPPED,
+    .pos = 0,
+    .current_bitrate = -1,
+    .buffer_fill = 0,
+    .buffer_size = 0,
+    .error_msg = NULL,
+    .file_changed = 0,
+    .metadata_changed = 0,
+    .status_changed = 0,
+    .position_changed = 0,
+    .buffer_fill_changed = 0,
+    .speed_changed = 0,
 };
 
 /* continue playing after track is finished? */
@@ -112,16 +102,16 @@ static double replaygain_scale = 1.0;
 #define consumer_lock() termus_mutex_lock(&consumer_mutex)
 #define consumer_unlock() termus_mutex_unlock(&consumer_mutex)
 
-#define player_lock() \
-	do { \
-		consumer_lock(); \
-		producer_lock(); \
+#define player_lock()                                                          \
+	do {                                                                   \
+		consumer_lock();                                               \
+		producer_lock();                                               \
 	} while (0)
 
-#define player_unlock() \
-	do { \
-		producer_unlock(); \
-		consumer_unlock(); \
+#define player_unlock()                                                        \
+	do {                                                                   \
+		producer_unlock();                                             \
+		consumer_unlock();                                             \
 	} while (0)
 
 /* locking }}} */
@@ -159,7 +149,8 @@ static sample_format_t get_output_sf(void)
 	sample_format_t sf = buffer_sf;
 
 	if (playback_speed != 1.0) {
-		unsigned int rate = (unsigned int)(sf_get_rate(sf) * playback_speed + 0.5);
+		unsigned int rate =
+		    (unsigned int)(sf_get_rate(sf) * playback_speed + 0.5);
 		if (rate < 1000)
 			rate = 1000;
 		if (rate > 192000)
@@ -175,20 +166,18 @@ static sample_format_t get_output_sf(void)
  * data copied from alsa-lib src/pcm/pcm_softvol.c
  */
 static const unsigned short soft_vol_db[100] = {
-	0x0000, 0x0110, 0x011c, 0x012f, 0x013d, 0x0152, 0x0161, 0x0179,
-	0x018a, 0x01a5, 0x01c1, 0x01d5, 0x01f5, 0x020b, 0x022e, 0x0247,
-	0x026e, 0x028a, 0x02b6, 0x02d5, 0x0306, 0x033a, 0x035f, 0x0399,
-	0x03c2, 0x0403, 0x0431, 0x0479, 0x04ac, 0x04fd, 0x0553, 0x058f,
-	0x05ef, 0x0633, 0x069e, 0x06ea, 0x0761, 0x07b5, 0x083a, 0x0898,
-	0x092c, 0x09cb, 0x0a3a, 0x0aeb, 0x0b67, 0x0c2c, 0x0cb6, 0x0d92,
-	0x0e2d, 0x0f21, 0x1027, 0x10de, 0x1202, 0x12cf, 0x1414, 0x14f8,
-	0x1662, 0x1761, 0x18f5, 0x1a11, 0x1bd3, 0x1db4, 0x1f06, 0x211d,
-	0x2297, 0x24ec, 0x2690, 0x292a, 0x2aff, 0x2de5, 0x30fe, 0x332b,
-	0x369f, 0x390d, 0x3ce6, 0x3f9b, 0x43e6, 0x46eb, 0x4bb3, 0x4f11,
-	0x5466, 0x5a18, 0x5e19, 0x6472, 0x68ea, 0x6ffd, 0x74f8, 0x7cdc,
-	0x826a, 0x8b35, 0x9499, 0x9b35, 0xa5ad, 0xad0b, 0xb8b7, 0xc0ee,
-	0xcdf1, 0xd71a, 0xe59c, 0xefd3
-};
+    0x0000, 0x0110, 0x011c, 0x012f, 0x013d, 0x0152, 0x0161, 0x0179, 0x018a,
+    0x01a5, 0x01c1, 0x01d5, 0x01f5, 0x020b, 0x022e, 0x0247, 0x026e, 0x028a,
+    0x02b6, 0x02d5, 0x0306, 0x033a, 0x035f, 0x0399, 0x03c2, 0x0403, 0x0431,
+    0x0479, 0x04ac, 0x04fd, 0x0553, 0x058f, 0x05ef, 0x0633, 0x069e, 0x06ea,
+    0x0761, 0x07b5, 0x083a, 0x0898, 0x092c, 0x09cb, 0x0a3a, 0x0aeb, 0x0b67,
+    0x0c2c, 0x0cb6, 0x0d92, 0x0e2d, 0x0f21, 0x1027, 0x10de, 0x1202, 0x12cf,
+    0x1414, 0x14f8, 0x1662, 0x1761, 0x18f5, 0x1a11, 0x1bd3, 0x1db4, 0x1f06,
+    0x211d, 0x2297, 0x24ec, 0x2690, 0x292a, 0x2aff, 0x2de5, 0x30fe, 0x332b,
+    0x369f, 0x390d, 0x3ce6, 0x3f9b, 0x43e6, 0x46eb, 0x4bb3, 0x4f11, 0x5466,
+    0x5a18, 0x5e19, 0x6472, 0x68ea, 0x6ffd, 0x74f8, 0x7cdc, 0x826a, 0x8b35,
+    0x9499, 0x9b35, 0xa5ad, 0xad0b, 0xb8b7, 0xc0ee, 0xcdf1, 0xd71a, 0xe59c,
+    0xefd3};
 
 static inline void scale_sample_int16_t(int16_t *buf, int i, int vol, int swap)
 {
@@ -246,35 +235,35 @@ static inline int sf_need_swap(sample_format_t sf)
 #endif
 }
 
-#define SCALE_SAMPLES(TYPE, buffer, count, l, r, swap)				\
-{										\
-	const int frames = count / sizeof(TYPE) / 2;				\
-	TYPE *buf = (void *) buffer;						\
-	int i;									\
-	/* avoid underflowing -32768 to 32767 when scale is 65536 */		\
-	if (l != SOFT_VOL_SCALE && r != SOFT_VOL_SCALE) {			\
-		for (i = 0; i < frames; i++) {					\
-			scale_sample_##TYPE(buf, i * 2, l, swap);		\
-			scale_sample_##TYPE(buf, i * 2 + 1, r, swap);		\
-		}								\
-	} else if (l != SOFT_VOL_SCALE) {					\
-		for (i = 0; i < frames; i++)					\
-			scale_sample_##TYPE(buf, i * 2, l, swap);		\
-	} else if (r != SOFT_VOL_SCALE) {					\
-		for (i = 0; i < frames; i++)					\
-			scale_sample_##TYPE(buf, i * 2 + 1, r, swap);		\
-	}									\
-}
+#define SCALE_SAMPLES(TYPE, buffer, count, l, r, swap)                         \
+	{                                                                      \
+		const int frames = count / sizeof(TYPE) / 2;                   \
+		TYPE *buf = (void *)buffer;                                    \
+		int i;                                                         \
+		/* avoid underflowing -32768 to 32767 when scale is 65536 */   \
+		if (l != SOFT_VOL_SCALE && r != SOFT_VOL_SCALE) {              \
+			for (i = 0; i < frames; i++) {                         \
+				scale_sample_##TYPE(buf, i * 2, l, swap);      \
+				scale_sample_##TYPE(buf, i * 2 + 1, r, swap);  \
+			}                                                      \
+		} else if (l != SOFT_VOL_SCALE) {                              \
+			for (i = 0; i < frames; i++)                           \
+				scale_sample_##TYPE(buf, i * 2, l, swap);      \
+		} else if (r != SOFT_VOL_SCALE) {                              \
+			for (i = 0; i < frames; i++)                           \
+				scale_sample_##TYPE(buf, i * 2 + 1, r, swap);  \
+		}                                                              \
+	}
 
 static inline int32_t read_s24le(const char *buf)
 {
-	const unsigned char *b = (const unsigned char *) buf;
-	return b[0] | (b[1] << 8) | (((const signed char *) buf)[2] << 16);
+	const unsigned char *b = (const unsigned char *)buf;
+	return b[0] | (b[1] << 8) | (((const signed char *)buf)[2] << 16);
 }
 
 static inline void write_s24le(char *buf, int32_t x)
 {
-	unsigned char *b = (unsigned char *) buf;
+	unsigned char *b = (unsigned char *)buf;
 	b[0] = x;
 	b[1] = x >> 8;
 	b[2] = x >> 16;
@@ -285,20 +274,24 @@ static void scale_samples_s24le(char *buf, unsigned int count, int l, int r)
 	int frames = count / 3 / 2;
 	if (l != SOFT_VOL_SCALE && r != SOFT_VOL_SCALE) {
 		while (frames--) {
-			write_s24le(buf, scale_sample_s24le(read_s24le(buf), l));
+			write_s24le(buf,
+				    scale_sample_s24le(read_s24le(buf), l));
 			buf += 3;
-			write_s24le(buf, scale_sample_s24le(read_s24le(buf), r));
+			write_s24le(buf,
+				    scale_sample_s24le(read_s24le(buf), r));
 			buf += 3;
 		}
 	} else if (l != SOFT_VOL_SCALE) {
 		while (frames--) {
-			write_s24le(buf, scale_sample_s24le(read_s24le(buf), l));
+			write_s24le(buf,
+				    scale_sample_s24le(read_s24le(buf), l));
 			buf += 3 * 2;
 		}
 	} else if (r != SOFT_VOL_SCALE) {
 		buf += 3;
 		while (frames--) {
-			write_s24le(buf, scale_sample_s24le(read_s24le(buf), r));
+			write_s24le(buf,
+				    scale_sample_s24le(read_s24le(buf), r));
 			buf += 3 * 2;
 		}
 	}
@@ -341,14 +334,16 @@ static void scale_samples(char *buffer, unsigned int *countp)
 
 	switch (bits) {
 	case 16:
-		SCALE_SAMPLES(int16_t, buffer, count, l, r, sf_need_swap(buffer_sf));
+		SCALE_SAMPLES(int16_t, buffer, count, l, r,
+			      sf_need_swap(buffer_sf));
 		break;
 	case 24:
 		if (likely(!sf_get_bigendian(buffer_sf)))
 			scale_samples_s24le(buffer, count, l, r);
 		break;
 	case 32:
-		SCALE_SAMPLES(int32_t, buffer, count, l, r, sf_need_swap(buffer_sf));
+		SCALE_SAMPLES(int32_t, buffer, count, l, r,
+			      sf_need_swap(buffer_sf));
 		break;
 	}
 }
@@ -361,10 +356,13 @@ static void update_rg_scale(void)
 	if (!player_info_priv.ti || !replaygain)
 		return;
 
-	bool avoid_album_gain = replaygain == RG_SMART
-		&& (!options_get_play_library() || options_get_shuffle() == SHUFFLE_TRACKS || termus_queue_active());
-	
-	if (replaygain == RG_TRACK || replaygain == RG_TRACK_PREFERRED || avoid_album_gain) {
+	bool avoid_album_gain =
+	    replaygain == RG_SMART &&
+	    (!options_get_play_library() ||
+	     options_get_shuffle() == SHUFFLE_TRACKS || termus_queue_active());
+
+	if (replaygain == RG_TRACK || replaygain == RG_TRACK_PREFERRED ||
+	    avoid_album_gain) {
 		gain = player_info_priv.ti->rg_track_gain;
 		peak = player_info_priv.ti->rg_track_peak;
 	} else {
@@ -405,8 +403,9 @@ static void update_rg_scale(void)
 			replaygain_scale = limit;
 	}
 
-	d_print("gain = %f, peak = %f, db = %f, scale = %f, limit = %f, replaygain_scale = %f\n",
-			gain, peak, db, scale, limit, replaygain_scale);
+	d_print("gain = %f, peak = %f, db = %f, scale = %f, limit = %f, "
+		"replaygain_scale = %f\n",
+		gain, peak, db, scale, limit, replaygain_scale);
 }
 
 static inline unsigned int buffer_second_size(void)
@@ -522,7 +521,7 @@ static void _producer_buffer_fill_update(void)
 	player_info_priv_lock();
 	fill = buffer_get_filled_chunks();
 	if (fill != player_info_priv.buffer_fill) {
-/* 		d_print("\n"); */
+		/* 		d_print("\n"); */
 		player_info_priv.buffer_fill = fill;
 		player_info_priv.buffer_fill_changed = 1;
 	}
@@ -563,7 +562,7 @@ static void _player_status_changed(void)
 {
 	unsigned int pos = 0;
 
-/* 	d_print("\n"); */
+	/* 	d_print("\n"); */
 	if (consumer_status == CS_PLAYING || consumer_status == CS_PAUSED)
 		pos = consumer_pos / buffer_second_size();
 
@@ -600,10 +599,11 @@ static void _prebuffer(void)
 		char *wpos;
 
 		filled = buffer_get_filled_chunks();
-/* 		d_print("PREBUF: %2d / %2d\n", filled, limit_chunks); */
+		/* 		d_print("PREBUF: %2d / %2d\n", filled,
+		 * limit_chunks); */
 
 		/* not fatal */
-		//BUG_ON(filled > limit_chunks);
+		// BUG_ON(filled > limit_chunks);
 
 		if (filled >= limit_chunks)
 			break;
@@ -613,7 +613,8 @@ static void _prebuffer(void)
 		if (nr_read < 0) {
 			if (nr_read == -1 && errno == EAGAIN)
 				continue;
-			player_ip_error(nr_read, "reading file %s", ip_get_filename(ip));
+			player_ip_error(nr_read, "reading file %s",
+					ip_get_filename(ip));
 			/* ip_read sets eof */
 			nr_read = 0;
 		}
@@ -635,7 +636,7 @@ static void _prebuffer(void)
 
 static void _producer_status_update(enum producer_status status)
 {
-	producer_status =  status;
+	producer_status = status;
 	pthread_cond_broadcast(&producer_playing);
 }
 
@@ -650,7 +651,8 @@ static void _producer_play(void)
 			ip = ip_new(ti->filename);
 			rc = ip_open(ip);
 			if (rc) {
-				player_ip_error(rc, "opening file `%s'", ti->filename);
+				player_ip_error(rc, "opening file `%s'",
+						ti->filename);
 				ip_delete(ip);
 				track_info_unref(ti);
 				file_changed(NULL);
@@ -784,7 +786,9 @@ static int change_sf(int drop)
 	channel_map_copy(old_channel_map, buffer_channel_map);
 
 	set_buffer_sf();
-	if (buffer_sf != old_sf || !channel_map_equal(buffer_channel_map, old_channel_map, sf_get_channels(buffer_sf))) {
+	if (buffer_sf != old_sf ||
+	    !channel_map_equal(buffer_channel_map, old_channel_map,
+			       sf_get_channels(buffer_sf))) {
 		/* reopen */
 		int rc;
 
@@ -837,7 +841,10 @@ static void _consumer_handle_eof(void)
 		ip = ip_new(ti->filename);
 		_producer_status_update(PS_STOPPED);
 		/* PS_STOPPED, CS_PLAYING */
-		if (player_cont && (player_cont_album == 1 || (player_info_priv.ti->album && ti->album && strcmp(player_info_priv.ti->album,ti->album) == 0))) {
+		if (player_cont &&
+		    (player_cont_album == 1 ||
+		     (player_info_priv.ti->album && ti->album &&
+		      strcmp(player_info_priv.ti->album, ti->album) == 0))) {
 			_producer_play();
 			if (producer_status == PS_UNLOADED) {
 				_consumer_stop();
@@ -872,7 +879,8 @@ static void *consumer_loop(void *arg)
 		if (!consumer_running)
 			break;
 
-		if (consumer_status == CS_PAUSED || consumer_status == CS_STOPPED) {
+		if (consumer_status == CS_PAUSED ||
+		    consumer_status == CS_STOPPED) {
 			pthread_cond_wait(&consumer_playing, &consumer_mutex);
 			consumer_unlock();
 			continue;
@@ -880,7 +888,7 @@ static void *consumer_loop(void *arg)
 		space = op_buffer_space();
 		if (space < 0) {
 			d_print("op_buffer_space returned %d %s\n", space,
-					space == -1 ? strerror(errno) : "");
+				space == -1 ? strerror(errno) : "");
 
 			/* try to reopen */
 			op_close();
@@ -890,13 +898,27 @@ static void *consumer_loop(void *arg)
 			consumer_unlock();
 			continue;
 		}
-/* 		d_print("BS: %6d %3d\n", space, space * 1000 / (44100 * 2 * 2)); */
+		/* 		d_print("BS: %6d %3d\n", space, space * 1000 /
+		 * (44100 * 2 * 2)); */
 
 		while (1) {
 			if (space == 0) {
+				struct timeval tv;
+				struct timespec ts;
 				_consumer_position_update();
+				/* Timed wait instead of a fixed sleep: wake
+				 * immediately on stop/pause/seek signals, fall
+				 * through after 25ms otherwise. */
+				gettimeofday(&tv, NULL);
+				ts.tv_sec = tv.tv_sec;
+				ts.tv_nsec = tv.tv_usec * 1000 + 25 * 1000000L;
+				if (ts.tv_nsec >= 1000000000L) {
+					ts.tv_sec++;
+					ts.tv_nsec -= 1000000000L;
+				}
+				pthread_cond_timedwait(&consumer_playing,
+						       &consumer_mutex, &ts);
 				consumer_unlock();
-				ms_sleep(25);
 				break;
 			}
 			size = buffer_get_rpos(&rpos);
@@ -910,7 +932,8 @@ static void *consumer_loop(void *arg)
 				/* must recheck rpos */
 				size = buffer_get_rpos(&rpos);
 				if (size == 0) {
-					/* OK. now it's safe to check if we are at EOF */
+					/* OK. now it's safe to check if we are
+					 * at EOF */
 					if (ip_eof(ip)) {
 						/* EOF */
 						_consumer_handle_eof();
@@ -918,7 +941,8 @@ static void *consumer_loop(void *arg)
 						consumer_unlock();
 						break;
 					} else {
-						/* possible underrun — wait for producer to fill data */
+						/* possible underrun — wait for
+						 * producer to fill data */
 						producer_unlock();
 						_consumer_position_update();
 						consumer_unlock();
@@ -937,10 +961,18 @@ static void *consumer_loop(void *arg)
 			rc = op_write(rpos, size);
 			if (rc < 0) {
 				d_print("op_write returned %d %s\n", rc,
-						rc == -1 ? strerror(errno) : "");
+					rc == -1 ? strerror(errno) : "");
 
 				/* try to reopen */
 				op_close();
+				if (playback_speed != 1.0) {
+					d_print("reverting playback speed to "
+						"1.0x due to write error\n");
+					playback_speed = 1.0;
+					player_info_priv_lock();
+					player_info_priv.speed_changed = 1;
+					player_info_priv_unlock();
+				}
 				_consumer_status_update(CS_STOPPED);
 				_consumer_play();
 
@@ -979,10 +1011,11 @@ static void *producer_loop(void *arg)
 			producer_unlock();
 			continue;
 		}
-		for (i = 0; ; i++) {
+		for (i = 0;; i++) {
 			size = buffer_get_wpos(&wpos);
 			if (size == 0) {
-				/* buffer is full — wait for consumer to drain */
+				/* buffer is full — wait for consumer to drain
+				 */
 				producer_unlock();
 				buffer_wait_drain();
 				break;
@@ -990,7 +1023,8 @@ static void *producer_loop(void *arg)
 			nr_read = ip_read(ip, wpos, size);
 			if (nr_read < 0) {
 				if (nr_read != -1 || errno != EAGAIN) {
-					player_ip_error(nr_read, "reading file %s",
+					player_ip_error(nr_read,
+							"reading file %s",
 							ip_get_filename(ip));
 					/* ip_read sets eof */
 					nr_read = 0;
@@ -1003,7 +1037,8 @@ static void *producer_loop(void *arg)
 			if (ip_metadata_changed(ip))
 				metadata_changed();
 
-			/* buffer_fill with 0 count marks current chunk filled */
+			/* buffer_fill with 0 count marks current chunk filled
+			 */
 			buffer_fill(nr_read);
 			if (nr_read == 0) {
 				/* consumer handles EOF */
@@ -1043,7 +1078,8 @@ void player_init(void)
 	BUG_ON(rc);
 	rc = pthread_attr_setschedpolicy(&attr, SCHED_RR);
 	if (rc) {
-		d_print("could not set real-time scheduling priority: %s\n", strerror(rc));
+		d_print("could not set real-time scheduling priority: %s\n",
+			strerror(rc));
 	} else {
 		struct sched_param param;
 
@@ -1061,8 +1097,11 @@ void player_init(void)
 
 	rc = pthread_create(&consumer_thread, attrp, consumer_loop, NULL);
 	if (rc && attrp) {
-		d_print("could not create thread using real-time scheduling: %s\n", strerror(rc));
-		rc = pthread_create(&consumer_thread, NULL, consumer_loop, NULL);
+		d_print(
+		    "could not create thread using real-time scheduling: %s\n",
+		    strerror(rc));
+		rc =
+		    pthread_create(&consumer_thread, NULL, consumer_loop, NULL);
 	}
 	BUG_ON(rc);
 
@@ -1219,10 +1258,7 @@ out:
 	player_unlock();
 }
 
-void player_file_changed(struct track_info *ti)
-{
-	_file_changed(ti);
-}
+void player_file_changed(struct track_info *ti) { _file_changed(ti); }
 
 void player_seek(double offset, int relative, int start_playing)
 {
@@ -1286,7 +1322,8 @@ void player_seek(double offset, int relative, int start_playing)
 					new_pos = 0.0;
 			}
 		}
-/* 		d_print("seeking %g/%g (%g from eof)\n", new_pos, duration, duration - new_pos); */
+		/* 		d_print("seeking %g/%g (%g from eof)\n",
+		 * new_pos, duration, duration - new_pos); */
 		rc = ip_seek(ip, new_pos);
 		if (rc == 0) {
 			d_print("doing op_drop after seek\n");
@@ -1301,7 +1338,8 @@ void player_seek(double offset, int relative, int start_playing)
 				_player_status_changed();
 			}
 		} else {
-			player_ip_error(rc, "seeking in file %s", ip_get_filename(ip));
+			player_ip_error(rc, "seeking in file %s",
+					ip_get_filename(ip));
 			d_print("error: ip_seek returned %d\n", rc);
 		}
 	}
@@ -1337,7 +1375,8 @@ void player_set_op(const char *name)
 			 * error if we are falling back because
 			 * the specified init plugin failed
 			 */
-			player_op_error(rc, "selecting output plugin '%s'", name);
+			player_op_error(rc, "selecting output plugin '%s'",
+					name);
 
 		d_print("selecting first initialized op\n");
 		rc = op_select_any();
@@ -1348,7 +1387,8 @@ void player_set_op(const char *name)
 
 		_producer_stop();
 		if (name)
-			player_op_error(rc, "selecting output plugin '%s'", name);
+			player_op_error(rc, "selecting output plugin '%s'",
+					name);
 		else
 			player_op_error(rc, "selecting any output plugin");
 		player_unlock();
@@ -1385,10 +1425,7 @@ void player_set_buffer_chunks(unsigned int nr_chunks)
 	player_unlock();
 }
 
-int player_get_buffer_chunks(void)
-{
-	return buffer_nr_chunks;
-}
+int player_get_buffer_chunks(void) { return buffer_nr_chunks; }
 
 void player_set_soft_volume(int l, int r)
 {
@@ -1401,7 +1438,8 @@ void player_set_soft_volume(int l, int r)
 void player_set_soft_vol(int soft)
 {
 	consumer_lock();
-	/* don't mess with scale_pos if soft_vol or replaygain is already enabled */
+	/* don't mess with scale_pos if soft_vol or replaygain is already
+	 * enabled */
 	if (!soft_vol && !replaygain)
 		scale_pos = consumer_pos;
 	soft_vol = soft;
@@ -1440,7 +1478,8 @@ int player_set_vol(int l, int lf, int r, int rf)
 void player_set_rg(enum replaygain rg)
 {
 	player_lock();
-	/* don't mess with scale_pos if soft_vol or replaygain is already enabled */
+	/* don't mess with scale_pos if soft_vol or replaygain is already
+	 * enabled */
 	if (!soft_vol && !replaygain)
 		scale_pos = consumer_pos;
 	replaygain = rg;
@@ -1531,16 +1570,65 @@ void player_set_speed(double speed)
 			playback_speed = old_speed;
 			if (op_open(get_output_sf(), buffer_channel_map) == 0) {
 				player_reopen_complete(was_paused);
-				player_op_error(rc, "changing playback speed to %.2fx", speed);
+				player_op_error(
+				    rc, "changing playback speed to %.2fx",
+				    speed);
 				player_unlock();
 				return;
 			}
 
-			player_op_error(rc, "changing playback speed to %.2fx", speed);
+			player_op_error(rc, "changing playback speed to %.2fx",
+					speed);
 			_consumer_status_update(CS_STOPPED);
 			_producer_stop();
 			player_unlock();
 			return;
+		}
+
+		if (!was_paused) {
+			/* Prime the hardware DMA with ~10ms of silence so the
+			 * device starts cleanly before real audio arrives,
+			 * eliminating the buzz/click that some outputs produce
+			 * on rate-change reopens. */
+			sample_format_t osf = get_output_sf();
+			int prime =
+			    (sf_get_rate(osf) / 100) * sf_get_frame_size(osf);
+			if (prime > 0) {
+				char *silence = xmalloc0(prime);
+				rc = op_write(silence, prime);
+				free(silence);
+				if (rc < 0) {
+					playback_speed = old_speed;
+					op_close();
+					if (op_open(get_output_sf(),
+						    buffer_channel_map) == 0) {
+						player_reopen_complete(
+						    was_paused);
+						player_op_error(
+						    rc,
+						    "changing playback speed "
+						    "to %.2fx",
+						    speed);
+						player_info_priv_lock();
+						player_info_priv.speed_changed =
+						    1;
+						player_info_priv_unlock();
+						player_unlock();
+						return;
+					}
+					player_op_error(
+					    rc,
+					    "changing playback speed to %.2fx",
+					    speed);
+					_consumer_status_update(CS_STOPPED);
+					_producer_stop();
+					player_info_priv_lock();
+					player_info_priv.speed_changed = 1;
+					player_info_priv_unlock();
+					player_unlock();
+					return;
+				}
+			}
 		}
 
 		player_reopen_complete(was_paused);
@@ -1552,15 +1640,9 @@ void player_set_speed(double speed)
 	player_unlock();
 }
 
-void player_metadata_lock(void)
-{
-	termus_mutex_lock(&player_info_mutex);
-}
+void player_metadata_lock(void) { termus_mutex_lock(&player_info_mutex); }
 
-void player_metadata_unlock(void)
-{
-	termus_mutex_unlock(&player_info_mutex);
-}
+void player_metadata_unlock(void) { termus_mutex_unlock(&player_info_mutex); }
 
 const char *player_get_stream_title(void)
 {

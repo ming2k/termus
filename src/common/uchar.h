@@ -1,8 +1,8 @@
 #ifndef TERMUS_UCHAR_H
 #define TERMUS_UCHAR_H
 
-#include <stddef.h> /* size_t */
 #include <stdbool.h>
+#include <stddef.h> /* size_t */
 
 typedef unsigned int uchar;
 
@@ -19,10 +19,7 @@ extern const char hex_tab[16];
  *
  * Returns 1 if @uch is valid unicode character, 0 otherwise
  */
-static inline int u_is_unicode(uchar uch)
-{
-	return uch <= 0x0010ffffU;
-}
+static inline int u_is_unicode(uchar uch) { return uch <= 0x0010ffffU; }
 
 /*
  * Returns size of @uch in bytes
@@ -59,10 +56,10 @@ int u_is_valid(const char *str);
  *
  * Returns position of next unicode character in @str.
  */
-extern const char * const utf8_skip;
+extern const char *const utf8_skip;
 static inline char *u_next_char(const char *str)
 {
-	return (char *) (str + utf8_skip[*((const unsigned char *) str)]);
+	return (char *)(str + utf8_skip[*((const unsigned char *)str)]);
 }
 
 /*

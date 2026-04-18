@@ -1,7 +1,6 @@
 #ifndef TERMUS_OPTIONS_CORE_STATE_H
 #define TERMUS_OPTIONS_CORE_STATE_H
 
-extern char *cdda_device;
 extern char *output_plugin;
 extern int scroll_offset;
 extern int rewind_offset;

@@ -1,8 +1,8 @@
 #include "common/debug.h"
 #include "common/prog.h"
 
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
 
@@ -84,6 +84,7 @@ void timer_print(const char *what, uint64_t usec)
 	uint64_t a = usec / 1e6;
 	uint64_t b = usec - a * 1e6;
 
-	_debug_print("TIMER", "%s: %11u.%06u\n", what, (unsigned int)a, (unsigned int)b);
+	_debug_print("TIMER", "%s: %11u.%06u\n", what, (unsigned int)a,
+		     (unsigned int)b);
 #endif
 }

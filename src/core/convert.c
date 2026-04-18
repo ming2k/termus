@@ -1,6 +1,6 @@
 #include "core/convert.h"
-#include "common/xmalloc.h"
 #include "common/uchar.h"
+#include "common/xmalloc.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -8,12 +8,12 @@
 #ifdef HAVE_ICONV
 #include <iconv.h>
 #endif
-#include <string.h>
 #include <errno.h>
+#include <string.h>
 
-ssize_t convert(const char *inbuf, ssize_t inbuf_size,
-		char **outbuf, ssize_t outbuf_estimate,
-		const char *tocode, const char *fromcode)
+ssize_t convert(const char *inbuf, ssize_t inbuf_size, char **outbuf,
+		ssize_t outbuf_estimate, const char *tocode,
+		const char *fromcode)
 {
 #ifdef HAVE_ICONV
 	const char *in;
@@ -23,7 +23,7 @@ ssize_t convert(const char *inbuf, ssize_t inbuf_size,
 	int finished = 0, err_save;
 
 	cd = iconv_open(tocode, fromcode);
-	if (cd == (iconv_t) -1)
+	if (cd == (iconv_t)-1)
 		return -1;
 
 	if (inbuf_size < 0)
@@ -42,12 +42,13 @@ ssize_t convert(const char *inbuf, ssize_t inbuf_size,
 	while (!finished) {
 		finished = 1;
 		rc = iconv(cd, (char **)&in, &inbytesleft, &out, &outbytesleft);
-		if (rc == (size_t) -1) {
+		if (rc == (size_t)-1) {
 			if (errno == E2BIG) {
 				size_t used = out - *outbuf;
 				outbytesleft += outbuf_size;
 				outbuf_size *= 2;
-				*outbuf = xrenew(char, *outbuf, outbuf_size + 1);
+				*outbuf =
+				    xrenew(char, *outbuf, outbuf_size + 1);
 				out = *outbuf + used;
 				continue;
 			} else if (errno != EINVAL)

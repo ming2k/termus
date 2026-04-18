@@ -3,6 +3,7 @@
 See also:
 
 - `docs/README.md` for the documentation index
+- `docs/formats.md` for supported formats, containers, and metadata standards
 - `docs/project-structure.md` for repository layout and subsystem ownership
 - `docs/development.md` for build and test workflow
 
@@ -12,14 +13,9 @@ termus is a terminal music player built around a multi-threaded audio pipeline.
 The UI, audio decoding, and audio output each run on separate threads and
 communicate through a shared ring buffer and condition variables.
 
-The repository layout is clearer than the historical upstream tree, but some
-older cross-layer dependencies still exist in the implementation. This document
-describes both the current structure and the intended direction for ongoing
-cleanup.
-
 ```text
 ┌─────────────────────────────────────────────────────────┐
-│                        termus process                     │
+│                        termus process                   │
 │                                                         │
 │  Main thread          Producer thread   Consumer thread │
 │  ┌───────────┐        ┌─────────────┐  ┌─────────────┐  │
@@ -59,13 +55,12 @@ condition when paused or stopped.
 ### Consumer thread (`src/core/player.c` — `consumer_loop`)
 
 Drains the ring buffer and writes PCM data to the active output plugin. Blocks
-on `consumer_playing` condition when the buffer is empty or playback is paused.
+on `consumer_playing` condition when paused or when the hardware output buffer
+is full (25 ms timedwait, wakes immediately on stop/pause/seek signals).
 
 ### Worker thread (`src/common/worker.c`)
 
-Processes background jobs off the main thread to keep the UI responsive. The
-generic queue lives in `src/common/worker.c` and the job type definitions live
-in `src/common/worker.h`. The UI result delivery lives in `src/ui/job.c`.
+Processes background jobs off the main thread to keep the UI responsive.
 
 Jobs are typed with bit flags from `src/common/worker.h`:
 
@@ -86,9 +81,9 @@ File
  │
  ▼
 Input plugin  ←─ open/read/seek/close via struct input_plugin_ops (src/core/ip.h)
- │  PCM bytes
+ │  PCM bytes (at source sample rate)
  ▼
-Ring buffer   ←─ src/core/buffer.c  (lock-free SPSC, about 2 seconds of audio)
+Ring buffer   ←─ src/core/buffer.c  (lock-free SPSC, ~2 seconds of audio)
  │  PCM bytes
  ▼
 Output plugin ←─ open/write/close via struct output_plugin_ops (src/core/op.h)
@@ -97,15 +92,48 @@ Output plugin ←─ open/write/close via struct output_plugin_ops (src/core/op.
 Sound hardware
 ```
 
-**Sample format** (`src/core/sf.h`): a single `uint64_t` (`sample_format_t`)
+**Sample format** (`src/core/sf.h`): a packed `uint32_t` (`sample_format_t`)
 encodes sample rate, bit depth, channel count, and byte order in bitfields.
 Both plugins agree on one format; `src/core/pcm.c` and `src/core/convert.c`
 handle format conversion when needed.
 
-**Playback speed** (`src/core/player.c`): implemented as tape-speed. The
-hardware sample rate sent to the output plugin is scaled by `playback_speed`.
-A 2× speed doubles the rate, causing pitch-proportional speedup without
-bringing in a time-stretch library.
+**Playback speed** (`src/core/player.c`): implemented as a tape-speed effect.
+The hardware sample rate sent to the output plugin is scaled by `playback_speed`;
+doubling the rate makes the hardware drain the buffer twice as fast. On speed
+change the output device is closed and reopened at the new rate; ~10 ms of
+silence is written first so the DMA starts cleanly before real audio arrives.
+
+**Soft volume / ReplayGain** (`src/core/player.c` — `scale_samples`):
+applied per-chunk in the consumer thread before each `op_write`. Volume
+coefficients use a 16-bit fixed-point table (`soft_vol_db`) copied from
+ALSA's soft-volume implementation.
+
+## Supported Formats
+
+### Primary formats (required at build time by default)
+
+| Format | Container | Metadata | Plugin |
+|--------|-----------|----------|--------|
+| FLAC | FLAC native | Vorbis Comments | `src/plugins/input/flac.c` |
+| Opus | Ogg | Vorbis Comments | `src/plugins/input/opus.c` |
+| AAC | raw .aac | ID3v2 | `src/plugins/input/aac.c` |
+| AAC | M4A / MP4 | QuickTime / iTunes | `src/plugins/input/mp4.c` |
+| Ogg Vorbis | Ogg | Vorbis Comments | `src/plugins/input/vorbis.c` |
+
+### Legacy compatibility
+
+| Format | Metadata | Plugin | Notes |
+|--------|----------|--------|-------|
+| MP3 | ID3v2 only | `src/plugins/input/mpg123.c` | Historical format; auto-detected |
+
+MP3 is supported for playback of existing collections. ID3v1 is not read.
+New content should use FLAC (lossless) or Opus (lossy).
+
+### CUE sheets
+
+`src/plugins/input/cue.c` reads `.cue` playlist files and maps track ranges
+onto an underlying audio file. Useful for FLAC album rips where the whole
+album is one file with a companion `.cue` sheet.
 
 ## Plugin System
 
@@ -126,20 +154,11 @@ const struct input_plugin_opt ip_options[];
 const unsigned ip_abi_version;
 ```
 
-`struct input_plugin_ops` provides:
+`struct input_plugin_ops` provides: `open`, `close`, `read`, `seek`,
+`read_comments`, `duration`, `bitrate`, `codec`, `codec_profile`.
 
-- `open`
-- `close`
-- `read`
-- `seek`
-- `read_comments`
-- `duration`
-- `bitrate`
-- `codec`
-- `codec_profile`
-
-Plugin selection happens in `src/core/input.c`: first by extension, then by
-MIME type, with lower `ip_priority` preferred.
+Plugin selection happens in `src/core/input.c`: first by file extension,
+then by MIME type, with lower `ip_priority` preferred.
 
 ### Output plugins (`src/plugins/output/`)
 
@@ -152,17 +171,18 @@ const int op_priority;
 const unsigned op_abi_version;
 ```
 
-`struct output_plugin_ops` provides:
+`struct output_plugin_ops` provides: `init`, `exit`, `open`, `close`,
+`write`, `buffer_space`, `drop`, `pause`, `unpause`.
 
-- `init`
-- `exit`
-- `open`
-- `close`
-- `write`
-- `buffer_space`
-- `drop`
-- `pause`
-- `unpause`
+### Supported output backends
+
+| Plugin | Platform | Notes |
+|--------|----------|-------|
+| PipeWire | Linux | Primary; modern audio server |
+| ALSA | Linux | Fallback / raw hardware access |
+| CoreAudio | macOS | Native framework |
+| OSS | FreeBSD | Native kernel audio |
+| sndio | OpenBSD | Native audio server |
 
 ## IPC — termus-remote
 
@@ -195,9 +215,7 @@ reference-counted and cached to disk through `src/library/cache.c`.
 | Play queue | Temporary FIFO override |
 
 All three share the `struct editable` abstraction from
-`src/library/editable.c`. Today that abstraction still carries some UI-facing
-state; the modernization goal is to keep collection state in `library/` and
-move curses window state into `ui/`.
+`src/library/editable.c`.
 
 ## Commands and Options
 
@@ -210,15 +228,12 @@ dispatch.
 ### Options (`src/ui/options.c` plus `src/app/options_*.c`)
 
 Option registration is split by area in `src/app/options_*.c` and wired through
-the registry declared in `src/app/options_registry.h`. The UI-facing load path
-still starts from `src/ui/options.c`, but the option definitions themselves are
-already separated by subsystem.
+the registry declared in `src/app/options_registry.h`.
 
 ### Format strings (`src/ui/format_print.c`)
 
 The statusline and track format strings support `%{tag}` substitution and
-`%{?tag?text}` conditional blocks. Format option values are populated per frame
-by `get_global_fopts()` in `src/ui/ui_curses.c`.
+`%{?tag?text}` conditional blocks.
 
 ## Directory Roles
 
@@ -233,29 +248,18 @@ src/ui         curses UI, command mode, rendering, window state
 tests/         low-level regression tests run by make check
 ```
 
-This section is the architectural view of the codebase. For top-level
-repository navigation and where new files should live, use
-`docs/project-structure.md`.
-
 ## Dependency Policy
 
-This is the intended direction for new work:
-
-- `common` should not depend on `ui`.
-- `core` should not depend on `ui`.
-- `library` should model playlist and library state, not own curses windows.
-- `ipc` should expose protocol-facing state without reusing TUI formatting
-  internals.
+- `common` does not depend on `ui`.
+- `core` does not depend on `ui`.
+- `library` models playlist and library state; it should not own curses windows.
+- `ipc` exposes protocol-facing state without reusing TUI formatting internals.
 - `app` is the composition layer that wires subsystems together.
 
-**Current Status:**
-The `common` and `core` layers are strictly decoupled from `ui`. They use a
-notification system (`src/common/msg.h`) with function pointers
-(`info_handler`, `error_handler`, `yes_no_query_handler`) to interact with
-the user. These pointers are hooked up to the ncurses UI during `main()` in
-`src/app/main.c` / `src/ui/ui_curses.c`.
+The `common` and `core` layers are strictly decoupled from `ui`. They interact
+with the user through function pointers (`info_handler`, `error_handler`,
+`yes_no_query_handler`) hooked up during `main()`.
 
-The `library` and `ipc` layers still have some historical cross-layer
-dependencies (e.g., `library` heavily depends on `ui/window.h`). Treat this
-section as the policy to move toward when refactoring those remaining
-subsystems or adding features.
+The `library` layer still carries some historical cross-layer dependencies
+on `ui/window.h`. Treat this section as the policy to move toward when
+refactoring those subsystems.

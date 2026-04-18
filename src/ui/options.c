@@ -1,12 +1,12 @@
 #include "app/options_core.h"
 #include "app/options_core_state.h"
-#include "app/options_registry.h"
+#include "app/options_defaults.h"
 #include "app/options_library.h"
+#include "app/options_loader.h"
 #include "app/options_misc.h"
 #include "app/options_playback.h"
-#include "app/options_defaults.h"
-#include "app/options_loader.h"
 #include "app/options_plugins.h"
+#include "app/options_registry.h"
 #include "ui/options_display.h"
 #include "ui/options_ui.h"
 #include "ui/ui.h"
@@ -26,11 +26,9 @@ void options_add(void)
 
 void options_load(void)
 {
-	cdda_device = options_get_default_cdda_device();
 	options_display_load_defaults();
 	options_load_autosave_or_default_rc();
 	options_load_optional_rc();
 	options_ui_apply_ascii_clipped_text_fallback(
-			using_utf8,
-			options_display_default_clipped_text());
+	    using_utf8, options_display_default_clipped_text());
 }

@@ -11,28 +11,26 @@ extern volatile sig_atomic_t termus_running;
 extern int ui_initialized;
 
 enum file_type {
-	/* not found, device file... */
 	FILE_TYPE_INVALID,
-
 	FILE_TYPE_URL,
 	FILE_TYPE_PL,
 	FILE_TYPE_DIR,
 	FILE_TYPE_FILE,
-	FILE_TYPE_CDDA
 };
 
 /* lib_for_each, lib_for_each_filtered, pl_for_each, play_queue_for_each */
 typedef int (*for_each_ti_cb)(track_info_cb cb, void *data, void *opaque);
 
 /* lib_for_each_sel, pl_for_each_sel, play_queue_for_each_sel */
-typedef int (*for_each_sel_ti_cb)(track_info_cb cb, void *data, int reverse, int advance);
+typedef int (*for_each_sel_ti_cb)(track_info_cb cb, void *data, int reverse,
+				  int advance);
 
 /* lib_add_track, pl_add_track, play_queue_append, play_queue_prepend */
 typedef void (*add_ti_cb)(struct track_info *, void *opaque);
 
 /* termus_save, termus_save_ext */
 typedef int (*save_ti_cb)(for_each_ti_cb for_each_ti, const char *filename,
-		void *opaque);
+			  void *opaque);
 
 int termus_init(void);
 void termus_exit(void);
@@ -55,7 +53,7 @@ void termus_add(add_ti_cb, const char *name, enum file_type ft, int jt,
 
 int termus_save(for_each_ti_cb for_each_ti, const char *filename, void *opaque);
 int termus_save_ext(for_each_ti_cb for_each_ti, const char *filename,
-		void *opaque);
+		    void *opaque);
 
 void termus_update_cache(int force);
 void termus_update_lib(void);
@@ -66,8 +64,8 @@ int termus_is_playable(const char *filename);
 int termus_is_supported(const char *filename);
 
 int termus_playlist_for_each(const char *buf, int size, int reverse,
-		int (*cb)(void *data, const char *line),
-		void *data);
+			     int (*cb)(void *data, const char *line),
+			     void *data);
 
 void termus_next(void);
 void termus_prev(void);

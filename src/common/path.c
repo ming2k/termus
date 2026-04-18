@@ -65,7 +65,7 @@ void path_strip(char *str)
 				str[i] = 0;
 				break;
 			} else if (str[i + 1] == '.' &&
-				  (str[i + 2] == '/' || str[i + 2] == 0)) {
+				   (str[i + 2] == '/' || str[i + 2] == 0)) {
 				/* aaa/bbb/../ccc */
 				/* aaa/ccc */
 				if (str[i + 2]) {

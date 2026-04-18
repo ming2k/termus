@@ -1,7 +1,7 @@
 #include "app/options_playback.h"
+#include "app/options_parse.h"
 #include "app/options_playback_state.h"
 #include "app/options_registry.h"
-#include "app/options_parse.h"
 #include "common/msg.h"
 #include "common/utils.h"
 #include "core/player.h"
@@ -42,12 +42,12 @@ err:
 	error_msg("two integers in range 0..100 expected");
 }
 
-static const char * const replaygain_names[] = {
-	"disabled", "track", "album", "track-preferred", "album-preferred", "smart", NULL
-};
+static const char *const replaygain_names[] = {
+    "disabled",	       "track", "album", "track-preferred",
+    "album-preferred", "smart", NULL};
 
 static const size_t replaygain_names_len =
-	sizeof(replaygain_names) / sizeof(replaygain_names[0]) - 1;
+    sizeof(replaygain_names) / sizeof(replaygain_names[0]) - 1;
 
 static void get_replaygain(void *data, char *buf, size_t size)
 {
@@ -58,7 +58,8 @@ static void set_replaygain(void *data, const char *buf)
 {
 	int value;
 
-	if (!parse_enum(buf, 0, replaygain_names_len - 1, replaygain_names, &value))
+	if (!parse_enum(buf, 0, replaygain_names_len - 1, replaygain_names,
+			&value))
 		return;
 	options_hooks_set_replaygain(value);
 }
@@ -105,9 +106,8 @@ static void set_replaygain_preamp(void *data, const char *buf)
 	options_hooks_set_replaygain_preamp(value);
 }
 
-static const char * const shuffle_names[] = {
-	"off", "tracks", "albums", "false", "true", NULL
-};
+static const char *const shuffle_names[] = {"off",   "tracks", "albums",
+					    "false", "true",   NULL};
 
 static void get_shuffle(void *data, char *buf, size_t size)
 {
@@ -172,10 +172,7 @@ static void get_softvol(void *data, char *buf, size_t size)
 	strscpy(buf, options_bool_names[soft_vol], size);
 }
 
-static void do_set_softvol(int soft)
-{
-	options_hooks_set_softvol(soft);
-}
+static void do_set_softvol(int soft) { options_hooks_set_softvol(soft); }
 
 static void set_softvol(void *data, const char *buf)
 {
@@ -186,10 +183,7 @@ static void set_softvol(void *data, const char *buf)
 	do_set_softvol(soft);
 }
 
-static void toggle_softvol(void *data)
-{
-	do_set_softvol(soft_vol ^ 1);
-}
+static void toggle_softvol(void *data) { do_set_softvol(soft_vol ^ 1); }
 
 static void post_set_refresh_statusline(void *data)
 {
@@ -202,27 +196,37 @@ static void post_set_loop_status(void *data)
 	options_hooks_refresh_statusline();
 }
 
-#define DN(name) option_add(#name, NULL, get_ ## name, set_ ## name, NULL, 0)
-#define DT(name) option_add(#name, NULL, get_ ## name, set_ ## name, toggle_ ## name, 0)
+#define DN(name) option_add(#name, NULL, get_##name, set_##name, NULL, 0)
+#define DT(name)                                                               \
+	option_add(#name, NULL, get_##name, set_##name, toggle_##name, 0)
 
 void options_add_playback_options(void)
 {
-	option_add_bool_full("continue", &player_cont, post_set_refresh_statusline, 0);
-	option_add_bool_full("continue_album", &player_cont_album, post_set_refresh_statusline, 0);
+	option_add_bool_full("continue", &player_cont,
+			     post_set_refresh_statusline, 0);
+	option_add_bool_full("continue_album", &player_cont_album,
+			     post_set_refresh_statusline, 0);
 	option_add_bool_full("follow", &follow, post_set_refresh_statusline, 0);
-	option_add_bool_full("play_library", &play_library, post_set_refresh_statusline, 0);
-	option_add_bool_full("play_sorted", &play_sorted, post_set_refresh_statusline, 0);
+	option_add_bool_full("play_library", &play_library,
+			     post_set_refresh_statusline, 0);
+	option_add_bool_full("play_sorted", &play_sorted,
+			     post_set_refresh_statusline, 0);
 	option_add_bool_full("repeat", &repeat, post_set_refresh_statusline, 0);
-	option_add_bool_full("repeat_current", &player_repeat_current, post_set_loop_status, 0);
+	option_add_bool_full("repeat_current", &player_repeat_current,
+			     post_set_loop_status, 0);
 	DT(replaygain);
 	DT(replaygain_limit);
 	DN(replaygain_preamp);
-	option_add_bool_full("show_current_bitrate", &show_current_bitrate, post_set_refresh_statusline, 0);
-	option_add_bool_full("show_playback_position", &show_playback_position, post_set_refresh_statusline, 0);
-	option_add_bool_full("show_remaining_time", &show_remaining_time, post_set_refresh_statusline, 0);
+	option_add_bool_full("show_current_bitrate", &show_current_bitrate,
+			     post_set_refresh_statusline, 0);
+	option_add_bool_full("show_playback_position", &show_playback_position,
+			     post_set_refresh_statusline, 0);
+	option_add_bool_full("show_remaining_time", &show_remaining_time,
+			     post_set_refresh_statusline, 0);
 	DT(shuffle);
 	DN(speed);
 	DT(softvol);
 	DN(softvol_state);
-	option_add_bool_full("time_show_leading_zero", &time_show_leading_zero, post_set_refresh_statusline, 0);
+	option_add_bool_full("time_show_leading_zero", &time_show_leading_zero,
+			     post_set_refresh_statusline, 0);
 }

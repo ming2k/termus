@@ -81,7 +81,7 @@ extern char *window_title_format;
 extern char *window_title_alt_format;
 extern char *clipped_text_internal;
 
-void options_ui_apply_ascii_clipped_text_fallback(int using_utf8,
-		const char *default_clipped_text);
+void options_ui_apply_ascii_clipped_text_fallback(
+    int using_utf8, const char *default_clipped_text);
 
 #endif

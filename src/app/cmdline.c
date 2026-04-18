@@ -4,7 +4,7 @@
 
 struct cmdline cmdline;
 
-const char cmdline_word_delimiters[]     = " ";
+const char cmdline_word_delimiters[] = " ";
 const char cmdline_filename_delimiters[] = "/";
 
 void cmdline_init(void)
@@ -27,8 +27,7 @@ void cmdline_insert_ch(uchar ch)
 		cmdline.size *= 2;
 		cmdline.line = xrenew(char, cmdline.line, cmdline.size);
 	}
-	memmove(cmdline.line + cmdline.bpos + size,
-		cmdline.line + cmdline.bpos,
+	memmove(cmdline.line + cmdline.bpos + size, cmdline.line + cmdline.bpos,
 		cmdline.blen - cmdline.bpos + 1);
 	u_set_char_raw(cmdline.line, &cmdline.bpos, ch);
 	cmdline.cpos++;
@@ -47,8 +46,7 @@ void cmdline_backspace(void)
 	u_prev_char_pos(cmdline.line, &bpos);
 	size = cmdline.bpos - bpos;
 
-	memmove(cmdline.line + bpos,
-		cmdline.line + cmdline.bpos,
+	memmove(cmdline.line + bpos, cmdline.line + cmdline.bpos,
 		cmdline.blen - cmdline.bpos + 1);
 	cmdline.bpos -= size;
 	cmdline.cpos--;
@@ -74,8 +72,7 @@ void cmdline_delete_ch(void)
 	size = u_char_size(ch);
 	cmdline.blen -= size;
 	cmdline.clen--;
-	memmove(cmdline.line + cmdline.bpos,
-		cmdline.line + cmdline.bpos + size,
+	memmove(cmdline.line + cmdline.bpos, cmdline.line + cmdline.bpos + size,
 		cmdline.blen - cmdline.bpos + 1);
 }
 
@@ -140,7 +137,8 @@ void cmdline_move_end(void)
 	cmdline.bpos = cmdline.blen;
 }
 
-static int next_word(const char *str, int bpos, int *cdiff, const char *delim, int direction)
+static int next_word(const char *str, int bpos, int *cdiff, const char *delim,
+		     int direction)
 {
 	int skip_delim = 1;
 	while ((direction > 0) ? str[bpos] : (bpos > 0)) {
@@ -170,12 +168,14 @@ static int next_word(const char *str, int bpos, int *cdiff, const char *delim, i
 
 void cmdline_forward_word(const char *delim)
 {
-	cmdline.bpos = next_word(cmdline.line, cmdline.bpos, &cmdline.cpos, delim, +1);
+	cmdline.bpos =
+	    next_word(cmdline.line, cmdline.bpos, &cmdline.cpos, delim, +1);
 }
 
 void cmdline_backward_word(const char *delim)
 {
-	cmdline.bpos = next_word(cmdline.line, cmdline.bpos, &cmdline.cpos, delim, -1);
+	cmdline.bpos =
+	    next_word(cmdline.line, cmdline.bpos, &cmdline.cpos, delim, -1);
 }
 
 void cmdline_delete_word(const char *delim)
@@ -184,8 +184,7 @@ void cmdline_delete_word(const char *delim)
 
 	bpos = next_word(cmdline.line, cmdline.bpos, &cdiff, delim, +1);
 
-	memmove(cmdline.line + cmdline.bpos,
-		cmdline.line + bpos,
+	memmove(cmdline.line + cmdline.bpos, cmdline.line + bpos,
 		cmdline.blen - bpos + 1);
 	cmdline.blen -= bpos - cmdline.bpos;
 	cmdline.clen -= cdiff;
@@ -198,8 +197,7 @@ void cmdline_backward_delete_word(const char *delim)
 	bpos = next_word(cmdline.line, cmdline.bpos, &cdiff, delim, -1);
 
 	cmdline.blen += bpos - cmdline.bpos;
-	memmove(cmdline.line + bpos,
-		cmdline.line + cmdline.bpos,
+	memmove(cmdline.line + bpos, cmdline.line + cmdline.bpos,
 		cmdline.blen - bpos + 1);
 	cmdline.bpos = bpos;
 	cmdline.clen += cdiff;

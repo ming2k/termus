@@ -22,18 +22,27 @@ struct format_option {
 };
 
 /* gcc < 4.6 and icc < 12.0 can't properly initialize anonymous unions */
-#if (defined(__GNUC__) && defined(__GNUC_MINOR__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 6))) || \
-	(defined(__INTEL_COMPILER) && __INTEL_COMPILER < 1200)
-#define UNION_INIT(f, v) { .f = v }
+#if (defined(__GNUC__) && defined(__GNUC_MINOR__) &&                           \
+     (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 6))) ||               \
+    (defined(__INTEL_COMPILER) && __INTEL_COMPILER < 1200)
+#define UNION_INIT(f, v) {.f = v}
 #else
 #define UNION_INIT(f, v) .f = v
 #endif
 
-#define DEF_FO_STR(c, s, z)    { UNION_INIT(fo_str,  ""),   .type = FO_STR,    .pad_zero = z, .ch = c, .str = s }
-#define DEF_FO_INT(c, s, z)    { UNION_INIT(fo_int,  0),    .type = FO_INT,    .pad_zero = z, .ch = c, .str = s }
-#define DEF_FO_TIME(c, s, z)   { UNION_INIT(fo_time, 0),    .type = FO_TIME,   .pad_zero = z, .ch = c, .str = s }
-#define DEF_FO_DOUBLE(c, s, z) { UNION_INIT(fo_double, 0.), .type = FO_DOUBLE, .pad_zero = z, .ch = c, .str = s }
-#define DEF_FO_END             { .type = 0 }
+#define DEF_FO_STR(c, s, z)                                                    \
+	{UNION_INIT(fo_str, ""), .type = FO_STR, .pad_zero = z, .ch = c,       \
+	 .str = s}
+#define DEF_FO_INT(c, s, z)                                                    \
+	{UNION_INIT(fo_int, 0), .type = FO_INT, .pad_zero = z, .ch = c,        \
+	 .str = s}
+#define DEF_FO_TIME(c, s, z)                                                   \
+	{UNION_INIT(fo_time, 0), .type = FO_TIME, .pad_zero = z, .ch = c,      \
+	 .str = s}
+#define DEF_FO_DOUBLE(c, s, z)                                                 \
+	{UNION_INIT(fo_double, 0.), .type = FO_DOUBLE, .pad_zero = z, .ch = c, \
+	 .str = s}
+#define DEF_FO_END {.type = 0}
 
 struct fp_len {
 	int llen;
@@ -41,7 +50,8 @@ struct fp_len {
 	int rlen;
 };
 
-struct fp_len format_print(struct gbuf *buf, int str_width, const char *format, const struct format_option *fopts);
+struct fp_len format_print(struct gbuf *buf, int str_width, const char *format,
+			   const struct format_option *fopts);
 int format_valid(const char *format, const struct format_option *fopts);
 
 #endif

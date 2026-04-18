@@ -1,12 +1,12 @@
 #include "common/spawn.h"
 #include "common/file.h"
 
+#include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <stdlib.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
 
 int spawn(char *argv[], int *status, int do_wait)
 {

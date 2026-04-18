@@ -20,6 +20,8 @@ Pick the shortest path based on what you need:
   and contribution checklists
 - `architecture.md`: runtime model, threads, pipeline, plugin ABI, IPC, and
   current dependency direction
+- `codecs.md`: decoder backend architecture, supported formats, containers,
+  metadata standards, backend priority system, and what is out of scope
 - `development.md`: build, test, local development workflow, and cleanup
 - `runtime.md`: config directory, `autosave`, socket placement, and runtime
   state semantics

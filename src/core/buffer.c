@@ -1,7 +1,7 @@
 #include "core/buffer.h"
-#include "common/xmalloc.h"
-#include "common/locking.h"
 #include "common/debug.h"
+#include "common/locking.h"
+#include "common/xmalloc.h"
 
 #include <sys/time.h>
 
@@ -43,10 +43,7 @@ void buffer_init(void)
 	buffer_reset();
 }
 
-void buffer_free(void)
-{
-	free(buffer_chunks);
-}
+void buffer_free(void) { free(buffer_chunks); }
 
 /*
  * @pos: returned pointer to available data

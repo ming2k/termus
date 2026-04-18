@@ -8,20 +8,19 @@
 #include "common/compiler.h"
 #include "common/debug.h"
 
+#include <errno.h>
+#include <fcntl.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <stdio.h>
+#include <sys/types.h>
 #include <time.h>
-#include <stdint.h>
+#include <unistd.h>
 #ifdef HAVE_BYTESWAP_H
 #include <byteswap.h>
 #endif
-
 
 #define N_ELEMENTS(array) (sizeof(array) / sizeof((array)[0]))
 
@@ -30,36 +29,33 @@ struct slice {
 	size_t len;
 };
 
-#define TO_SLICE(type, ...) ((struct slice) { \
-	.ptr = ((type[]){__VA_ARGS__}), \
-	.len = N_ELEMENTS(((type[]){__VA_ARGS__})), \
-})
+#define TO_SLICE(type, ...)                                                    \
+	((struct slice){                                                       \
+	    .ptr = ((type[]){__VA_ARGS__}),                                    \
+	    .len = N_ELEMENTS(((type[]){__VA_ARGS__})),                        \
+	})
 
 #define STRINGIZE_HELPER(x) #x
 #define STRINGIZE(x) STRINGIZE_HELPER(x)
 
-#define CONCATENATE_HELPER(x,y) x##y
-#define CONCATENATE(x,y) CONCATENATE_HELPER(x,y)
+#define CONCATENATE_HELPER(x, y) x##y
+#define CONCATENATE(x, y) CONCATENATE_HELPER(x, y)
 
-#define getentry(ptr, offset, type) (*((type *) ((void *) ((char *) (ptr) + (offset)))))
+#define getentry(ptr, offset, type)                                            \
+	(*((type *)((void *)((char *)(ptr) + (offset)))))
 
-#define STATIC_ASSERT(cond) \
-	static uint8_t CONCATENATE(_termus_unused_, __LINE__)[2*(cond) - 1] UNUSED
+#define STATIC_ASSERT(cond)                                                    \
+	static uint8_t CONCATENATE(_termus_unused_,                            \
+				   __LINE__)[2 * (cond) - 1] UNUSED
 
-static inline long min_i(long a, long b)
-{
-	return a < b ? a : b;
-}
+static inline long min_i(long a, long b) { return a < b ? a : b; }
 
 static inline unsigned long min_u(unsigned long a, unsigned long b)
 {
 	return a < b ? a : b;
 }
 
-static inline long max_i(long a, long b)
-{
-	return a > b ? a : b;
-}
+static inline long max_i(long a, long b) { return a > b ? a : b; }
 
 static inline unsigned long abs_delta(unsigned long a, unsigned long b)
 {
@@ -114,10 +110,7 @@ static inline int strcmp0(const char *str1, const char *str2)
 	return strcmp(str1, str2);
 }
 
-static inline int is_space(const char ch)
-{
-	return (ch == ' ' || ch == '\t');
-}
+static inline int is_space(const char ch) { return (ch == ' ' || ch == '\t'); }
 
 static inline int ends_with(const char *str, const char *suffix)
 {
@@ -127,7 +120,7 @@ static inline int ends_with(const char *str, const char *suffix)
 static inline void strip_trailing_spaces(char *str)
 {
 	char *end = str + strlen(str);
-	while (end > str && is_space(*(end-1))) {
+	while (end > str && is_space(*(end - 1))) {
 		end--;
 	}
 	*end = 0;
@@ -165,24 +158,13 @@ static inline void ns_sleep(int ns)
 	nanosleep(&req, NULL);
 }
 
-static inline void us_sleep(int us)
-{
-	ns_sleep(us * 1e3);
-}
+static inline void us_sleep(int us) { ns_sleep(us * 1e3); }
 
-static inline void ms_sleep(int ms)
-{
-	ns_sleep(ms * 1e6);
-}
+static inline void ms_sleep(int ms) { ns_sleep(ms * 1e6); }
 
 static inline int is_http_url(const char *name)
 {
 	return strncmp(name, "http://", 7) == 0;
-}
-
-static inline int is_cdda_url(const char *name)
-{
-	return strncmp(name, "cdda://", 7) == 0;
 }
 
 static inline int is_cue_url(const char *name)
@@ -192,52 +174,44 @@ static inline int is_cue_url(const char *name)
 
 static inline int is_url(const char *name)
 {
-	return is_http_url(name) || is_cdda_url(name) || is_cue_url(name);
+	return is_http_url(name) || is_cue_url(name);
 }
 
 static inline int is_freeform_true(const char *c)
 {
-	return	c[0] == '1' ||
-		c[0] == 'y' || c[0] == 'Y' ||
-		c[0] == 't' || c[0] == 'T';
+	return c[0] == '1' || c[0] == 'y' || c[0] == 'Y' || c[0] == 't' ||
+	       c[0] == 'T';
 }
 
 /* e.g. NetBSD */
 #if defined(bswap16)
 /* GNU libc */
 #elif defined(bswap_16)
-# define bswap16 bswap_16
+#define bswap16 bswap_16
 /* e.g. OpenBSD */
 #elif defined(swap16)
-# define bswap16 swap16
+#define bswap16 swap16
 #else
-# define bswap16(x) \
-	((((x) >> 8) & 0xff) | (((x) & 0xff) << 8))
+#define bswap16(x) ((((x) >> 8) & 0xff) | (((x) & 0xff) << 8))
 #endif
 
-static inline uint16_t swap_uint16(uint16_t x)
-{
-	return bswap16(x);
-}
+static inline uint16_t swap_uint16(uint16_t x) { return bswap16(x); }
 
 /* e.g. NetBSD */
 #if defined(bswap32)
 /* GNU libc */
 #elif defined(bswap_32)
-# define bswap32 bswap_32
+#define bswap32 bswap_32
 /* e.g. OpenBSD */
 #elif defined(swap32)
-# define bswap32 swap32
+#define bswap32 swap32
 #else
-# define bswap32(x) \
-	((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) |	\
-	 (((x) & 0x0000ff00) <<  8) | (((x) & 0x000000ff) << 24))
+#define bswap32(x)                                                             \
+	((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >> 8) |              \
+	 (((x) & 0x0000ff00) << 8) | (((x) & 0x000000ff) << 24))
 #endif
 
-static inline uint32_t swap_uint32(uint32_t x)
-{
-	return bswap32(x);
-}
+static inline uint32_t swap_uint32(uint32_t x) { return bswap32(x); }
 
 static inline uint32_t read_le32(const char *buf)
 {
@@ -287,8 +261,10 @@ static inline void enable_stdio(void)
 {
 	fflush(stdout);
 	fflush(stderr);
-	while (dup2(_saved_stdout, 1) == -1 && errno == EINTR) { }
-	while (dup2(_saved_stderr, 2) == -1 && errno == EINTR) { }
+	while (dup2(_saved_stdout, 1) == -1 && errno == EINTR) {
+	}
+	while (dup2(_saved_stderr, 2) == -1 && errno == EINTR) {
+	}
 	close(_saved_stdout);
 	close(_saved_stderr);
 }

@@ -29,8 +29,10 @@ static char *pl_env_norm(char *path)
 {
 #ifdef _WIN32
 	/* convert backslashes to slashes */
-	/* note: termus uses forward slashes internally, but Windows accepts both */
-	/* even though they will get normalized on windows, we need paths to match exactly */
+	/* note: termus uses forward slashes internally, but Windows accepts
+	 * both */
+	/* even though they will get normalized on windows, we need paths to
+	 * match exactly */
 	for (char *p = path; *p; p++)
 		*p = *p == '\\' ? '/' : *p;
 #endif
@@ -40,37 +42,45 @@ static char *pl_env_norm(char *path)
 	while (path[r]) {
 
 		/* handle the start of a segment */
-		if (w == 0 || path[w-1] == '/') {
+		if (w == 0 || path[w - 1] == '/') {
 
 			/* handle empty segments */
 			if (path[r] == '/') {
 
 				/* skip the duplicate slashes */
-				while (path[r] == '/') r++;
+				while (path[r] == '/')
+					r++;
 
 				continue;
 			}
 
 			/* handle '.' segments */
-			if (path[r] == '.' && (path[r+1] == '/' || !path[r+1])) {
+			if (path[r] == '.' &&
+			    (path[r + 1] == '/' || !path[r + 1])) {
 
 				/* skip them */
-				if (path[r += 1]) r++;
+				if (path[r += 1])
+					r++;
 
 				continue;
 			}
 
 			/* handle '..' segments */
-			if (path[r] == '.' && path[r+1] == '.' && (path[r+2] == '/' || !path[r+2])) {
+			if (path[r] == '.' && path[r + 1] == '.' &&
+			    (path[r + 2] == '/' || !path[r + 2])) {
 
-				/* if there aren't any parent directories left to skip, return NULL */
-				if (!w) return NULL;
+				/* if there aren't any parent directories left
+				 * to skip, return NULL */
+				if (!w)
+					return NULL;
 
 				/* remove the previous segment up to the '/' */
-				for (w--; w && path[w-1] != '/'; ) w--;
+				for (w--; w && path[w - 1] != '/';)
+					w--;
 
 				/* skip the '..' */
-				if (path[r += 2]) r++;
+				if (path[r += 2])
+					r++;
 
 				continue;
 			}
@@ -81,7 +91,7 @@ static char *pl_env_norm(char *path)
 	}
 
 	/* remove the trailing slash if the path isn't / */
-	if (w >= 2 && path[w-1] == '/') {
+	if (w >= 2 && path[w - 1] == '/') {
 		w--;
 	}
 
@@ -102,15 +112,15 @@ static const char *pl_env_get(const char *var, int var_len)
 	if (!var)
 		return NULL;
 
-	size_t vl = var_len == -1
-		? strlen(var)
-		: var_len;
+	size_t vl = var_len == -1 ? strlen(var) : var_len;
 
 	const char *vs = var;
 	const char *ve = var + vl;
-	while (vs < ve && isspace(*vs)) vs++;
-	while (ve > vs && isspace(*(ve-1))) ve--;
-	vl = ve-vs;
+	while (vs < ve && isspace(*vs))
+		vs++;
+	while (ve > vs && isspace(*(ve - 1)))
+		ve--;
+	vl = ve - vs;
 
 	if (!vl)
 		return NULL;
@@ -136,10 +146,11 @@ void pl_env_init(void)
 	for (char **x = environ; *x; x++)
 		n++;
 
-	char **new = pl_env_cache = xnew(char*, n+1);
+	char **new = pl_env_cache = xnew(char *, n + 1);
 	for (char **x = environ; *x; x++)
 		if (!pl_env_contains_delimiter(*x))
-			if (!pl_env_norm(strchr((*new++ = xstrdup(*x)), '=') + 1))
+			if (!pl_env_norm(strchr((*new ++= xstrdup(*x)), '=') +
+					 1))
 				free(*--new);
 	*new = NULL;
 }
@@ -176,7 +187,7 @@ char *pl_env_reduce(const char *path)
 		size_t rem_len = strlen(rem);
 
 		char *new, *ptr;
-		new = ptr = xmalloc(1+var_len+1+rem_len+1);
+		new = ptr = xmalloc(1 + var_len + 1 + rem_len + 1);
 		*ptr++ = PL_ENV_DELIMITER;
 		memcpy(ptr, *var, var_len);
 		ptr += var_len;
@@ -210,7 +221,7 @@ char *pl_env_expand(const char *path)
 	size_t rem_len = strlen(rem);
 
 	char *new, *ptr;
-	new = ptr = xmalloc(val_len+rem_len+1);
+	new = ptr = xmalloc(val_len + rem_len + 1);
 	strcpy(ptr, val);
 	ptr += val_len;
 	strcpy(ptr, rem);
@@ -228,13 +239,13 @@ const char *pl_env_var(const char *path, int *out_length)
 	if (!(end = strrchr(path, PL_ENV_DELIMITER)) || path == end)
 		return NULL;
 	if (out_length)
-		*out_length = (int) (end-path);
+		*out_length = (int)(end - path);
 	return path;
 }
 
 const char *pl_env_var_remainder(const char *path, int length)
 {
-	return path+length+2;
+	return path + length + 2;
 }
 
 int pl_env_var_len(const char *path)

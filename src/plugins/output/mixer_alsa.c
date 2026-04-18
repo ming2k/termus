@@ -1,10 +1,10 @@
+#include "common/debug.h"
+#include "common/xmalloc.h"
 #include "core/mixer.h"
 #include "core/op.h"
-#include "common/xmalloc.h"
-#include "common/debug.h"
 
-#include <strings.h>
 #include <math.h>
+#include <strings.h>
 
 #define ALSA_PCM_NEW_HW_PARAMS_API
 #define ALSA_PCM_NEW_SW_PARAMS_API
@@ -49,15 +49,16 @@ static snd_mixer_elem_t *find_mixer_elem_by_name(const char *name)
 	elem = snd_mixer_find_selem(mixer, sid);
 	if (!elem) {
 		d_print("unable to find simple control '%s',%i\n",
-				snd_mixer_selem_id_get_name(sid),
-				snd_mixer_selem_id_get_index(sid));
+			snd_mixer_selem_id_get_name(sid),
+			snd_mixer_selem_id_get_index(sid));
 		return NULL;
 	}
 
 	if (!snd_mixer_selem_has_playback_volume(elem)) {
-		d_print("simple control '%s',%i does not have playback volume\n",
-				snd_mixer_selem_id_get_name(sid),
-				snd_mixer_selem_id_get_index(sid));
+		d_print(
+		    "simple control '%s',%i does not have playback volume\n",
+		    snd_mixer_selem_id_get_name(sid),
+		    snd_mixer_selem_id_get_index(sid));
 		return NULL;
 	}
 
@@ -85,7 +86,7 @@ static int alsa_mixer_open(int *volume_max)
 	elem = find_mixer_elem_by_name(alsa_mixer_element);
 	if (!elem) {
 		d_print("mixer element '%s' not found, trying 'Master'\n",
-				alsa_mixer_element);
+			alsa_mixer_element);
 		elem = find_mixer_elem_by_name("Master");
 		if (!elem) {
 			d_print("error: cannot find suitable mixer element\n");
@@ -126,8 +127,8 @@ static int alsa_mixer_get_fds(int what, int *fds)
 static void alsa_mixer_get_range(long *min, long *max, int *linear_mapping)
 {
 	if (!*linear_mapping) {
-		int err = snd_mixer_selem_get_playback_dB_range(
-				mixer_elem, min, max);
+		int err =
+		    snd_mixer_selem_get_playback_dB_range(mixer_elem, min, max);
 		*linear_mapping = err != 0 || *min >= *max;
 
 		/* Force linear mapping for small ranges of 24 dB */
@@ -138,8 +139,8 @@ static void alsa_mixer_get_range(long *min, long *max, int *linear_mapping)
 		snd_mixer_selem_get_playback_volume_range(mixer_elem, min, max);
 }
 
-static void alsa_mixer_set_vol(snd_mixer_selem_channel_id_t channel,
-		long min, long max, int vol, int linear_mapping)
+static void alsa_mixer_set_vol(snd_mixer_selem_channel_id_t channel, long min,
+			       long max, int vol, int linear_mapping)
 {
 	if (linear_mapping) {
 		long v = (long)(vol * (max - min) / 100.0 + 0.5) + min;
@@ -170,15 +171,15 @@ static int alsa_mixer_set_volume(int l, int r)
 
 	alsa_mixer_get_range(&min, &max, &linear_mapping);
 
-	alsa_mixer_set_vol(SND_MIXER_SCHN_FRONT_LEFT,
-			min, max, l, linear_mapping);
-	alsa_mixer_set_vol(SND_MIXER_SCHN_FRONT_RIGHT,
-			min, max, r, linear_mapping);
+	alsa_mixer_set_vol(SND_MIXER_SCHN_FRONT_LEFT, min, max, l,
+			   linear_mapping);
+	alsa_mixer_set_vol(SND_MIXER_SCHN_FRONT_RIGHT, min, max, r,
+			   linear_mapping);
 	return 0;
 }
 
-static int alsa_mixer_get_vol(snd_mixer_selem_channel_id_t channel,
-		long min, long max, int linear_mapping)
+static int alsa_mixer_get_vol(snd_mixer_selem_channel_id_t channel, long min,
+			      long max, int linear_mapping)
 {
 	long val;
 
@@ -209,10 +210,10 @@ static int alsa_mixer_get_volume(int *l, int *r)
 
 	alsa_mixer_get_range(&min, &max, &linear_mapping);
 
-	*l = alsa_mixer_get_vol(SND_MIXER_SCHN_FRONT_LEFT,
-			min, max, linear_mapping);
-	*r = alsa_mixer_get_vol(SND_MIXER_SCHN_FRONT_RIGHT,
-			min, max, linear_mapping);
+	*l = alsa_mixer_get_vol(SND_MIXER_SCHN_FRONT_LEFT, min, max,
+				linear_mapping);
+	*r = alsa_mixer_get_vol(SND_MIXER_SCHN_FRONT_RIGHT, min, max,
+				linear_mapping);
 	return 0;
 }
 
@@ -257,18 +258,18 @@ static int alsa_mixer_get_mapped_volume(char **val)
 }
 
 const struct mixer_plugin_ops op_mixer_ops = {
-	.init = alsa_mixer_init,
-	.exit = alsa_mixer_exit,
-	.open = alsa_mixer_open,
-	.close = alsa_mixer_close,
-	.get_fds.abi_2 = alsa_mixer_get_fds,
-	.set_volume = alsa_mixer_set_volume,
-	.get_volume = alsa_mixer_get_volume,
+    .init = alsa_mixer_init,
+    .exit = alsa_mixer_exit,
+    .open = alsa_mixer_open,
+    .close = alsa_mixer_close,
+    .get_fds.abi_2 = alsa_mixer_get_fds,
+    .set_volume = alsa_mixer_set_volume,
+    .get_volume = alsa_mixer_get_volume,
 };
 
 const struct mixer_plugin_opt op_mixer_options[] = {
-	OPT(alsa_mixer, channel),
-	OPT(alsa_mixer, device),
-	OPT(alsa_mixer, mapped_volume),
-	{ NULL },
+    OPT(alsa_mixer, channel),
+    OPT(alsa_mixer, device),
+    OPT(alsa_mixer, mapped_volume),
+    {NULL},
 };

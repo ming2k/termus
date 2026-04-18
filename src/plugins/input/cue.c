@@ -1,15 +1,15 @@
-#include "core/ip.h"
-#include "common/debug.h"
-#include "core/input.h"
-#include "common/utils.h"
-#include "core/comment.h"
-#include "common/xmalloc.h"
-#include "core/cue_utils.h"
 #include "library/cue.h"
+#include "common/debug.h"
+#include "common/utils.h"
+#include "common/xmalloc.h"
+#include "core/comment.h"
+#include "core/cue_utils.h"
+#include "core/input.h"
+#include "core/ip.h"
 
-#include <stdio.h>
 #include <fcntl.h>
 #include <math.h>
+#include <stdio.h>
 
 struct cue_private {
 	struct input_plugin *child;
@@ -21,7 +21,6 @@ struct cue_private {
 	double current_offset;
 	double end_offset;
 };
-
 
 static int _parse_cue_url(const char *url, char **filename, int *track_n)
 {
@@ -45,8 +44,8 @@ static int _parse_cue_url(const char *url, char **filename, int *track_n)
 	return 0;
 }
 
-
-static char *_make_absolute_path(const char *abs_filename, const char *rel_filename)
+static char *_make_absolute_path(const char *abs_filename,
+				 const char *rel_filename)
 {
 	char *s;
 	const char *slash;
@@ -63,7 +62,6 @@ static char *_make_absolute_path(const char *abs_filename, const char *rel_filen
 	return xstrdup(buf);
 }
 
-
 static int cue_open(struct input_plugin_data *ip_data)
 {
 	int rc;
@@ -74,7 +72,8 @@ static int cue_open(struct input_plugin_data *ip_data)
 
 	priv = xnew(struct cue_private, 1);
 
-	rc = _parse_cue_url(ip_data->filename, &priv->cue_filename, &priv->track_n);
+	rc = _parse_cue_url(ip_data->filename, &priv->cue_filename,
+			    &priv->track_n);
 	if (rc) {
 		rc = -IP_ERROR_INVALID_URI;
 		goto url_parse_failed;
@@ -140,7 +139,6 @@ url_parse_failed:
 	return rc;
 }
 
-
 static int cue_close(struct input_plugin_data *ip_data)
 {
 	struct cue_private *priv = ip_data->private;
@@ -156,7 +154,6 @@ static int cue_close(struct input_plugin_data *ip_data)
 
 	return 0;
 }
-
 
 static int cue_read(struct input_plugin_data *ip_data, char *buffer, int count)
 {
@@ -178,12 +175,12 @@ static int cue_read(struct input_plugin_data *ip_data, char *buffer, int count)
 		priv->current_offset += len;
 
 		if (priv->current_offset >= priv->end_offset)
-			rc = lround(rem_len * sf_get_rate(sf)) * sf_get_frame_size(sf);
+			rc = lround(rem_len * sf_get_rate(sf)) *
+			     sf_get_frame_size(sf);
 	}
 
 	return rc;
 }
-
 
 static int cue_seek(struct input_plugin_data *ip_data, double offset)
 {
@@ -198,14 +195,14 @@ static int cue_seek(struct input_plugin_data *ip_data, double offset)
 	return ip_seek(priv->child, new_offset);
 }
 
-
-static int cue_read_comments(struct input_plugin_data *ip_data, struct keyval **comments)
+static int cue_read_comments(struct input_plugin_data *ip_data,
+			     struct keyval **comments)
 {
 	struct cue_private *priv = ip_data->private;
 	struct cue_sheet *cd = cue_from_file(priv->cue_filename);
 	struct cue_track *t;
 	int rc;
-	char buf[32] = { 0 };
+	char buf[32] = {0};
 	GROWING_KEYVALS(c);
 
 	if (cd == NULL) {
@@ -244,13 +241,17 @@ static int cue_read_comments(struct input_plugin_data *ip_data, struct keyval **
 		comments_add_const(&c, "genre", cd->meta.genre);
 
 	if (cd->meta.rg_gain)
-		comments_add_const(&c, "replaygain_album_gain", cd->meta.rg_gain);
+		comments_add_const(&c, "replaygain_album_gain",
+				   cd->meta.rg_gain);
 	if (cd->meta.rg_peak)
-		comments_add_const(&c, "replaygain_album_peak", cd->meta.rg_peak);
+		comments_add_const(&c, "replaygain_album_peak",
+				   cd->meta.rg_peak);
 	if (t->meta.rg_gain)
-		comments_add_const(&c, "replaygain_track_gain", t->meta.rg_gain);
+		comments_add_const(&c, "replaygain_track_gain",
+				   t->meta.rg_gain);
 	if (t->meta.rg_peak)
-		comments_add_const(&c, "replaygain_track_peak", t->meta.rg_peak);
+		comments_add_const(&c, "replaygain_track_peak",
+				   t->meta.rg_peak);
 
 	keyvals_terminate(&c);
 	*comments = c.keyvals;
@@ -265,7 +266,6 @@ cue_parse_failed:
 	return rc;
 }
 
-
 static int cue_duration(struct input_plugin_data *ip_data)
 {
 	struct cue_private *priv = ip_data->private;
@@ -275,14 +275,12 @@ static int cue_duration(struct input_plugin_data *ip_data)
 		return priv->end_offset - priv->start_offset;
 }
 
-
 static long cue_bitrate(struct input_plugin_data *ip_data)
 {
 	struct cue_private *priv = ip_data->private;
 
 	return ip_bitrate(priv->child);
 }
-
 
 static long cue_current_bitrate(struct input_plugin_data *ip_data)
 {
@@ -291,14 +289,12 @@ static long cue_current_bitrate(struct input_plugin_data *ip_data)
 	return ip_current_bitrate(priv->child);
 }
 
-
 static char *cue_codec(struct input_plugin_data *ip_data)
 {
 	struct cue_private *priv = ip_data->private;
 
 	return ip_codec(priv->child);
 }
-
 
 static char *cue_codec_profile(struct input_plugin_data *ip_data)
 {
@@ -307,22 +303,21 @@ static char *cue_codec_profile(struct input_plugin_data *ip_data)
 	return ip_codec_profile(priv->child);
 }
 
-
 const struct input_plugin_ops ip_ops = {
-	.open            = cue_open,
-	.close           = cue_close,
-	.read            = cue_read,
-	.seek            = cue_seek,
-	.read_comments   = cue_read_comments,
-	.duration        = cue_duration,
-	.bitrate         = cue_bitrate,
-	.bitrate_current = cue_current_bitrate,
-	.codec           = cue_codec,
-	.codec_profile   = cue_codec_profile,
+    .open = cue_open,
+    .close = cue_close,
+    .read = cue_read,
+    .seek = cue_seek,
+    .read_comments = cue_read_comments,
+    .duration = cue_duration,
+    .bitrate = cue_bitrate,
+    .bitrate_current = cue_current_bitrate,
+    .codec = cue_codec,
+    .codec_profile = cue_codec_profile,
 };
 
 const int ip_priority = 50;
-const char * const ip_extensions[] = { "cue", NULL };
-const char * const ip_mime_types[] = { "application/x-cue", NULL };
-const struct input_plugin_opt ip_options[] = { { NULL } };
+const char *const ip_extensions[] = {"cue", NULL};
+const char *const ip_mime_types[] = {"application/x-cue", NULL};
+const struct input_plugin_opt ip_options[] = {{NULL}};
 const unsigned ip_abi_version = IP_ABI_VERSION;

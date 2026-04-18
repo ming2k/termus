@@ -1,13 +1,13 @@
 #include "common/file.h"
 #include "common/xmalloc.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <stdlib.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 ssize_t read_all(int fd, void *buf, size_t count)
 {
@@ -85,8 +85,7 @@ err:
 }
 
 void buffer_for_each_line(const char *buf, int size,
-		int (*cb)(void *data, const char *line),
-		void *data)
+			  int (*cb)(void *data, const char *line), void *data)
 {
 	char *line = NULL;
 	int line_size = 0, pos = 0;
@@ -117,8 +116,8 @@ void buffer_for_each_line(const char *buf, int size,
 }
 
 void buffer_for_each_line_reverse(const char *buf, int size,
-		int (*cb)(void *data, const char *line),
-		void *data)
+				  int (*cb)(void *data, const char *line),
+				  void *data)
 {
 	char *line = NULL;
 	int line_size = 0, end = size - 1;
@@ -149,8 +148,7 @@ void buffer_for_each_line_reverse(const char *buf, int size,
 }
 
 int file_for_each_line(const char *filename,
-		int (*cb)(void *data, const char *line),
-		void *data)
+		       int (*cb)(void *data, const char *line), void *data)
 {
 	char *buf;
 	ssize_t size;

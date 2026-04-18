@@ -28,6 +28,14 @@ Required:
 - ncursesw
 - pthreads
 
+Primary format libraries (required by default):
+
+- libFLAC (`libflac-dev`)
+- opusfile (`libopusfile-dev`)
+- faad2 (`libfaad-dev`)
+- mp4v2 + faad2 (`libmp4v2-dev libfaad-dev`)
+- libvorbisfile (`libvorbis-dev`) — auto-detected
+
 Use `autoreconf`, not `autoconf`.
 
 ## Build Toolkit
@@ -94,7 +102,9 @@ Useful configure examples:
 ../configure --enable-warnings-as-errors
 ../configure --enable-sanitizers
 ../configure --enable-sanitizers=address
-../configure --disable-alsa
+../configure --disable-alsa          # skip ALSA, use PipeWire only
+../configure --disable-flac          # not recommended
+../configure --disable-mpg123        # skip legacy MP3 support
 ../configure --help
 ```
 
@@ -105,6 +115,14 @@ Developer-oriented switches:
 - `--enable-sanitizers[=LIST]`: runtime sanitizers, with `yes` meaning
   `address,undefined`
 
+Format support flags (see `configure.ac` for the full list):
+
+- `--disable-flac / --disable-opus / --disable-aac / --disable-mp4`: disable
+  a primary format (not recommended; these are required by default)
+- `--disable-vorbis`: skip Ogg Vorbis auto-detection
+- `--disable-mpg123`: skip legacy MP3 support
+- `--disable-cue`: skip CUE sheet playlist support
+
 Artifacts stay under `build/`:
 
 - `build/src/termus`
@@ -114,21 +132,14 @@ Artifacts stay under `build/`:
 
 ## Test And Run
 
-Run from the build tree without installing:
-
-```sh
-make run
-```
-
 Run the test suite:
 
 ```sh
 make check
 ```
 
-`make check` currently uses a small low-level regression test set under
-`tests/`. The goal is to keep a stable place for incremental coverage as
-subsystems are cleaned up.
+`make check` uses a low-level regression test set under `tests/`. The goal is to
+keep a stable place for incremental coverage as subsystems are cleaned up.
 
 ## Development Environment
 
@@ -136,50 +147,34 @@ For development and debugging, do not use your daily config directory. Keep a
 separate termus environment so autosave, cache, history, playlists, and socket
 state do not interfere with normal usage.
 
-For the runtime meaning of `autosave`, `rc`, and the control socket, see
-`docs/runtime.md`.
+The build system provides built-in targets to handle this isolation and correctly
+stage locally built plugins (which otherwise wouldn't be found without a full `make install`):
 
-Recommended local setup:
+- **`make run`**: Launches termus against a persistent sandbox at `build/dev-home/`.
+  Configuration, history, and cache survive across invocations. This is the recommended
+  workflow for normal feature work.
+- **`make run-clean`**: Launches termus against a completely empty, disposable
+  temporary directory. Great for testing first-run behavior or reproducing issues
+  from a blank slate.
+- **`make run-user`**: Launches termus against your real `~/.config/termus` account
+  config. Use this *only* if you specifically need to test your daily setup.
 
-```sh
-mkdir -p /tmp/termus-dev
-TERMUS_HOME=/tmp/termus-dev \
-TERMUS_SOCKET=/tmp/termus-dev/socket \
-build/src/termus
-```
-
-Why this is the preferred workflow:
-
-- Keeps your real `~/.config/termus` untouched
-- Makes test runs reproducible
-- Lets you reset state with `rm -rf /tmp/termus-dev`
-- Avoids socket collisions when another termus instance is already running
-
-Suggested practices:
-
-- Start with an empty dev config dir unless you are debugging user-specific
-  behavior
-- Add only the minimum files under the dev `TERMUS_HOME` such as `rc` or
-  `*.theme`
-- Treat `autosave`, `cache`, `command-history`, `search-history`, and `resume`
-  as disposable debug state
-- Use a different `TERMUS_SOCKET` for each concurrent instance
-
-If you specifically want to test default XDG path behavior, isolate the XDG
-variables instead of touching your real account config:
+If you specifically want to test default XDG path resolution manually, you can
+isolate the XDG variables against the raw binary (make sure to run `make stage` first
+so plugins are available):
 
 ```sh
-mkdir -p /tmp/termus-xdg/config /tmp/termus-xdg/state /tmp/termus-xdg/cache /tmp/termus-xdg/data /tmp/termus-xdg/runtime
+make stage
+mkdir -p /tmp/termus-xdg/config /tmp/termus-xdg/state /tmp/termus-xdg/cache
 XDG_CONFIG_HOME=/tmp/termus-xdg/config \
 XDG_STATE_HOME=/tmp/termus-xdg/state \
 XDG_CACHE_HOME=/tmp/termus-xdg/cache \
-XDG_DATA_HOME=/tmp/termus-xdg/data \
-XDG_RUNTIME_DIR=/tmp/termus-xdg/runtime \
-build/src/termus
+TERMUS_LIB_DIR=$PWD/stage \
+src/termus
 ```
 
 Use that only when validating path resolution or startup behavior. For ordinary
-feature work, `TERMUS_HOME=/tmp/termus-dev` is simpler.
+feature work, simply use `make run`.
 
 ## Packager Notes
 

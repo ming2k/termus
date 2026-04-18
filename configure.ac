@@ -49,6 +49,7 @@ test "$c_std_ok" = no && AC_MSG_ERROR([C11 or newer with atomics required])
 DEV_WARN_CFLAGS=
 for flag in \
     -pipe -Wall -Wshadow -Wcast-align -Wpointer-arith \
+    -fanalyzer \
     -Wwrite-strings -Wundef -Wmissing-prototypes -Wredundant-decls \
     -Wextra -Wno-sign-compare -Wformat-security \
     -Wold-style-definition -Wno-pointer-sign \
@@ -283,117 +284,62 @@ AC_DEFINE_UNQUOTED([LIBDIR], ["$libdir_val"], [Lib dir])
 
 # -----------------------------------------------------------------------
 # Input plugins
+#
+# Decoder backends — see docs/codecs.md for the full rationale.
+#
+# Each supported format requires at least one backend.  Format-specific
+# libraries run at ip_priority=50 (preferred); the FFmpeg backend runs at
+# ip_priority=10 (fallback).  AAC/M4A have no maintained dedicated library,
+# so FFmpeg is their primary and only backend.
+#
+# Format coverage is validated after all checks (configure errors if a
+# primary format ends up with no backend at all).
 # -----------------------------------------------------------------------
 
-# -- CDDB --
-AC_ARG_ENABLE([cddb],[AS_HELP_STRING([--disable-cddb],[disable libcddb])],
-  [enable_cddb=$enableval],[enable_cddb=auto])
-have_cddb=no
-test "$enable_cddb" != no &&
-  PKG_CHECK_MODULES([CDDB],[libcddb],
-    [have_cddb=yes;AC_DEFINE([HAVE_CDDB],[1],[Have libcddb])],
-    [test "$enable_cddb" = yes && AC_MSG_ERROR([libcddb not found])])
-AM_CONDITIONAL([CONFIG_CDDB],[test "$have_cddb" = yes])
+# -- FFmpeg decoder backend (libavformat + libavcodec + libswresample) --
+# Required for AAC/M4A; optional fallback for FLAC/Opus/Vorbis/MP3.
+# Minimum version: FFmpeg 5.0 / libavformat 59 / libswresample 4.
+AC_ARG_ENABLE([avcodec],
+  [AS_HELP_STRING([--disable-avcodec],[disable FFmpeg decoder backend])],
+  [enable_avcodec=$enableval],[enable_avcodec=auto])
+have_avcodec=no
+if test "$enable_avcodec" != no; then
+  PKG_CHECK_MODULES([AVCODEC],
+    [libavformat >= 59 libavcodec >= 59 libswresample >= 4 libavutil],
+    [have_avcodec=yes],
+    [test "$enable_avcodec" = yes &&
+       AC_MSG_ERROR([FFmpeg >= 5.0 not found; install libavformat-dev libavcodec-dev libswresample-dev])])
+fi
+AM_CONDITIONAL([CONFIG_AVCODEC],[test "$have_avcodec" = yes])
 
-# -- CDIO --
-AC_ARG_ENABLE([cdio],[AS_HELP_STRING([--disable-cdio],[disable libcdio CDDA])],
-  [enable_cdio=$enableval],[enable_cdio=auto])
-have_cdio=no
-test "$enable_cdio" != no &&
-  PKG_CHECK_MODULES([CDIO],[libcdio_cdda],
-    [have_cdio=yes],
-    [test "$enable_cdio" = yes && AC_MSG_ERROR([libcdio_cdda not found])])
-AM_CONDITIONAL([CONFIG_CDIO],[test "$have_cdio" = yes])
-
-# -- FLAC --
-AC_ARG_ENABLE([flac],[AS_HELP_STRING([--disable-flac],[disable FLAC])],
-  [enable_flac=$enableval],[enable_flac=auto])
+# -- FLAC — primary: libFLAC; fallback: FFmpeg --
+AC_ARG_ENABLE([flac],[AS_HELP_STRING([--disable-flac],[disable libFLAC (FFmpeg fallback will be used if available)])],
+  [enable_flac=$enableval],[enable_flac=yes])
 have_flac=no
 test "$enable_flac" != no &&
   PKG_CHECK_MODULES([FLAC],[flac],
     [have_flac=yes;FLAC_CFLAGS=$(echo "$FLAC_CFLAGS"|sed 's|/FLAC$||')],
-    [test "$enable_flac" = yes && AC_MSG_ERROR([flac not found])])
+    [test "$enable_flac" = yes && AC_MSG_ERROR([flac not found; install libflac-dev or --disable-flac])])
 AM_CONDITIONAL([CONFIG_FLAC],[test "$have_flac" = yes])
 
-# -- MAD --
-AC_ARG_ENABLE([mad],[AS_HELP_STRING([--disable-mad],[disable MAD mp3 decoder])],
-  [enable_mad=$enableval],[enable_mad=auto])
-have_mad=no
-test "$enable_mad" != no &&
-  PKG_CHECK_MODULES([MAD],[mad],
-    [have_mad=yes],
-    [test "$enable_mad" = yes && AC_MSG_ERROR([libmad not found])])
-AM_CONDITIONAL([CONFIG_MAD],[test "$have_mad" = yes])
+# -- OPUS — primary: libopusfile; fallback: FFmpeg --
+AC_ARG_ENABLE([opus],[AS_HELP_STRING([--disable-opus],[disable libopusfile (FFmpeg fallback will be used if available)])],
+  [enable_opus=$enableval],[enable_opus=yes])
+have_opus=no
+test "$enable_opus" != no &&
+  PKG_CHECK_MODULES([OPUS],[opusfile],
+    [have_opus=yes],
+    [test "$enable_opus" = yes && AC_MSG_ERROR([opusfile not found; install libopusfile-dev or --disable-opus])])
+AM_CONDITIONAL([CONFIG_OPUS],[test "$have_opus" = yes])
 
-# -- MPG123 --
-AC_ARG_ENABLE([mpg123],[AS_HELP_STRING([--disable-mpg123],[disable mpg123])],
-  [enable_mpg123=$enableval],[enable_mpg123=auto])
-have_mpg123=no
-test "$enable_mpg123" != no &&
-  PKG_CHECK_MODULES([MPG123],[libmpg123],
-    [have_mpg123=yes],
-    [test "$enable_mpg123" = yes && AC_MSG_ERROR([libmpg123 not found])])
-AM_CONDITIONAL([CONFIG_MPG123],[test "$have_mpg123" = yes])
-
-# -- MIKMOD (off by default) --
-AC_ARG_ENABLE([mikmod],[AS_HELP_STRING([--enable-mikmod],[enable libmikmod (default: no)])],
-  [enable_mikmod=$enableval],[enable_mikmod=no])
-have_mikmod=no
-if test "$enable_mikmod" = yes; then
-  PKG_CHECK_MODULES([MIKMOD],[libmikmod],[have_mikmod=yes],[
-    AC_CHECK_LIB([mikmod],[MikMod_RegisterAllDrivers],
-      [have_mikmod=yes;MIKMOD_LIBS="-lmikmod $PTHREAD_LIBS"],,[
-$PTHREAD_LIBS])])
-fi
-AC_SUBST([MIKMOD_CFLAGS])
-AC_SUBST([MIKMOD_LIBS])
-AM_CONDITIONAL([CONFIG_MIKMOD],[test "$have_mikmod" = yes])
-
-# -- MODPLUG --
-AC_ARG_ENABLE([modplug],[AS_HELP_STRING([--disable-modplug],[disable libmodplug])],
-  [enable_modplug=$enableval],[enable_modplug=auto])
-have_modplug=no; modplug_api8=0
-test "$enable_modplug" != no &&
-  PKG_CHECK_MODULES([MODPLUG],[libmodplug],
-    [have_modplug=yes
-     AC_CHECK_LIB([modplug],[ModPlug_GetModuleType],[modplug_api8=1],,[$MODPLUG_LIBS])],
-    [test "$enable_modplug" = yes && AC_MSG_ERROR([libmodplug not found])])
-AC_DEFINE_UNQUOTED([MODPLUG_API_8],[$modplug_api8],[ModPlug API 8])
-AM_CONDITIONAL([CONFIG_MODPLUG],[test "$have_modplug" = yes])
-
-# -- BASS (off by default) --
-AC_ARG_ENABLE([bass],[AS_HELP_STRING([--enable-bass],[enable libbass (default: no)])],
-  [enable_bass=$enableval],[enable_bass=no])
-have_bass=no; BASS_LIBS=""
-if test "$enable_bass" = yes; then
-  AC_CHECK_HEADER([bass.h],
-    [AC_CHECK_LIB([bass],[BASS_Init],[have_bass=yes;BASS_LIBS="-lbass"])])
-fi
-AC_SUBST([BASS_LIBS])
-AM_CONDITIONAL([CONFIG_BASS],[test "$have_bass" = yes])
-
-# -- MPC --
-AC_ARG_ENABLE([mpc],[AS_HELP_STRING([--disable-mpc],[disable Musepack])],
-  [enable_mpc=$enableval],[enable_mpc=auto])
-have_mpc=no; mpc_sv8=0; MPC_LIBS=""
-if test "$enable_mpc" != no; then
-  AC_CHECK_HEADER([mpc/mpcdec.h],[mpc_sv8=1],[AC_CHECK_HEADER([mpcdec/mpcdec.h],[])])
-  AC_CHECK_LIB([mpcdec],[mpc_demux_init],
-    [have_mpc=yes;MPC_LIBS="-lmpcdec -lm"],
-    [test "$enable_mpc" = yes && AC_MSG_ERROR([libmpcdec not found])])
-fi
-AC_DEFINE_UNQUOTED([MPC_SV8],[$mpc_sv8],[MPC SV8 API])
-AC_SUBST([MPC_LIBS])
-AM_CONDITIONAL([CONFIG_MPC],[test "$have_mpc" = yes])
-
-# -- TREMOR (affects vorbis) --
-AC_ARG_ENABLE([tremor],[AS_HELP_STRING([--enable-tremor],[use Tremor Ogg/Vorbis (default: no)])],
+# -- TREMOR (fixed-point Vorbis for embedded/ARM) --
+AC_ARG_ENABLE([tremor],[AS_HELP_STRING([--enable-tremor],[use Tremor fixed-point Ogg/Vorbis (default: no)])],
   [enable_tremor=$enableval],[enable_tremor=no])
 test "$enable_tremor" = yes && AC_DEFINE([CONFIG_TREMOR],[1],[Use Tremor])
 AM_CONDITIONAL([CONFIG_TREMOR],[test "$enable_tremor" = yes])
 
-# -- VORBIS --
-AC_ARG_ENABLE([vorbis],[AS_HELP_STRING([--disable-vorbis],[disable Ogg/Vorbis])],
+# -- OGG VORBIS — primary: libvorbisfile; fallback: FFmpeg --
+AC_ARG_ENABLE([vorbis],[AS_HELP_STRING([--disable-vorbis],[disable libvorbisfile (FFmpeg fallback will be used)])],
   [enable_vorbis=$enableval],[enable_vorbis=auto])
 have_vorbis=no
 if test "$enable_vorbis" != no; then
@@ -407,102 +353,50 @@ if test "$enable_vorbis" != no; then
 fi
 AM_CONDITIONAL([CONFIG_VORBIS],[test "$have_vorbis" = yes])
 
-# -- OPUS --
-AC_ARG_ENABLE([opus],[AS_HELP_STRING([--disable-opus],[disable Opus])],
-  [enable_opus=$enableval],[enable_opus=auto])
-have_opus=no
-test "$enable_opus" != no &&
-  PKG_CHECK_MODULES([OPUS],[opusfile],[have_opus=yes],
-    [test "$enable_opus" = yes && AC_MSG_ERROR([opusfile not found])])
-AM_CONDITIONAL([CONFIG_OPUS],[test "$have_opus" = yes])
+# -- MP3 (legacy) — primary: libmpg123; fallback: FFmpeg --
+AC_ARG_ENABLE([mpg123],[AS_HELP_STRING([--disable-mpg123],[disable libmpg123 MP3 backend])],
+  [enable_mpg123=$enableval],[enable_mpg123=auto])
+have_mpg123=no
+test "$enable_mpg123" != no &&
+  PKG_CHECK_MODULES([MPG123],[libmpg123],
+    [have_mpg123=yes],
+    [test "$enable_mpg123" = yes && AC_MSG_ERROR([libmpg123 not found])])
+AM_CONDITIONAL([CONFIG_MPG123],[test "$have_mpg123" = yes])
 
-# -- WAVPACK --
-AC_ARG_ENABLE([wavpack],[AS_HELP_STRING([--disable-wavpack],[disable WavPack])],
-  [enable_wavpack=$enableval],[enable_wavpack=auto])
-have_wavpack=no
-test "$enable_wavpack" != no &&
-  PKG_CHECK_MODULES([WAVPACK],[wavpack >= 4.40],[have_wavpack=yes],
-    [test "$enable_wavpack" = yes && AC_MSG_ERROR([wavpack >= 4.40 not found])])
-AM_CONDITIONAL([CONFIG_WAVPACK],[test "$have_wavpack" = yes])
-
-# -- MP4 --
-AC_ARG_ENABLE([mp4],[AS_HELP_STRING([--disable-mp4],[disable MPEG-4 AAC])],
-  [enable_mp4=$enableval],[enable_mp4=auto])
-have_mp4=no; use_mpeg4ip=0
-if test "$enable_mp4" != no; then
-  PKG_CHECK_MODULES([MP4],[mp4v2 faad2],
-    [have_mp4=yes
-     AC_CHECK_HEADER([mp4v2/mp4v2.h],,[use_mpeg4ip=1;
-       AC_CHECK_HEADER([mp4.h],,[have_mp4=no])])],
-    [test "$enable_mp4" = yes && AC_MSG_ERROR([mp4v2 + faad2 not found])])
-fi
-AC_DEFINE_UNQUOTED([USE_MPEG4IP],[$use_mpeg4ip],[Use mpeg4ip API])
-AM_CONDITIONAL([CONFIG_MP4],[test "$have_mp4" = yes])
-
-# -- AAC --
-AC_ARG_ENABLE([aac],[AS_HELP_STRING([--disable-aac],[disable AAC])],
-  [enable_aac=$enableval],[enable_aac=auto])
-have_aac=no
-if test "$enable_aac" != no; then
-  PKG_CHECK_MODULES([AAC],[faad2],
-    [AC_CHECK_HEADER([neaacdec.h],[have_aac=yes],,[CFLAGS="$AAC_CFLAGS"])],
-    [test "$enable_aac" = yes && AC_MSG_ERROR([faad2 not found])])
-fi
-AM_CONDITIONAL([CONFIG_AAC],[test "$have_aac" = yes])
-
-# -- FFMPEG --
-AC_ARG_ENABLE([ffmpeg],[AS_HELP_STRING([--disable-ffmpeg],[disable FFMPEG])],
-  [enable_ffmpeg=$enableval],[enable_ffmpeg=auto])
-have_ffmpeg=no
-if test "$enable_ffmpeg" != no; then
-  PKG_CHECK_MODULES([FFMPEG],[libavformat libavcodec libswresample libavutil],
-    [ok=yes
-     save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS $FFMPEG_CFLAGS"
-     AC_CHECK_HEADER([libavformat/avformat.h],   ,[ok=no])
-     AC_CHECK_HEADER([libavcodec/avcodec.h],     ,[ok=no])
-     AC_CHECK_HEADER([libswresample/swresample.h],[ok=no])
-     AC_CHECK_HEADER([libavutil/avutil.h],        ,[ok=no])
-     CFLAGS="$save_CFLAGS"
-     if test "$ok" = yes; then
-       have_ffmpeg=yes
-       AC_DEFINE([HAVE_FFMPEG_AVCODEC_H],[1],[Have ffmpeg headers])
-     fi],
-    [test "$enable_ffmpeg" = yes && AC_MSG_ERROR([ffmpeg not found])])
-fi
-AM_CONDITIONAL([CONFIG_FFMPEG],[test "$have_ffmpeg" = yes])
-
-# -- VTX --
-AC_ARG_ENABLE([vtx],[AS_HELP_STRING([--disable-vtx],[disable VTX/ayemu])],
-  [enable_vtx=$enableval],[enable_vtx=auto])
-have_vtx=no; VTX_LIBS=""
-test "$enable_vtx" != no &&
-  AC_CHECK_HEADER([ayemu.h],
-    [AC_CHECK_LIB([ayemu],[ayemu_init],
-      [have_vtx=yes;VTX_LIBS="-layemu"],
-      [test "$enable_vtx" = yes && AC_MSG_ERROR([libayemu not found])])])
-AC_SUBST([VTX_LIBS])
-AM_CONDITIONAL([CONFIG_VTX],[test "$have_vtx" = yes])
-
-# -- CUE / WAV (no external deps) --
+# -- CUE sheet playlist --
 AC_ARG_ENABLE([cue],[AS_HELP_STRING([--disable-cue],[disable CUE sheet support])],
   [enable_cue=$enableval],[enable_cue=yes])
 AM_CONDITIONAL([CONFIG_CUE],[test "$enable_cue" = yes])
 
-AC_ARG_ENABLE([wav],[AS_HELP_STRING([--disable-wav],[disable WAV support])],
-  [enable_wav=$enableval],[enable_wav=yes])
-AM_CONDITIONAL([CONFIG_WAV],[test "$enable_wav" = yes])
+# ── Format coverage validation ───────────────────────────────────────────
+# Each primary format must have at least one backend available.
 
-# -- USE_FALLBACK_IP --
-AC_ARG_ENABLE([fallback-ip],
-  [AS_HELP_STRING([--enable-fallback-ip],[use FFMPEG for unknown formats])],
-  [test "$enableval" = yes &&
-     AC_DEFINE([USE_FALLBACK_IP],[1],[FFMPEG fallback input plugin])])
+# FLAC: libFLAC or FFmpeg
+if test "$have_flac" = no && test "$have_avcodec" = no; then
+  AC_MSG_ERROR([No FLAC backend: install libflac-dev or libavformat-dev (FFmpeg)])
+fi
+
+# Opus: libopusfile or FFmpeg
+if test "$have_opus" = no && test "$have_avcodec" = no; then
+  AC_MSG_ERROR([No Opus backend: install libopusfile-dev or libavformat-dev (FFmpeg)])
+fi
+
+# AAC / M4A: FFmpeg only (no maintained dedicated library)
+if test "$have_avcodec" = no; then
+  AC_MSG_WARN([AAC/M4A not supported: install libavformat-dev (FFmpeg >= 5.0)])
+fi
 
 # -----------------------------------------------------------------------
 # Output plugins
+#
+# Supported outputs by platform:
+#   Linux:   PipeWire (primary), ALSA (fallback / raw)
+#   macOS:   CoreAudio
+#   FreeBSD: OSS (native)
+#   OpenBSD: sndio (native)
 # -----------------------------------------------------------------------
 
-# -- PIPEWIRE --
+# -- PIPEWIRE (Linux primary) --
 AC_ARG_ENABLE([pipewire],[AS_HELP_STRING([--disable-pipewire],[disable PipeWire])],
   [enable_pipewire=$enableval],[enable_pipewire=auto])
 have_pipewire=no
@@ -511,7 +405,7 @@ test "$enable_pipewire" != no &&
     [test "$enable_pipewire" = yes && AC_MSG_ERROR([libpipewire-0.3 not found])])
 AM_CONDITIONAL([CONFIG_PIPEWIRE],[test "$have_pipewire" = yes])
 
-# -- ALSA --
+# -- ALSA (Linux fallback) --
 AC_ARG_ENABLE([alsa],[AS_HELP_STRING([--disable-alsa],[disable ALSA])],
   [enable_alsa=$enableval],[enable_alsa=auto])
 have_alsa=no
@@ -520,35 +414,7 @@ test "$enable_alsa" != no &&
     [test "$enable_alsa" = yes && AC_MSG_ERROR([ALSA >= 1.0.11 not found])])
 AM_CONDITIONAL([CONFIG_ALSA],[test "$have_alsa" = yes])
 
-# -- JACK --
-AC_ARG_ENABLE([jack],[AS_HELP_STRING([--disable-jack],[disable JACK])],
-  [enable_jack=$enableval],[enable_jack=auto])
-have_jack=no
-test "$enable_jack" != no &&
-  PKG_CHECK_MODULES([JACK],[jack],[have_jack=yes],
-    [test "$enable_jack" = yes && AC_MSG_ERROR([JACK not found])])
-AM_CONDITIONAL([CONFIG_JACK],[test "$have_jack" = yes])
-
-# -- SAMPLERATE (JACK resampling) --
-AC_ARG_ENABLE([samplerate],[AS_HELP_STRING([--disable-samplerate],[disable libsamplerate for JACK])],
-  [enable_samplerate=$enableval],[enable_samplerate=auto])
-have_samplerate=no
-test "$enable_samplerate" != no &&
-  PKG_CHECK_MODULES([SAMPLERATE],[samplerate],
-    [have_samplerate=yes;AC_DEFINE([HAVE_SAMPLERATE],[1],[Have libsamplerate])],
-    [test "$enable_samplerate" = yes && AC_MSG_ERROR([libsamplerate not found])])
-AM_CONDITIONAL([CONFIG_SAMPLERATE],[test "$have_samplerate" = yes])
-
-# -- AO --
-AC_ARG_ENABLE([ao],[AS_HELP_STRING([--disable-ao],[disable libao])],
-  [enable_ao=$enableval],[enable_ao=auto])
-have_ao=no
-test "$enable_ao" != no &&
-  PKG_CHECK_MODULES([AO],[ao],[have_ao=yes],
-    [test "$enable_ao" = yes && AC_MSG_ERROR([libao not found])])
-AM_CONDITIONAL([CONFIG_AO],[test "$have_ao" = yes])
-
-# -- COREAUDIO (macOS only) --
+# -- COREAUDIO (macOS native) --
 have_coreaudio=no; COREAUDIO_LIBS=""
 case "$host_os" in
   darwin*)
@@ -565,29 +431,13 @@ esac
 AC_SUBST([COREAUDIO_LIBS])
 AM_CONDITIONAL([CONFIG_COREAUDIO],[test "$have_coreaudio" = yes])
 
-# -- ARTS --
-AC_ARG_ENABLE([arts],[AS_HELP_STRING([--disable-arts],[disable ARTS])],
-  [enable_arts=$enableval],[enable_arts=auto])
-have_arts=no; ARTS_CFLAGS=""; ARTS_LIBS=""
-if test "$enable_arts" != no; then
-  AC_PATH_PROG([ARTSC_CONFIG],[artsc-config])
-  if test -n "$ARTSC_CONFIG"; then
-    ARTS_CFLAGS=$($ARTSC_CONFIG --cflags 2>/dev/null)
-    ARTS_LIBS=$($ARTSC_CONFIG --libs 2>/dev/null)
-    have_arts=yes
-  fi
-fi
-AC_SUBST([ARTS_CFLAGS])
-AC_SUBST([ARTS_LIBS])
-AM_CONDITIONAL([CONFIG_ARTS],[test "$have_arts" = yes])
-
-# -- OSS --
+# -- OSS (FreeBSD native) --
 AC_ARG_ENABLE([oss],[AS_HELP_STRING([--disable-oss],[disable OSS])],
   [enable_oss=$enableval],[enable_oss=auto])
 have_oss=no; OSS_LIBS=""
 if test "$enable_oss" != no; then
   case "$host_os" in
-    linux*|*freebsd*)
+    *freebsd*)
       AC_CHECK_HEADER([sys/soundcard.h],[have_oss=yes]);;
     *bsd*)
       AC_CHECK_LIB([ossaudio],[main],
@@ -597,7 +447,7 @@ fi
 AC_SUBST([OSS_LIBS])
 AM_CONDITIONAL([CONFIG_OSS],[test "$have_oss" = yes])
 
-# -- SNDIO --
+# -- SNDIO (OpenBSD native) --
 AC_ARG_ENABLE([sndio],[AS_HELP_STRING([--disable-sndio],[disable sndio])],
   [enable_sndio=$enableval],[enable_sndio=auto])
 have_sndio=no; SNDIO_LIBS=""
@@ -607,41 +457,6 @@ test "$enable_sndio" != no &&
     [test "$enable_sndio" = yes && AC_MSG_ERROR([libsndio not found])])
 AC_SUBST([SNDIO_LIBS])
 AM_CONDITIONAL([CONFIG_SNDIO],[test "$have_sndio" = yes])
-
-# -- SUN --
-have_sun=no
-AC_CHECK_HEADER([sys/audioio.h],[have_sun=yes])
-AM_CONDITIONAL([CONFIG_SUN],[test "$have_sun" = yes])
-
-# -- WAVEOUT (Cygwin) --
-have_waveout=no; WAVEOUT_LIBS=""
-case "$host_os" in
-  *cygwin*)
-    AC_CHECK_LIB([winmm],[waveOutOpen],
-      [have_waveout=yes;WAVEOUT_LIBS="-lwinmm"]);;
-esac
-AC_SUBST([WAVEOUT_LIBS])
-AM_CONDITIONAL([CONFIG_WAVEOUT],[test "$have_waveout" = yes])
-
-# -- ROAR --
-AC_ARG_ENABLE([roar],[AS_HELP_STRING([--disable-roar],[disable RoarAudio])],
-  [enable_roar=$enableval],[enable_roar=auto])
-have_roar=no
-test "$enable_roar" != no &&
-  PKG_CHECK_MODULES([ROAR],[libroar >= 0.4.5],[have_roar=yes],
-    [test "$enable_roar" = yes && AC_MSG_ERROR([libroar >= 0.4.5 not found])])
-AM_CONDITIONAL([CONFIG_ROAR],[test "$have_roar" = yes])
-
-# -- AAUDIO (Android) --
-have_aaudio=no; AAUDIO_CFLAGS=""; AAUDIO_LIBS=""
-AC_CHECK_HEADER([aaudio/AAudio.h],
-  [AC_CHECK_LIB([aaudio],[AAudio_createStreamBuilder],
-    [have_aaudio=yes
-     AAUDIO_CFLAGS="-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ -Werror=unguarded-availability"
-     AAUDIO_LIBS="-Wl,--no-as-needed -laaudio"])])
-AC_SUBST([AAUDIO_CFLAGS])
-AC_SUBST([AAUDIO_LIBS])
-AM_CONDITIONAL([CONFIG_AAUDIO],[test "$have_aaudio" = yes])
 
 # -----------------------------------------------------------------------
 # MPRIS (libsystemd / libelogind / basu)
@@ -660,18 +475,6 @@ fi
 test "$have_mpris" = yes && AC_DEFINE([CONFIG_MPRIS],[1],[MPRIS support])
 AM_CONDITIONAL([CONFIG_MPRIS],[test "$have_mpris" = yes])
 
-# -----------------------------------------------------------------------
-# DISCID (only useful when CDIO is on)
-# -----------------------------------------------------------------------
-AC_ARG_ENABLE([discid],[AS_HELP_STRING([--disable-discid],[disable libdiscid])],
-  [enable_discid=$enableval],[enable_discid=auto])
-have_discid=no; DISCID_CFLAGS=""; DISCID_LIBS=""
-if test "$have_cdio" = yes && test "$enable_discid" != no; then
-  PKG_CHECK_MODULES([DISCID],[libdiscid],
-    [have_discid=yes;AC_DEFINE([HAVE_DISCID],[1],[Have libdiscid])],
-    [test "$enable_discid" = yes && AC_MSG_ERROR([libdiscid not found])])
-fi
-AM_CONDITIONAL([CONFIG_DISCID],[test "$have_discid" = yes])
 
 # -----------------------------------------------------------------------
 # Output
@@ -689,40 +492,29 @@ AC_OUTPUT
 
 AC_MSG_NOTICE([
 === termus build configuration ===
-  Input plugins:
-    CDIO:      $have_cdio   (CDDB: $have_cddb, DiscID: $have_discid)
-    FLAC:      $have_flac
-    MAD:       $have_mad
-    MPG123:    $have_mpg123
-    MikMod:    $have_mikmod
-    ModPlug:   $have_modplug
-    BASS:      $have_bass
-    MPC:       $have_mpc
-    Vorbis:    $have_vorbis  (Tremor: $enable_tremor)
-    Opus:      $have_opus
-    WavPack:   $have_wavpack
-    MP4:       $have_mp4
-    AAC:       $have_aac
-    FFMPEG:    $have_ffmpeg
-    CUE:       $enable_cue
-    WAV:       $enable_wav
-    VTX:       $have_vtx
+
+  Input backends  (P=primary ip_priority=50  F=fallback ip_priority=10)
+  ┌──────────┬──────────────────────┬───────────────────────────┐
+  │ Format   │ Primary backend      │ FFmpeg fallback           │
+  ├──────────┼──────────────────────┼───────────────────────────┤
+  │ FLAC     │ libFLAC: $have_flac          │ avcodec: $have_avcodec                   │
+  │ Opus     │ libopusfile: $have_opus      │ avcodec: $have_avcodec                   │
+  │ Vorbis   │ libvorbisfile: $have_vorbis  │ avcodec: $have_avcodec  (Tremor: $enable_tremor)  │
+  │ AAC/M4A  │ (none — FFmpeg only) │ avcodec: $have_avcodec  [primary]        │
+  │ MP3      │ libmpg123: $have_mpg123      │ avcodec: $have_avcodec  [legacy]         │
+  └──────────┴──────────────────────┴───────────────────────────┘
+    CUE sheets: $enable_cue
+
   Output plugins:
-    PipeWire:  $have_pipewire
-    ALSA:      $have_alsa
-    JACK:      $have_jack
-    AO:        $have_ao
-    CoreAudio: $have_coreaudio
-    ARTS:      $have_arts
-    OSS:       $have_oss
-    Sndio:     $have_sndio
-    Sun:       $have_sun
-    WaveOut:   $have_waveout
-    RoarAudio: $have_roar
-    AAudio:    $have_aaudio
+    PipeWire   $have_pipewire   (Linux primary)
+    ALSA       $have_alsa       (Linux fallback / raw)
+    CoreAudio  $have_coreaudio  (macOS)
+    OSS        $have_oss        (FreeBSD)
+    sndio      $have_sndio      (OpenBSD)
+
   Features:
-    MPRIS:     $have_mpris
-    Debug:     $debug_level
-    Werror:    $enable_warnings_as_errors
-    Sanitizers:${sanitizer_list:- none}
+    MPRIS      $have_mpris
+    Debug      $debug_level
+    Werror     $enable_warnings_as_errors
+    Sanitizers ${sanitizer_list:- none}
 ])

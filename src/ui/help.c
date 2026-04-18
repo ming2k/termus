@@ -1,13 +1,13 @@
 #include "ui/help.h"
-#include "ui/window.h"
-#include "library/search.h"
+#include "app/cmdline.h"
+#include "app/options_registry.h"
 #include "common/misc.h"
 #include "common/xmalloc.h"
-#include "ui/keys.h"
+#include "library/search.h"
 #include "ui/command_mode.h"
+#include "ui/keys.h"
 #include "ui/ui_curses.h"
-#include "app/options_registry.h"
-#include "app/cmdline.h"
+#include "ui/window.h"
 
 #include <stdio.h>
 
@@ -27,10 +27,12 @@ static inline void help_entry_to_iter(struct help_entry *e, struct iter *iter)
 	iter->data2 = NULL;
 }
 
-static GENERIC_ITER_PREV(help_get_prev, struct help_entry, node)
-static GENERIC_ITER_NEXT(help_get_next, struct help_entry, node)
+static GENERIC_ITER_PREV(help_get_prev, struct help_entry,
+			 node) static GENERIC_ITER_NEXT(help_get_next,
+							struct help_entry, node)
 
-static int help_search_get_current(void *data, struct iter *iter, enum search_direction dir)
+    static int help_search_get_current(void *data, struct iter *iter,
+				       enum search_direction dir)
 {
 	return window_get_sel(help_win, iter);
 }
@@ -45,7 +47,7 @@ static int help_search_matches(void *data, struct iter *iter, const char *text)
 		int i;
 
 		ent = iter_to_help_entry(iter);
-		for (i = 0; ; i++) {
+		for (i = 0;; i++) {
 			if (words[i] == NULL) {
 				window_set_sel(help_win, iter);
 				matched = 1;
@@ -55,8 +57,10 @@ static int help_search_matches(void *data, struct iter *iter, const char *text)
 				if (!u_strcasestr(ent->text, words[i]))
 					break;
 			} else if (ent->type == HE_BOUND) {
-				if (!u_strcasestr(ent->binding->cmd, words[i]) &&
-					!u_strcasestr(ent->binding->key->name, words[i]))
+				if (!u_strcasestr(ent->binding->cmd,
+						  words[i]) &&
+				    !u_strcasestr(ent->binding->key->name,
+						  words[i]))
 					break;
 			} else if (ent->type == HE_UNBOUND) {
 				if (!u_strcasestr(ent->command->name, words[i]))
@@ -72,11 +76,10 @@ static int help_search_matches(void *data, struct iter *iter, const char *text)
 }
 
 static const struct searchable_ops help_search_ops = {
-	.get_prev = help_get_prev,
-	.get_next = help_get_next,
-	.get_current = help_search_get_current,
-	.matches = help_search_matches
-};
+    .get_prev = help_get_prev,
+    .get_next = help_get_next,
+    .get_current = help_search_get_current,
+    .matches = help_search_matches};
 
 static void help_add_text(const char *s)
 {
@@ -102,7 +105,8 @@ static void help_add_defaults(void)
 	help_add_text("Options");
 	help_add_text("-------");
 
-	list_for_each_entry(opt, &option_head, node) {
+	list_for_each_entry(opt, &option_head, node)
+	{
 		struct help_entry *ent = xnew(struct help_entry, 1);
 
 		ent->type = HE_OPTION;
@@ -118,7 +122,8 @@ void help_remove_unbound(struct command *cmd)
 {
 	struct help_entry *ent;
 	struct iter i;
-	list_for_each_entry(ent, &help_head, node) {
+	list_for_each_entry(ent, &help_head, node)
+	{
 		if (ent->type != HE_UNBOUND)
 			continue;
 		if (ent->command == cmd) {
@@ -132,8 +137,8 @@ void help_remove_unbound(struct command *cmd)
 }
 
 static void list_add_sorted(struct list_head *new, struct list_head *head,
-		struct list_head *tail,
-		int (*cmp)(struct list_head *, struct list_head *))
+			    struct list_head *tail,
+			    int (*cmp)(struct list_head *, struct list_head *))
 {
 	struct list_head *item = tail->prev;
 
@@ -196,22 +201,22 @@ void help_select(void)
 	switch (ent->type) {
 	case HE_BOUND:
 		snprintf(buf, sizeof(buf), "bind -f %s %s %s",
-				key_context_names[ent->binding->ctx],
-				ent->binding->key->name,
-				ent->binding->cmd);
+			 key_context_names[ent->binding->ctx],
+			 ent->binding->key->name, ent->binding->cmd);
 		cmdline_set_text(buf);
 		enter_command_mode();
 		break;
 	case HE_UNBOUND:
 		snprintf(buf, sizeof(buf), "bind common <key> %s",
-				ent->command->name);
+			 ent->command->name);
 		cmdline_set_text(buf);
 		enter_command_mode();
 		break;
 	case HE_OPTION:
 		snprintf(buf, sizeof(buf), "set %s=", ent->option->name);
 		size_t len = strlen(buf);
-		ent->option->get(ent->option->data, buf + len, sizeof(buf) - len);
+		ent->option->get(ent->option->data, buf + len,
+				 sizeof(buf) - len);
 		cmdline_set_text(buf);
 		enter_command_mode();
 		break;
@@ -252,9 +257,10 @@ void help_remove(void)
 	ent = iter_to_help_entry(&sel);
 	switch (ent->type) {
 	case HE_BOUND:
-		if (yes_no_query("Remove selected binding? [y/N]") == QUERY_ANSWER_YES)
+		if (yes_no_query("Remove selected binding? [y/N]") ==
+		    QUERY_ANSWER_YES)
 			key_unbind(key_context_names[ent->binding->ctx],
-					ent->binding->key->name, 0);
+				   ent->binding->key->name, 0);
 		break;
 	default:
 		break;
@@ -274,7 +280,8 @@ void help_remove_bound(const struct binding *bind)
 {
 	struct help_entry *ent;
 	struct iter i;
-	list_for_each_entry(ent, &help_head, node) {
+	list_for_each_entry(ent, &help_head, node)
+	{
 		if (ent->binding == bind) {
 			help_entry_to_iter(ent, &i);
 			window_row_vanishes(help_win, &i);

@@ -1,8 +1,8 @@
 #ifndef TERMUS_OUTPUT_H
 #define TERMUS_OUTPUT_H
 
-#include "core/sf.h"
 #include "core/channelmap.h"
+#include "core/sf.h"
 
 extern int volume_max;
 extern int volume_l;

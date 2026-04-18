@@ -18,19 +18,16 @@
 
 #include "app/options_library.h"
 #include "app/options_library_state.h"
+#include "app/options_parse.h"
 #include "app/options_playback_state.h"
 #include "app/options_registry.h"
-#include "app/options_parse.h"
 #include "common/utils.h"
 #include "library/lib.h"
 #include "ui/options_hooks.h"
 
 #include <string.h>
 
-static void post_set_sort_artists(void *data)
-{
-	lib_sort_artists();
-}
+static void post_set_sort_artists(void *data) { lib_sort_artists(); }
 
 static void post_set_tree_changed(void *data)
 {
@@ -134,13 +131,26 @@ static void toggle_aaa_mode(void *data)
 
 void options_add_library_options(void)
 {
-	option_add("aaa_mode", NULL, get_aaa_mode, set_aaa_mode, toggle_aaa_mode, 0);
-	option_add_bool_full("auto_expand_albums_follow", &auto_expand_albums_follow, post_set_auto_expand_follow, 0);
-	option_add_bool_full("auto_expand_albums_search", &auto_expand_albums_search, post_set_auto_expand_search, 0);
-	option_add_bool_full("auto_expand_albums_selcur", &auto_expand_albums_selcur, post_set_auto_expand_selcur, 0);
-	option_add_bool_full("display_artist_sort_name", &display_artist_sort_name, post_set_tree_changed, 0);
-	option_add_bool_full("show_all_tracks", &show_all_tracks, post_set_show_all_tracks, 0);
-	option_add_bool_full("show_hidden", &show_hidden, post_set_reload_browser, 0);
-	option_add_bool_full("smart_artist_sort", &smart_artist_sort, post_set_sort_artists, 0);
-	option_add_bool_full("sort_albums_by_name", &sort_albums_by_name, post_set_sort_artists, 0);
+	option_add("aaa_mode", NULL, get_aaa_mode, set_aaa_mode,
+		   toggle_aaa_mode, 0);
+	option_add_bool_full("auto_expand_albums_follow",
+			     &auto_expand_albums_follow,
+			     post_set_auto_expand_follow, 0);
+	option_add_bool_full("auto_expand_albums_search",
+			     &auto_expand_albums_search,
+			     post_set_auto_expand_search, 0);
+	option_add_bool_full("auto_expand_albums_selcur",
+			     &auto_expand_albums_selcur,
+			     post_set_auto_expand_selcur, 0);
+	option_add_bool_full("display_artist_sort_name",
+			     &display_artist_sort_name, post_set_tree_changed,
+			     0);
+	option_add_bool_full("show_all_tracks", &show_all_tracks,
+			     post_set_show_all_tracks, 0);
+	option_add_bool_full("show_hidden", &show_hidden,
+			     post_set_reload_browser, 0);
+	option_add_bool_full("smart_artist_sort", &smart_artist_sort,
+			     post_set_sort_artists, 0);
+	option_add_bool_full("sort_albums_by_name", &sort_albums_by_name,
+			     post_set_sort_artists, 0);
 }

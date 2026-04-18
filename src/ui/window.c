@@ -1,8 +1,8 @@
 #include "ui/window.h"
 #include "app/options_core_state.h"
-#include "common/xmalloc.h"
 #include "common/debug.h"
 #include "common/utils.h"
+#include "common/xmalloc.h"
 
 #include <stdlib.h>
 
@@ -20,7 +20,8 @@ static int selectable(struct window *win, struct iter *iter)
 	return 1;
 }
 
-struct window *window_new(int (*get_prev)(struct iter *), int (*get_next)(struct iter *))
+struct window *window_new(int (*get_prev)(struct iter *),
+			  int (*get_next)(struct iter *))
 {
 	struct window *win;
 
@@ -37,10 +38,7 @@ struct window *window_new(int (*get_prev)(struct iter *), int (*get_next)(struct
 	return win;
 }
 
-void window_free(struct window *win)
-{
-	free(win);
-}
+void window_free(struct window *win) { free(win); }
 
 void window_set_empty(struct window *win)
 {
@@ -78,12 +76,12 @@ void window_set_nr_rows(struct window *win, int nr_rows)
 void window_up(struct window *win, int rows)
 {
 	struct iter iter;
-	int upper_bound   = min_i(scroll_offset,  win->nr_rows/2);
-	int buffer        = 0; /* rows between `old sel` and `old top` */
-	int sel_up        = 0; /* selectable rows between `old sel` and `new sel` */
-	int skipped       = 0; /* unselectable rows between `old sel` and `new sel` */
+	int upper_bound = min_i(scroll_offset, win->nr_rows / 2);
+	int buffer = 0;	 /* rows between `old sel` and `old top` */
+	int sel_up = 0;	 /* selectable rows between `old sel` and `new sel` */
+	int skipped = 0; /* unselectable rows between `old sel` and `new sel` */
 	int actual_offset = 0; /* rows between `new sel` and `new top` */
-	int top_up        = 0; /* rows between `old top` and `new top` */
+	int top_up = 0;	       /* rows between `old top` and `new top` */
 
 	iter = win->top;
 	while (!iters_equal(&iter, &win->sel)) {
@@ -103,11 +101,12 @@ void window_up(struct window *win, int rows)
 			skipped++;
 		}
 	}
-	/* if there is no selectable row above the current, we move win->top instead
-	 * this is necessary when scroll_offset=0 to make the first album header visible */
+	/* if there is no selectable row above the current, we move win->top
+	 * instead this is necessary when scroll_offset=0 to make the first
+	 * album header visible */
 	if (sel_up == 0) {
 		skipped = 0;
-		upper_bound = min_i(buffer+rows, win->nr_rows/2);
+		upper_bound = min_i(buffer + rows, win->nr_rows / 2);
 	}
 
 	iter = win->sel;
@@ -131,12 +130,12 @@ void window_up(struct window *win, int rows)
 void window_down(struct window *win, int rows)
 {
 	struct iter iter;
-	int upper_bound   = min_i(scroll_offset, (win->nr_rows-1)/2);
-	int buffer        = 0; /* rows between `old sel` and `old bottom` */
-	int sel_down      = 0; /* selectable rows between `old sel` and `new sel` */
-	int skipped       = 0; /* unselectable rows between `old sel` and `new sel` */
+	int upper_bound = min_i(scroll_offset, (win->nr_rows - 1) / 2);
+	int buffer = 0;	  /* rows between `old sel` and `old bottom` */
+	int sel_down = 0; /* selectable rows between `old sel` and `new sel` */
+	int skipped = 0; /* unselectable rows between `old sel` and `new sel` */
 	int actual_offset = 0; /* rows between `new sel` and `new bottom` */
-	int top_down      = 0; /* rows between `old top` and `new top` */
+	int top_down = 0;      /* rows between `old top` and `new top` */
 
 	buffer = win->nr_rows - 1;
 	iter = win->top;
@@ -159,7 +158,7 @@ void window_down(struct window *win, int rows)
 	}
 	if (sel_down == 0) {
 		skipped = 0;
-		upper_bound = min_i(buffer+rows, (win->nr_rows-1)/2);
+		upper_bound = min_i(buffer + rows, (win->nr_rows - 1) / 2);
 	}
 
 	iter = win->sel;
@@ -187,7 +186,7 @@ void window_changed(struct window *win)
 {
 	struct iter iter;
 	int delta, rows, blank_lines;
-	int upper_bound = min_i(scroll_offset, win->nr_rows/2);
+	int upper_bound = min_i(scroll_offset, win->nr_rows / 2);
 
 	if (iter_is_null(&win->head)) {
 		BUG_ON(!iter_is_null(&win->top));
@@ -389,7 +388,8 @@ void window_set_sel(struct window *win, struct iter *iter)
 
 		tmp = win->sel;
 		bottom_nr = sel_nr;
-		if (sel_nr >= top_nr + win->nr_rows) { /* selected element not visible */
+		if (sel_nr >=
+		    top_nr + win->nr_rows) { /* selected element not visible */
 			while (sel_nr >= top_nr + win->nr_rows) {
 				win->get_next(&win->top);
 				top_nr++;
@@ -530,7 +530,7 @@ void window_half_page_down(struct window *win)
 	struct iter top = win->top;
 	int down;
 
-	for (down = 0; down < (win-> nr_rows - 1) / 2; down++) {
+	for (down = 0; down < (win->nr_rows - 1) / 2; down++) {
 		if (!win->get_next(&sel) || !win->get_next(&bot))
 			break;
 		win->get_next(&top);
@@ -543,13 +543,14 @@ void window_half_page_down(struct window *win)
 	sel_changed(win);
 }
 
-
 void window_scroll_down(struct window *win)
 {
 	struct iter bot = window_bottom(win);
 	struct iter top = win->top;
-	if (!win->get_next(&bot)) return;
-	if (!win->get_next(&top)) return;
+	if (!win->get_next(&bot))
+		return;
+	if (!win->get_next(&top))
+		return;
 	if (iters_equal(&win->top, &win->sel))
 		win->get_next(&win->sel);
 	win->top = top;
@@ -561,7 +562,8 @@ void window_scroll_down(struct window *win)
 void window_scroll_up(struct window *win)
 {
 	struct iter top = win->top;
-	if (!win->get_prev(&top)) return;
+	if (!win->get_prev(&top))
+		return;
 	struct iter bot = window_bottom(win);
 	/* keep selected row on screen: */
 	if (iters_equal(&bot, &win->sel))
@@ -606,7 +608,4 @@ void window_page_middle(struct window *win)
 		win->get_next(&win->sel);
 }
 
-int window_get_nr_rows(struct window *win)
-{
-	return win->nr_rows;
-}
+int window_get_nr_rows(struct window *win) { return win->nr_rows; }

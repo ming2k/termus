@@ -1,36 +1,37 @@
 #include "library/cache.h"
-#include "common/misc.h"
+#include "app/options_ui_state.h"
 #include "common/file.h"
-#include "core/input.h"
-#include "core/track_info.h"
+#include "common/gbuf.h"
+#include "common/misc.h"
 #include "common/utils.h"
 #include "common/xmalloc.h"
 #include "common/xstrjoin.h"
-#include "common/gbuf.h"
-#include "app/options_ui_state.h"
+#include "core/input.h"
+#include "core/track_info.h"
 #include "library/pl_env.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-#define CACHE_VERSION   0x0d
+#define CACHE_VERSION 0x0d
 
-#define CACHE_64_BIT	0x01
-#define CACHE_BE	0x02
+#define CACHE_64_BIT 0x01
+#define CACHE_BE 0x02
 
-#define CACHE_RESERVED_PATTERN  	0xff
+#define CACHE_RESERVED_PATTERN 0xff
 
-#define CACHE_ENTRY_USED_SIZE		28
-#define CACHE_ENTRY_RESERVED_SIZE	52
-#define CACHE_ENTRY_TOTAL_SIZE	(CACHE_ENTRY_RESERVED_SIZE + CACHE_ENTRY_USED_SIZE)
+#define CACHE_ENTRY_USED_SIZE 28
+#define CACHE_ENTRY_RESERVED_SIZE 52
+#define CACHE_ENTRY_TOTAL_SIZE                                                 \
+	(CACHE_ENTRY_RESERVED_SIZE + CACHE_ENTRY_USED_SIZE)
 
 // Cmus Track Cache version X + 4 bytes flags
 static char cache_header[8] TERMUS_NONSTRING = "CTC\0\0\0\0\0";
@@ -58,7 +59,6 @@ struct cache_entry {
 STATIC_ASSERT(CACHE_ENTRY_TOTAL_SIZE == sizeof(struct cache_entry));
 STATIC_ASSERT(CACHE_ENTRY_TOTAL_SIZE == offsetof(struct cache_entry, strings));
 
-
 #define ALIGN(size) (((size) + sizeof(long) - 1) & ~(sizeof(long) - 1))
 #define HASH_SIZE 1023
 
@@ -67,7 +67,6 @@ static char *cache_filename;
 static int total;
 
 struct fifo_mutex cache_mutex = FIFO_MUTEX_INITIALIZER;
-
 
 static void add_ti(struct track_info *ti, unsigned int hash)
 {
@@ -113,7 +112,8 @@ static struct track_info *cache_entry_to_ti(struct cache_entry *e)
 	int pos, i, count;
 	char *proc_filename;
 
-	if (pl_env_var(strings, NULL) && (proc_filename = pl_env_expand(strings))) {
+	if (pl_env_var(strings, NULL) &&
+	    (proc_filename = pl_env_expand(strings))) {
 		ti = track_info_new(proc_filename);
 		free(proc_filename);
 	} else {
@@ -258,9 +258,12 @@ int cache_init(void)
 	if (sizeof(long) == 8)
 		flags |= CACHE_64_BIT;
 
-	cache_header[7] = flags & 0xff; flags >>= 8;
-	cache_header[6] = flags & 0xff; flags >>= 8;
-	cache_header[5] = flags & 0xff; flags >>= 8;
+	cache_header[7] = flags & 0xff;
+	flags >>= 8;
+	cache_header[6] = flags & 0xff;
+	flags >>= 8;
+	cache_header[5] = flags & 0xff;
+	flags >>= 8;
 	cache_header[4] = flags & 0xff;
 
 	/* assumed version */
@@ -307,7 +310,8 @@ static void flush_buffer(int fd, struct gbuf *buf)
 	}
 }
 
-static void write_ti(int fd, struct gbuf *buf, struct track_info *ti, unsigned int *offsetp)
+static void write_ti(int fd, struct gbuf *buf, struct track_info *ti,
+		     unsigned int *offsetp)
 {
 	char *proc_filename = pl_env_reduce(ti->filename);
 	const struct keyval *kv = ti->comments;
@@ -353,7 +357,8 @@ static void write_ti(int fd, struct gbuf *buf, struct track_info *ti, unsigned i
 	gbuf_add_bytes(buf, &e, sizeof(e));
 	gbuf_add_bytes(buf, proc_filename, len[count++]);
 	gbuf_add_bytes(buf, ti->codec ? ti->codec : "", len[count++]);
-	gbuf_add_bytes(buf, ti->codec_profile ? ti->codec_profile : "", len[count++]);
+	gbuf_add_bytes(buf, ti->codec_profile ? ti->codec_profile : "",
+		       len[count++]);
 	for (i = 0; kv[i].key; i++) {
 		gbuf_add_bytes(buf, kv[i].key, len[count++]);
 		gbuf_add_bytes(buf, kv[i].val, len[count++]);
@@ -433,7 +438,9 @@ struct track_info *cache_get_ti(const char *filename, int force)
 
 	ti = lookup_cache_entry(filename, hash);
 	if (ti) {
-		if ((!options_get_skip_track_info() && ti->duration == 0 && !is_http_url(filename)) || force){
+		if ((!options_get_skip_track_info() && ti->duration == 0 &&
+		     !is_http_url(filename)) ||
+		    force) {
 			do_cache_remove_ti(ti, hash);
 			ti = NULL;
 			reload = 1;
@@ -450,7 +457,7 @@ struct track_info *cache_get_ti(const char *filename, int force)
 
 			ti->duration = 0;
 		} else {
-		       	ti = ip_get_ti(filename);
+			ti = ip_get_ti(filename);
 		}
 		if (!ti)
 			return NULL;

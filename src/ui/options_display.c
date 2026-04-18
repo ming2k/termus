@@ -17,9 +17,9 @@
  */
 
 #include "ui/options_display.h"
+#include "app/options_parse.h"
 #include "app/options_registry.h"
 #include "app/options_ui_state.h"
-#include "app/options_parse.h"
 #include "common/misc.h"
 #include "common/prog.h"
 #include "common/utils.h"
@@ -28,8 +28,8 @@
 #include "ui/options_ui.h"
 #include "ui/ui.h"
 
-#include <stdio.h>
 #include <errno.h>
+#include <stdio.h>
 #include <string.h>
 
 #if defined(__sun__)
@@ -65,97 +65,102 @@ static const struct {
 	const char *name;
 	const char *value;
 } str_defaults[] = {
-	[FMT_CLIPPED_TEXT]	= { "format_clipped_text"	, "…"							},
-	[FMT_CURRENT_ALT]	= { "altformat_current"		, " %F "						},
-	[FMT_CURRENT]		= { "format_current"		, " %a - %l%! - %n. %t%= %y "				},
-	[FMT_HEADING_ALBUM]	= { "format_heading_album"	, "%a - %l%= %y %{duration}"				},
-	[FMT_HEADING_ARTIST]	= { "format_heading_artist"	, "%a%= %{duration}"					},
-	[FMT_HEADING_PLAYLIST]	= { "format_heading_playlist"	, "%{?!panel?Playlist - }%{title}%= %{duration}    "	},
-	[FMT_STATUSLINE]	= { "format_statusline"		,
-		" %{status} %{?show_playback_position?%{position} %{?duration?/ %{duration} }?%{?duration?%{duration} }}"
-		"%{?bpm>0?at %{bpm} BPM }"
-		"%{?stream?buf: %{buffer} }"
-		"%{?show_current_bitrate & bitrate>=0? %{bitrate} kbps }"
-		"%{speed}x "
-		"%= "
-		"%{?volume>=0?vol %{?lvolume!=rvolume?%{lvolume}%% %{rvolume}?%{volume}}%% | }"
-		"%1{continue}%1{follow}%1{repeat}%1{shuffle} "
-	},
-	[FMT_PLAYLIST_ALT]	= { "altformat_playlist"	, " %f%= %d %{?X!=0?%3X ?    }"				},
-	[FMT_PLAYLIST]		= { "format_playlist"		, " %-21%a %3n. %t%= %y %d %{?X!=0?%3X ?    }"		},
-	[FMT_PLAYLIST_VA]	= { "format_playlist_va"	, " %-21%A %3n. %t (%a)%= %y %d %{?X!=0?%3X ?    }"	},
-	[FMT_TITLE_ALT]		= { "altformat_title"		, "%f"							},
-	[FMT_TITLE]		= { "format_title"		, "%a - %l - %t (%y)"					},
-	[FMT_TRACKWIN_ALBUM]	= { "format_trackwin_album"	, " %l %= %y %{duration} "				},
-	[FMT_TRACKWIN_ALT]	= { "altformat_trackwin"	, " %f%= %d "						},
-	[FMT_TRACKWIN]		= { "format_trackwin"		, "%3n. %t%= %d "					},
-	[FMT_TRACKWIN_VA]	= { "format_trackwin_va"	, "%3n. %t (%a)%= %d "					},
-	[FMT_TREEWIN]		= { "format_treewin"		, "  %l"						},
-	[FMT_TREEWIN_ARTIST]	= { "format_treewin_artist"	, "%a"							},
+    [FMT_CLIPPED_TEXT] = {"format_clipped_text", "…"},
+    [FMT_CURRENT_ALT] = {"altformat_current", " %F "},
+    [FMT_CURRENT] = {"format_current", " %a - %l%! - %n. %t%= %y "},
+    [FMT_HEADING_ALBUM] = {"format_heading_album", "%a - %l%= %y %{duration}"},
+    [FMT_HEADING_ARTIST] = {"format_heading_artist", "%a%= %{duration}"},
+    [FMT_HEADING_PLAYLIST] =
+	{"format_heading_playlist",
+	 "%{?!panel?Playlist - }%{title}%= %{duration}    "},
+    [FMT_STATUSLINE] =
+	{"format_statusline",
+	 " %{status} %{?show_playback_position?%{position} %{?duration?/ "
+	 "%{duration} }?%{?duration?%{duration} }}"
+	 "%{?bpm>0?at %{bpm} BPM }"
+	 "%{?stream?buf: %{buffer} }"
+	 "%{?show_current_bitrate & bitrate>=0? %{bitrate} kbps }"
+	 "%{speed}x "
+	 "%= "
+	 "%{?volume>=0?vol %{?lvolume!=rvolume?%{lvolume}%% "
+	 "%{rvolume}?%{volume}}%% | }"
+	 "%1{continue}%1{follow}%1{repeat}%1{shuffle} "},
+    [FMT_PLAYLIST_ALT] = {"altformat_playlist", " %f%= %d %{?X!=0?%3X ?    }"},
+    [FMT_PLAYLIST] = {"format_playlist",
+		      " %-21%a %3n. %t%= %y %d %{?X!=0?%3X ?    }"},
+    [FMT_PLAYLIST_VA] = {"format_playlist_va",
+			 " %-21%A %3n. %t (%a)%= %y %d %{?X!=0?%3X ?    }"},
+    [FMT_TITLE_ALT] = {"altformat_title", "%f"},
+    [FMT_TITLE] = {"format_title", "%a - %l - %t (%y)"},
+    [FMT_TRACKWIN_ALBUM] = {"format_trackwin_album", " %l %= %y %{duration} "},
+    [FMT_TRACKWIN_ALT] = {"altformat_trackwin", " %f%= %d "},
+    [FMT_TRACKWIN] = {"format_trackwin", "%3n. %t%= %d "},
+    [FMT_TRACKWIN_VA] = {"format_trackwin_va", "%3n. %t (%a)%= %d "},
+    [FMT_TREEWIN] = {"format_treewin", "  %l"},
+    [FMT_TREEWIN_ARTIST] = {"format_treewin_artist", "%a"},
 
-	[NR_FMTS] =
+    [NR_FMTS] =
 
-	{ "lib_sort", "albumartist date album discnumber tracknumber title filename play_count" },
-	{ "pl_sort", "" },
-	{ "id3_default_charset", "ISO-8859-1" },
-	{ "icecast_default_charset", "ISO-8859-1" },
-	{ "pl_env_vars", "" },
-	{ NULL, NULL }
-};
+	{"lib_sort", "albumartist date album discnumber tracknumber title "
+		     "filename play_count"},
+    {"pl_sort", ""},
+    {"id3_default_charset", "ISO-8859-1"},
+    {"icecast_default_charset", "ISO-8859-1"},
+    {"pl_env_vars", ""},
+    {NULL, NULL}};
 
 #define DEFAULT_COLORSCHEME_NAME "default"
 
-static const char * const color_enum_names[1 + 8 * 2 + 1] = {
-	"default",
-	"black", "red", "green", "yellow", "blue", "magenta", "cyan", "gray",
-	"darkgray", "lightred", "lightgreen", "lightyellow", "lightblue", "lightmagenta", "lightcyan", "white",
-	NULL
+static const char *const color_enum_names[1 + 8 * 2 + 1] = {
+    "default",	 "black",      "red",	      "green",	   "yellow",
+    "blue",	 "magenta",    "cyan",	      "gray",	   "darkgray",
+    "lightred",	 "lightgreen", "lightyellow", "lightblue", "lightmagenta",
+    "lightcyan", "white",      NULL};
+
+static const char *const color_names[NR_COLORS] = {
+    "color_cmdline_bg",
+    "color_cmdline_fg",
+    "color_error",
+    "color_info",
+    "color_separator",
+    "color_statusline_bg",
+    "color_statusline_fg",
+    "color_statusline_progress_bg",
+    "color_statusline_progress_fg",
+    "color_titleline_bg",
+    "color_titleline_fg",
+    "color_win_bg",
+    "color_win_cur",
+    "color_win_cur_sel_bg",
+    "color_win_cur_sel_fg",
+    "color_win_dir",
+    "color_win_fg",
+    "color_win_inactive_cur_sel_bg",
+    "color_win_inactive_cur_sel_fg",
+    "color_win_inactive_sel_bg",
+    "color_win_inactive_sel_fg",
+    "color_win_sel_bg",
+    "color_win_sel_fg",
+    "color_win_title_bg",
+    "color_win_title_fg",
+    "color_trackwin_album_bg",
+    "color_trackwin_album_fg",
 };
 
-static const char * const color_names[NR_COLORS] = {
-	"color_cmdline_bg",
-	"color_cmdline_fg",
-	"color_error",
-	"color_info",
-	"color_separator",
-	"color_statusline_bg",
-	"color_statusline_fg",
-	"color_statusline_progress_bg",
-	"color_statusline_progress_fg",
-	"color_titleline_bg",
-	"color_titleline_fg",
-	"color_win_bg",
-	"color_win_cur",
-	"color_win_cur_sel_bg",
-	"color_win_cur_sel_fg",
-	"color_win_dir",
-	"color_win_fg",
-	"color_win_inactive_cur_sel_bg",
-	"color_win_inactive_cur_sel_fg",
-	"color_win_inactive_sel_bg",
-	"color_win_inactive_sel_fg",
-	"color_win_sel_bg",
-	"color_win_sel_fg",
-	"color_win_title_bg",
-	"color_win_title_fg",
-	"color_trackwin_album_bg",
-	"color_trackwin_album_fg",
-};
-
-static const char * const attr_names[NR_ATTRS] = {
-	"color_cmdline_attr",
-	"color_statusline_attr",
-	"color_statusline_progress_attr",
-	"color_titleline_attr",
-	"color_win_attr",
-	"color_win_cur_sel_attr",
-	"color_cur_sel_attr",
-	"color_win_inactive_cur_sel_attr",
-	"color_win_inactive_sel_attr",
-	"color_win_sel_attr",
-	"color_win_title_attr",
-	"color_trackwin_album_attr",
-	"color_win_cur_attr",
+static const char *const attr_names[NR_ATTRS] = {
+    "color_cmdline_attr",
+    "color_statusline_attr",
+    "color_statusline_progress_attr",
+    "color_titleline_attr",
+    "color_win_attr",
+    "color_win_cur_sel_attr",
+    "color_cur_sel_attr",
+    "color_win_inactive_cur_sel_attr",
+    "color_win_inactive_sel_attr",
+    "color_win_sel_attr",
+    "color_win_title_attr",
+    "color_trackwin_album_attr",
+    "color_win_cur_attr",
 };
 
 static void options_display_buf_int(char *buf, int val, size_t size)
@@ -239,9 +244,11 @@ int options_display_apply_colorscheme(const char *name)
 		return 0;
 	}
 
-	snprintf(filename, sizeof(filename), "%s/%s.theme", termus_config_dir, name);
+	snprintf(filename, sizeof(filename), "%s/%s.theme", termus_config_dir,
+		 name);
 	if (source_file(filename) == -1) {
-		snprintf(filename, sizeof(filename), "%s/%s.theme", termus_data_dir, name);
+		snprintf(filename, sizeof(filename), "%s/%s.theme",
+			 termus_data_dir, name);
 		if (source_file(filename) == -1)
 			return -1;
 	}
@@ -305,8 +312,8 @@ static void get_attr(void *data, char *buf, size_t size)
 		italic = "italic|";
 #endif
 
-	size_t len = snprintf(buf, size, "%s%s%s%s%s%s",
-			standout, underline, reverse, blink, bold, italic);
+	size_t len = snprintf(buf, size, "%s%s%s%s%s%s", standout, underline,
+			      reverse, blink, bold, italic);
 
 	if (0 < len && len < size)
 		buf[len - 1] = 0;
@@ -389,17 +396,20 @@ void options_add_display_options(void)
 {
 	for (int i = 0; i < NR_FMTS; i++)
 		option_add(str_defaults[i].name, id_to_fmt(i), get_format,
-				set_format, NULL, 0);
+			   set_format, NULL, 0);
 
 	option_find("format_clipped_text")->set = set_clipped_text_format;
 	option_add("start_view", NULL, get_start_view, set_start_view, NULL, 0);
-	option_add("colorscheme", NULL, get_colorscheme, set_colorscheme, NULL, 0);
+	option_add("colorscheme", NULL, get_colorscheme, set_colorscheme, NULL,
+		   0);
 
 	for (int i = 0; i < NR_COLORS; i++)
-		option_add(color_names[i], &colors[i], get_color, set_color, NULL, 0);
+		option_add(color_names[i], &colors[i], get_color, set_color,
+			   NULL, 0);
 
 	for (int i = 0; i < NR_ATTRS; i++)
-		option_add(attr_names[i], &attrs[i], get_attr, set_attr, NULL, 0);
+		option_add(attr_names[i], &attrs[i], get_attr, set_attr, NULL,
+			   0);
 }
 
 void options_display_load_defaults(void)
@@ -408,11 +418,11 @@ void options_display_load_defaults(void)
 		option_set(str_defaults[i].name, str_defaults[i].value);
 
 	char filename[512];
-	snprintf(filename, sizeof(filename), "%s/%s.theme",
-			termus_data_dir, DEFAULT_COLORSCHEME_NAME);
+	snprintf(filename, sizeof(filename), "%s/%s.theme", termus_data_dir,
+		 DEFAULT_COLORSCHEME_NAME);
 	if (source_file(filename) == -1) {
-		d_print("loading default colorscheme %s failed: %s\n",
-				filename, strerror(errno));
+		d_print("loading default colorscheme %s failed: %s\n", filename,
+			strerror(errno));
 		errno = 0;
 	}
 	options_set_colorscheme(NULL);

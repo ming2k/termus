@@ -1,37 +1,37 @@
-#include "core/convert.h"
 #include "core/input.h"
-#include "core/ip.h"
-#include "core/pcm.h"
-#include "core/http.h"
-#include "common/xmalloc.h"
-#include "common/file.h"
-#include "common/path.h"
-#include "common/utils.h"
-#include "app/termus.h"
-#include "app/options_registry.h"
 #include "app/options_core_state.h"
+#include "app/options_registry.h"
+#include "app/termus.h"
+#include "common/debug.h"
+#include "common/file.h"
 #include "common/list.h"
+#include "common/locking.h"
 #include "common/mergesort.h"
 #include "common/misc.h"
-#include "common/debug.h"
 #include "common/msg.h"
-#include "common/locking.h"
+#include "common/path.h"
+#include "common/utils.h"
+#include "common/xmalloc.h"
 #include "common/xstrjoin.h"
+#include "core/convert.h"
+#include "core/http.h"
+#include "core/ip.h"
+#include "core/pcm.h"
 
-#include <unistd.h>
-#include <stdbool.h>
-#include <string.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <sys/select.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <dirent.h>
 #include <dlfcn.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 #include <strings.h>
+#include <sys/select.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 struct input_plugin {
 	const struct input_plugin_ops *ops;
@@ -70,8 +70,8 @@ struct ip {
 	void *handle;
 
 	int priority;
-	const char * const *extensions;
-	const char * const *mime_types;
+	const char *const *extensions;
+	const char *const *mime_types;
 	const struct input_plugin_ops *ops;
 	const struct input_plugin_opt *options;
 };
@@ -90,11 +90,8 @@ static pthread_rwlock_t ip_lock = TERMUS_RWLOCK_INITIALIZER;
 static int http_connection_timeout = 5e3;
 static int http_read_timeout = 5e3;
 
-static const char *pl_mime_types[] = {
-	"audio/m3u",
-	"audio/x-scpls",
-	"audio/x-mpegurl"
-};
+static const char *pl_mime_types[] = {"audio/m3u", "audio/x-scpls",
+				      "audio/x-mpegurl"};
 
 static const struct input_plugin_ops *
 get_ops_by_extension_locked(const char *ext, struct list_head **headp)
@@ -103,7 +100,7 @@ get_ops_by_extension_locked(const char *ext, struct list_head **headp)
 
 	for (node = node->next; node != &ip_head; node = node->next) {
 		struct ip *ip = list_entry(node, struct ip, node);
-		const char * const *exts = ip->extensions;
+		const char *const *exts = ip->extensions;
 		int i;
 
 		if (ip->priority <= 0) {
@@ -111,7 +108,8 @@ get_ops_by_extension_locked(const char *ext, struct list_head **headp)
 		}
 
 		for (i = 0; exts[i]; i++) {
-			if (strcasecmp(ext, exts[i]) == 0 || strcmp("*", exts[i]) == 0) {
+			if (strcasecmp(ext, exts[i]) == 0 ||
+			    strcmp("*", exts[i]) == 0) {
 				*headp = node;
 				return ip->ops;
 			}
@@ -124,8 +122,8 @@ static const struct input_plugin_ops *
 get_ops_by_extension(const char *ext, struct list_head **headp)
 {
 	ip_rdlock();
-	const struct input_plugin_ops *rv = get_ops_by_extension_locked(ext,
-			headp);
+	const struct input_plugin_ops *rv =
+	    get_ops_by_extension_locked(ext, headp);
 	ip_unlock();
 	return rv;
 }
@@ -135,8 +133,9 @@ get_ops_by_mime_type_locked(const char *mime_type)
 {
 	struct ip *ip;
 
-	list_for_each_entry(ip, &ip_head, node) {
-		const char * const *types = ip->mime_types;
+	list_for_each_entry(ip, &ip_head, node)
+	{
+		const char *const *types = ip->mime_types;
 		int i;
 
 		if (ip->priority <= 0) {
@@ -156,15 +155,13 @@ get_ops_by_mime_type(const char *mime_type)
 {
 	ip_rdlock();
 	const struct input_plugin_ops *rv =
-		get_ops_by_mime_type_locked(mime_type);
+	    get_ops_by_mime_type_locked(mime_type);
 	ip_unlock();
 	return rv;
 }
 
-static void keyvals_add_basic_auth(struct growing_keyvals *c,
-				   const char *user,
-				   const char *pass,
-				   const char *header)
+static void keyvals_add_basic_auth(struct growing_keyvals *c, const char *user,
+				   const char *pass, const char *header)
 {
 	char buf[256];
 	char *encoded;
@@ -202,11 +199,13 @@ static int do_http_get(struct http_get *hg, const char *uri, int redirections)
 
 	keyvals_add(&h, "Host", xstrdup(hg->uri.host));
 	if (hg->proxy && hg->proxy->user && hg->proxy->pass)
-		keyvals_add_basic_auth(&h, hg->proxy->user, hg->proxy->pass, "Proxy-Authorization");
+		keyvals_add_basic_auth(&h, hg->proxy->user, hg->proxy->pass,
+				       "Proxy-Authorization");
 	keyvals_add(&h, "User-Agent", xstrdup("termus/" VERSION));
 	keyvals_add(&h, "Icy-MetaData", xstrdup("1"));
 	if (hg->uri.user && hg->uri.pass)
-		keyvals_add_basic_auth(&h, hg->uri.user, hg->uri.pass, "Authorization");
+		keyvals_add_basic_auth(&h, hg->uri.user, hg->uri.pass,
+				       "Authorization");
 	keyvals_terminate(&h);
 
 	rc = http_get(hg, h.keyvals, http_read_timeout);
@@ -254,7 +253,8 @@ static int do_http_get(struct http_get *hg, const char *uri, int redirections)
 	}
 }
 
-static int setup_remote(struct input_plugin *ip, const struct keyval *headers, int sock)
+static int setup_remote(struct input_plugin *ip, const struct keyval *headers,
+			int sock)
 {
 	const char *val;
 
@@ -342,7 +342,7 @@ static int handle_line(void *data, const char *uri)
 
 static int read_playlist(struct input_plugin *ip, int sock)
 {
-	struct read_playlist_data rpd = { ip, 0, 0 };
+	struct read_playlist_data rpd = {ip, 0, 0};
 	char *body;
 	size_t size;
 
@@ -397,17 +397,14 @@ static int open_remote(struct input_plugin *ip)
 static void ip_init(struct input_plugin *ip, char *filename)
 {
 	const struct input_plugin t = {
-		.http_code          = -1,
-		.pcm_convert_scale  = -1,
-		.duration           = -1,
-		.bitrate            = -1,
-		.data = {
-			.fd         = -1,
-			.filename   = filename,
-			.remote     = is_http_url(filename),
-			.channel_map = CHANNEL_MAP_INIT
-		}
-	};
+	    .http_code = -1,
+	    .pcm_convert_scale = -1,
+	    .duration = -1,
+	    .bitrate = -1,
+	    .data = {.fd = -1,
+		     .filename = filename,
+		     .remote = is_http_url(filename),
+		     .channel_map = CHANNEL_MAP_INIT}};
 	*ip = t;
 }
 
@@ -456,7 +453,8 @@ static int open_file_locked(struct input_plugin *ip)
 			break;
 
 		ip_reset(ip, 0);
-		d_print("fallback: try next plugin for `%s'\n", ip->data.filename);
+		d_print("fallback: try next plugin for `%s'\n",
+			ip->data.filename);
 	}
 
 	return rc;
@@ -485,12 +483,13 @@ void ip_load_plugins(void)
 	plugin_dir = xstrjoin(termus_lib_dir, "/input");
 	dir = opendir(plugin_dir);
 	if (dir == NULL) {
-		error_msg("couldn't open directory `%s': %s", plugin_dir, strerror(errno));
+		error_msg("couldn't open directory `%s': %s", plugin_dir,
+			  strerror(errno));
 		return;
 	}
 
 	ip_wrlock();
-	while ((d = (struct dirent *) readdir(dir)) != NULL) {
+	while ((d = (struct dirent *)readdir(dir)) != NULL) {
 		char filename[512];
 		struct ip *ip;
 		void *so;
@@ -507,7 +506,8 @@ void ip_load_plugins(void)
 		if (strcmp(ext, ".so"))
 			continue;
 
-		snprintf(filename, sizeof(filename), "%s/%s", plugin_dir, d->d_name);
+		snprintf(filename, sizeof(filename), "%s/%s", plugin_dir,
+			 d->d_name);
 
 		so = dlopen(filename, RTLD_NOW);
 		if (so == NULL) {
@@ -523,7 +523,8 @@ void ip_load_plugins(void)
 		ip->mime_types = dlsym(so, "ip_mime_types");
 		ip->ops = dlsym(so, "ip_ops");
 		ip->options = dlsym(so, "ip_options");
-		if (!priority_ptr || !ip->extensions || !ip->mime_types || !ip->ops || !ip->options) {
+		if (!priority_ptr || !ip->extensions || !ip->mime_types ||
+		    !ip->ops || !ip->options) {
 			error_msg("%s: missing symbol", filename);
 			err = true;
 		}
@@ -576,10 +577,7 @@ int ip_open(struct input_plugin *ip)
 		if (rc == 0)
 			rc = ip->ops->open(&ip->data);
 	} else {
-		if (is_cdda_url(ip->data.filename)) {
-			ip->ops = get_ops_by_mime_type("x-content/audio-cdda");
-			rc = ip->ops ? ip->ops->open(&ip->data) : 1;
-		} else if (is_cue_url(ip->data.filename)) {
+		if (is_cue_url(ip->data.filename)) {
 			ip->ops = get_ops_by_mime_type("application/x-cue");
 			rc = ip->ops ? ip->ops->open(&ip->data) : 1;
 		} else
@@ -588,7 +586,7 @@ int ip_open(struct input_plugin *ip)
 
 	if (rc) {
 		d_print("opening `%s' failed: %d %s\n", ip->data.filename, rc,
-				rc == -1 ? strerror(errno) : "");
+			rc == -1 ? strerror(errno) : "");
 		ip_reset(ip, 1);
 		return rc;
 	}
@@ -598,7 +596,7 @@ int ip_open(struct input_plugin *ip)
 	unsigned rate = sf_get_rate(ip->data.sf);
 	if (!bits || !channels || !rate) {
 		d_print("corrupt file: bits = %u, channels = %u, rate = %u\n",
-				bits, channels, rate);
+			bits, channels, rate);
 		return -IP_ERROR_FILE_FORMAT;
 	}
 
@@ -623,15 +621,15 @@ void ip_setup(struct input_plugin *ip)
 		unsigned int mask = ((bits >> 2) & 4) | (is_signed << 1);
 
 		ip->pcm_convert = pcm_conv[mask | (channels - 1)];
-		ip->pcm_convert_in_place = pcm_conv_in_place[mask | sf_get_bigendian(sf)];
+		ip->pcm_convert_in_place =
+		    pcm_conv_in_place[mask | sf_get_bigendian(sf)];
 
 		ip->pcm_convert_scale = (3 - channels) * (3 - bits / 8);
 	}
 
 	d_print("pcm convert: scale=%d convert=%d convert_in_place=%d\n",
-			ip->pcm_convert_scale,
-			ip->pcm_convert != NULL,
-			ip->pcm_convert_in_place != NULL);
+		ip->pcm_convert_scale, ip->pcm_convert != NULL,
+		ip->pcm_convert_in_place != NULL);
 }
 
 int ip_close(struct input_plugin *ip)
@@ -810,7 +808,8 @@ sample_format_t ip_get_sf(struct input_plugin *ip)
 	return ip->data.sf;
 }
 
-void ip_get_channel_map(struct input_plugin *ip, channel_position_t *channel_map)
+void ip_get_channel_map(struct input_plugin *ip,
+			channel_position_t *channel_map)
 {
 	BUG_ON(!ip->open);
 	channel_map_copy(channel_map, ip->data.channel_map);
@@ -827,10 +826,7 @@ const char *ip_get_metadata(struct input_plugin *ip)
 	return ip->data.metadata;
 }
 
-int ip_is_remote(struct input_plugin *ip)
-{
-	return ip->data.remote;
-}
+int ip_is_remote(struct input_plugin *ip) { return ip->data.remote; }
 
 int ip_metadata_changed(struct input_plugin *ip)
 {
@@ -890,8 +886,8 @@ static void set_ip_priority(void *data, const char *val)
 	if (ui_initialized) {
 		if (!warned) {
 			static const char *msg =
-				"Metadata might become inconsistent "
-				"after this change. Continue? [y/N]";
+			    "Metadata might become inconsistent "
+			    "after this change. Continue? [y/N]";
 			if (yes_no_query("%s", msg) != QUERY_ANSWER_YES) {
 				info_msg("Aborted");
 				return;
@@ -922,15 +918,17 @@ void ip_add_options(void)
 	char key[64];
 
 	ip_rdlock();
-	list_for_each_entry(ip, &ip_head, node) {
+	list_for_each_entry(ip, &ip_head, node)
+	{
 		for (ipo = ip->options; ipo->name; ipo++) {
 			snprintf(key, sizeof(key), "input.%s.%s", ip->name,
-					ipo->name);
+				 ipo->name);
 			option_add(xstrdup(key), ipo, get_ip_option,
-					set_ip_option, NULL, 0);
+				   set_ip_option, NULL, 0);
 		}
 		snprintf(key, sizeof(key), "input.%s.priority", ip->name);
-		option_add(xstrdup(key), ip, get_ip_priority, set_ip_priority, NULL, 0);
+		option_add(xstrdup(key), ip, get_ip_priority, set_ip_priority,
+			   NULL, 0);
 	}
 	ip_unlock();
 }
@@ -941,54 +939,59 @@ char *ip_get_error_msg(struct input_plugin *ip, int rc, const char *arg)
 
 	switch (-rc) {
 	case IP_ERROR_ERRNO:
-		snprintf(buffer, sizeof(buffer), "%s: %s", arg, strerror(errno));
+		snprintf(buffer, sizeof(buffer), "%s: %s", arg,
+			 strerror(errno));
 		break;
 	case IP_ERROR_UNRECOGNIZED_FILE_TYPE:
 		snprintf(buffer, sizeof(buffer),
-				"%s: unrecognized filename extension", arg);
+			 "%s: unrecognized filename extension", arg);
 		break;
 	case IP_ERROR_UNSUPPORTED_FILE_TYPE:
-		snprintf(buffer, sizeof(buffer),
-				"%s: unsupported file format", arg);
+		snprintf(buffer, sizeof(buffer), "%s: unsupported file format",
+			 arg);
 		break;
 	case IP_ERROR_FUNCTION_NOT_SUPPORTED:
-		snprintf(buffer, sizeof(buffer),
-				"%s: function not supported", arg);
+		snprintf(buffer, sizeof(buffer), "%s: function not supported",
+			 arg);
 		break;
 	case IP_ERROR_FILE_FORMAT:
 		snprintf(buffer, sizeof(buffer),
-				"%s: file format not supported or corrupted file",
-				arg);
+			 "%s: file format not supported or corrupted file",
+			 arg);
 		break;
 	case IP_ERROR_INVALID_URI:
 		snprintf(buffer, sizeof(buffer), "%s: invalid URI", arg);
 		break;
 	case IP_ERROR_SAMPLE_FORMAT:
 		snprintf(buffer, sizeof(buffer),
-				"%s: input plugin doesn't support the sample format",
-				arg);
+			 "%s: input plugin doesn't support the sample format",
+			 arg);
 		break;
 	case IP_ERROR_WRONG_DISC:
-		snprintf(buffer, sizeof(buffer), "%s: wrong disc inserted, aborting!", arg);
+		snprintf(buffer, sizeof(buffer),
+			 "%s: wrong disc inserted, aborting!", arg);
 		break;
 	case IP_ERROR_NO_DISC:
-		snprintf(buffer, sizeof(buffer), "%s: could not read disc", arg);
+		snprintf(buffer, sizeof(buffer), "%s: could not read disc",
+			 arg);
 		break;
 	case IP_ERROR_HTTP_RESPONSE:
-		snprintf(buffer, sizeof(buffer), "%s: invalid HTTP response", arg);
+		snprintf(buffer, sizeof(buffer), "%s: invalid HTTP response",
+			 arg);
 		break;
 	case IP_ERROR_HTTP_STATUS:
-		snprintf(buffer, sizeof(buffer), "%s: %d %s", arg, ip->http_code, ip->http_reason);
+		snprintf(buffer, sizeof(buffer), "%s: %d %s", arg,
+			 ip->http_code, ip->http_reason);
 		free(ip->http_reason);
 		ip->http_reason = NULL;
 		ip->http_code = -1;
 		break;
 	case IP_ERROR_HTTP_REDIRECT_LIMIT:
-		snprintf(buffer, sizeof(buffer), "%s: too many HTTP redirections", arg);
+		snprintf(buffer, sizeof(buffer),
+			 "%s: too many HTTP redirections", arg);
 		break;
 	case IP_ERROR_NOT_OPTION:
-		snprintf(buffer, sizeof(buffer),
-				"%s: no such option", arg);
+		snprintf(buffer, sizeof(buffer), "%s: no such option", arg);
 		break;
 	case IP_ERROR_INTERNAL:
 		snprintf(buffer, sizeof(buffer), "%s: internal error", arg);
@@ -996,8 +999,8 @@ char *ip_get_error_msg(struct input_plugin *ip, int rc, const char *arg)
 	case IP_ERROR_SUCCESS:
 	default:
 		snprintf(buffer, sizeof(buffer),
-				"%s: this is not an error (%d), this is a bug",
-				arg, rc);
+			 "%s: this is not an error (%d), this is a bug", arg,
+			 rc);
 		break;
 	}
 	return xstrdup(buffer);
@@ -1013,8 +1016,9 @@ char **ip_get_supported_extensions(void)
 	size = 8;
 	exts = xnew(char *, size);
 	ip_rdlock();
-	list_for_each_entry(ip, &ip_head, node) {
-		const char * const *e = ip->extensions;
+	list_for_each_entry(ip, &ip_head, node)
+	{
+		const char *const *e = ip->extensions;
 
 		for (i = 0; e[i]; i++) {
 			if (count == size - 1) {
@@ -1037,8 +1041,10 @@ void ip_dump_plugins(void)
 
 	printf("Input Plugins: %s\n", plugin_dir);
 	ip_rdlock();
-	list_for_each_entry(ip, &ip_head, node) {
-		printf("  %s:\n    Default Priority: %d\n    File Types:", ip->name, ip->priority);
+	list_for_each_entry(ip, &ip_head, node)
+	{
+		printf("  %s:\n    Default Priority: %d\n    File Types:",
+		       ip->name, ip->priority);
 		for (i = 0; ip->extensions[i]; i++)
 			printf(" %s", ip->extensions[i]);
 		printf("\n    MIME Types:");

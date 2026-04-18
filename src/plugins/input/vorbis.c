@@ -1,7 +1,7 @@
-#include "core/ip.h"
-#include "common/xmalloc.h"
-#include "common/read_wrapper.h"
 #include "common/debug.h"
+#include "common/read_wrapper.h"
+#include "common/xmalloc.h"
+#include "core/ip.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -14,10 +14,10 @@
 #endif
 
 #include <errno.h>
+#include <math.h>
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <math.h>
 
 struct vorbis_private {
 	OggVorbis_File vf;
@@ -73,18 +73,15 @@ static long tell_func(void *datasource)
 
 /*
  * typedef struct {
- *   size_t (*read_func)  (void *ptr, size_t size, size_t nmemb, void *datasource);
- *   int    (*seek_func)  (void *datasource, ogg_int64_t offset, int whence);
- *   int    (*close_func) (void *datasource);
- *   long   (*tell_func)  (void *datasource);
- * } ov_callbacks;
+ *   size_t (*read_func)  (void *ptr, size_t size, size_t nmemb, void
+ * *datasource); int    (*seek_func)  (void *datasource, ogg_int64_t offset, int
+ * whence); int    (*close_func) (void *datasource); long   (*tell_func)  (void
+ * *datasource); } ov_callbacks;
  */
-static ov_callbacks callbacks = {
-	.read_func = read_func,
-	.seek_func = seek_func,
-	.close_func = close_func,
-	.tell_func = tell_func
-};
+static ov_callbacks callbacks = {.read_func = read_func,
+				 .seek_func = seek_func,
+				 .close_func = close_func,
+				 .tell_func = tell_func};
 
 /* http://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-800004.3.9 */
 static void channel_map_init_vorbis(int channels, channel_position_t *map)
@@ -153,7 +150,8 @@ static int vorbis_open(struct input_plugin_data *ip_data)
 	ip_data->private = priv;
 
 	vi = ov_info(&priv->vf, -1);
-	ip_data->sf = sf_rate(vi->rate) | sf_channels(vi->channels) | sf_bits(16) | sf_signed(1);
+	ip_data->sf = sf_rate(vi->rate) | sf_channels(vi->channels) |
+		      sf_bits(16) | sf_signed(1);
 	ip_data->sf |= sf_host_endian();
 	channel_map_init_vorbis(vi->channels, ip_data->channel_map);
 	return 0;
@@ -199,7 +197,8 @@ static inline int vorbis_endian(void)
  *     one vorbis packet per invocation, so the value returned will generally
  *     be less than length.
  */
-static int vorbis_read(struct input_plugin_data *ip_data, char *buffer, int count)
+static int vorbis_read(struct input_plugin_data *ip_data, char *buffer,
+		       int count)
 {
 	struct vorbis_private *priv;
 	int rc;
@@ -210,7 +209,8 @@ static int vorbis_read(struct input_plugin_data *ip_data, char *buffer, int coun
 	/* Tremor can only handle signed 16 bit data */
 	rc = ov_read(&priv->vf, buffer, count, &current_section);
 #else
-	rc = ov_read(&priv->vf, buffer, count, vorbis_endian(), 2, 1, &current_section);
+	rc = ov_read(&priv->vf, buffer, count, vorbis_endian(), 2, 1,
+		     &current_section);
 #endif
 
 	if (ip_data->remote && current_section != priv->current_section) {
@@ -232,7 +232,7 @@ static int vorbis_read(struct input_plugin_data *ip_data, char *buffer, int coun
 		if (errno) {
 			d_print("error: %s\n", strerror(errno));
 			return -1;
-/* 			return -IP_ERROR_INTERNAL; */
+			/* 			return -IP_ERROR_INTERNAL; */
 		}
 		/* EOF */
 		return 0;
@@ -273,7 +273,7 @@ static int vorbis_seek(struct input_plugin_data *ip_data, double offset)
 }
 
 static int vorbis_read_comments(struct input_plugin_data *ip_data,
-		struct keyval **comments)
+				struct keyval **comments)
 {
 	GROWING_KEYVALS(c);
 	struct vorbis_private *priv;
@@ -342,9 +342,10 @@ static char *vorbis_codec(struct input_plugin_data *ip_data)
 }
 
 static const long rate_mapping_44[2][12] = {
-	{ 32000, 48000, 60000, 70000,  80000,  86000,  96000, 110000, 120000, 140000, 160000, 239920 },
-	{ 45000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000, 256000, 320000, 499821 }
-};
+    {32000, 48000, 60000, 70000, 80000, 86000, 96000, 110000, 120000, 140000,
+     160000, 239920},
+    {45000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000, 256000,
+     320000, 499821}};
 
 static char *vorbis_codec_profile(struct input_plugin_data *ip_data)
 {
@@ -363,34 +364,33 @@ static char *vorbis_codec_profile(struct input_plugin_data *ip_data)
 		float q;
 		int i;
 
-		for (i = 0; i < 12-1; i++) {
-			if (b >= map[i] && b < map[i+1])
+		for (i = 0; i < 12 - 1; i++) {
+			if (b >= map[i] && b < map[i + 1])
 				break;
 		}
 		/* This is used even if upper / lower bitrate are set
 		 * because it gives a good approximation. */
-		q = (i - 1) + (float) (b - map[i]) / (map[i+1] - map[i]);
+		q = (i - 1) + (float)(b - map[i]) / (map[i + 1] - map[i]);
 		sprintf(buf, "q%g", roundf(q * 100.f) / 100.f);
 	}
 
 	return xstrdup(buf);
 }
 
-const struct input_plugin_ops ip_ops = {
-	.open = vorbis_open,
-	.close = vorbis_close,
-	.read = vorbis_read,
-	.seek = vorbis_seek,
-	.read_comments = vorbis_read_comments,
-	.duration = vorbis_duration,
-	.bitrate = vorbis_bitrate,
-	.bitrate_current = vorbis_current_bitrate,
-	.codec = vorbis_codec,
-	.codec_profile = vorbis_codec_profile
-};
+const struct input_plugin_ops ip_ops = {.open = vorbis_open,
+					.close = vorbis_close,
+					.read = vorbis_read,
+					.seek = vorbis_seek,
+					.read_comments = vorbis_read_comments,
+					.duration = vorbis_duration,
+					.bitrate = vorbis_bitrate,
+					.bitrate_current =
+					    vorbis_current_bitrate,
+					.codec = vorbis_codec,
+					.codec_profile = vorbis_codec_profile};
 
 const int ip_priority = 50;
-const char * const ip_extensions[] = { "ogg", "oga", "ogx", NULL };
-const char * const ip_mime_types[] = { "application/ogg", "audio/x-ogg", NULL };
-const struct input_plugin_opt ip_options[] = { { NULL } };
+const char *const ip_extensions[] = {"ogg", "oga", "ogx", NULL};
+const char *const ip_mime_types[] = {"application/ogg", "audio/x-ogg", NULL};
+const struct input_plugin_opt ip_options[] = {{NULL}};
 const unsigned ip_abi_version = IP_ABI_VERSION;

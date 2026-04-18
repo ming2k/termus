@@ -1,8 +1,8 @@
 #ifndef TERMUS_FILTERS_H
 #define TERMUS_FILTERS_H
 
-#include "common/list.h"
 #include "common/iter.h"
+#include "common/list.h"
 #include "library/search.h"
 
 #include <stddef.h>

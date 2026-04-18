@@ -1,9 +1,9 @@
 #ifndef TERMUS_INPUT_H
 #define TERMUS_INPUT_H
 
+#include "core/channelmap.h"
 #include "core/keyval.h"
 #include "core/sf.h"
-#include "core/channelmap.h"
 
 struct input_plugin;
 
@@ -54,7 +54,8 @@ char *ip_codec(struct input_plugin *ip);
 char *ip_codec_profile(struct input_plugin *ip);
 
 sample_format_t ip_get_sf(struct input_plugin *ip);
-void ip_get_channel_map(struct input_plugin *ip, channel_position_t *channel_map);
+void ip_get_channel_map(struct input_plugin *ip,
+			channel_position_t *channel_map);
 const char *ip_get_filename(struct input_plugin *ip);
 const char *ip_get_metadata(struct input_plugin *ip);
 int ip_is_remote(struct input_plugin *ip);

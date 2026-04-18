@@ -2,13 +2,17 @@
 #define TERMUS_BROWSER_H
 
 #include "common/list.h"
-#include "ui/window.h"
 #include "library/search.h"
+#include "ui/window.h"
 
 struct browser_entry {
 	struct list_head node;
 
-	enum { BROWSER_ENTRY_DIR, BROWSER_ENTRY_FILE, BROWSER_ENTRY_PLLINE } type;
+	enum {
+		BROWSER_ENTRY_DIR,
+		BROWSER_ENTRY_FILE,
+		BROWSER_ENTRY_PLLINE
+	} type;
 	char name[];
 };
 

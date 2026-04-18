@@ -5,11 +5,11 @@
 #include "common/utils.h" /* N_ELEMENTS */
 #include "core/convert.h"
 
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
 #include <wctype.h>
-#include <ctype.h>
 
 #include "common/unidecomp.h"
 #include "common/wcwidth_uchar.h"
@@ -17,12 +17,13 @@
 const char hex_tab[16] TERMUS_NONSTRING = "0123456789abcdef";
 
 /*
- * Byte Sequence                                             Min       Min        Max
+ * Byte Sequence                                             Min       Min Max
  * ----------------------------------------------------------------------------------
- * 0xxxxxxx                                              0000000   0x00000   0x00007f
- * 110xxxxx 10xxxxxx                                000 10000000   0x00080   0x0007ff
- * 1110xxxx 10xxxxxx 10xxxxxx                  00001000 00000000   0x00800   0x00ffff
- * 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx   00001 00000000 00000000   0x10000   0x10ffff (not 0x1fffff)
+ * 0xxxxxxx                                              0000000   0x00000
+ * 0x00007f 110xxxxx 10xxxxxx                                000 10000000
+ * 0x00080   0x0007ff 1110xxxx 10xxxxxx 10xxxxxx                  00001000
+ * 00000000   0x00800   0x00ffff 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx   00001
+ * 00000000 00000000   0x10000   0x10ffff (not 0x1fffff)
  *
  * max: 100   001111   111111   111111  (0x10ffff)
  */
@@ -31,58 +32,56 @@ const char hex_tab[16] TERMUS_NONSTRING = "0123456789abcdef";
  * Table index is the first byte of UTF-8 sequence.
  */
 static const signed char len_tab[256] = {
-	/*   0-127  0xxxxxxx */
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    /*   0-127  0xxxxxxx */
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1,
 
-	/* 128-191  10xxxxxx (invalid first byte) */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    /* 128-191  10xxxxxx (invalid first byte) */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-	/* 192-223  110xxxxx */
-	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    /* 192-223  110xxxxx */
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2,
 
-	/* 224-239  1110xxxx */
-	3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    /* 224-239  1110xxxx */
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 
-	/* 240-244  11110xxx (000 - 100) */
-	4, 4, 4, 4, 4,
+    /* 240-244  11110xxx (000 - 100) */
+    4, 4, 4, 4, 4,
 
-	/* 11110xxx (101 - 111) (always invalid) */
-	-1, -1, -1,
+    /* 11110xxx (101 - 111) (always invalid) */
+    -1, -1, -1,
 
-	/* 11111xxx (always invalid) */
-	-1, -1, -1, -1, -1, -1, -1, -1
-};
+    /* 11111xxx (always invalid) */
+    -1, -1, -1, -1, -1, -1, -1, -1};
 
 /* fault-tolerant equivalent to len_tab, from glib */
 static const char utf8_skip_data[256] = {
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-	2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
-	3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5,6,6,1,1
-};
-const char * const utf8_skip = utf8_skip_data;
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 1, 1};
+const char *const utf8_skip = utf8_skip_data;
 
 /* index is length of the UTF-8 sequence - 1 */
-static int min_val[4] = { 0x000000, 0x000080, 0x000800, 0x010000 };
-static int max_val[4] = { 0x00007f, 0x0007ff, 0x00ffff, 0x10ffff };
+static int min_val[4] = {0x000000, 0x000080, 0x000800, 0x010000};
+static int max_val[4] = {0x00007f, 0x0007ff, 0x00ffff, 0x10ffff};
 
 /* get value bits from the first UTF-8 sequence byte */
-static unsigned int first_byte_mask[4] = { 0x7f, 0x1f, 0x0f, 0x07 };
+static unsigned int first_byte_mask[4] = {0x7f, 0x1f, 0x0f, 0x07};
 
 int u_is_valid(const char *str)
 {
@@ -150,7 +149,7 @@ size_t u_strlen_safe(const char *str)
 			len++;
 			continue;
 		}
-single_char:
+	single_char:
 		/* l is -1, 0 or 1
 		 * invalid chars counted as single characters */
 		s++;
@@ -222,7 +221,7 @@ char *u_strchr(const char *str, uchar uch)
 	while (str[idx]) {
 		uchar u = u_get_char(str, &idx);
 		if (uch == u)
-			return (char *) (str + idx);
+			return (char *)(str + idx);
 	}
 	return NULL;
 }
@@ -317,20 +316,26 @@ void u_set_char_raw(char *str, int *idx, uchar uch)
 		str[i++] = uch;
 		*idx = i;
 	} else if (uch <= 0x000007ffU) {
-		str[i + 1] = (uch & 63) | 0x80; uch >>= 6;
+		str[i + 1] = (uch & 63) | 0x80;
+		uch >>= 6;
 		str[i + 0] = uch | 0x000000c0U;
 		i += 2;
 		*idx = i;
 	} else if (uch <= 0x0000ffffU) {
-		str[i + 2] = (uch & 63) | 0x80; uch >>= 6;
-		str[i + 1] = (uch & 63) | 0x80; uch >>= 6;
+		str[i + 2] = (uch & 63) | 0x80;
+		uch >>= 6;
+		str[i + 1] = (uch & 63) | 0x80;
+		uch >>= 6;
 		str[i + 0] = uch | 0x000000e0U;
 		i += 3;
 		*idx = i;
 	} else if (uch <= 0x0010ffffU) {
-		str[i + 3] = (uch & 63) | 0x80; uch >>= 6;
-		str[i + 2] = (uch & 63) | 0x80; uch >>= 6;
-		str[i + 1] = (uch & 63) | 0x80; uch >>= 6;
+		str[i + 3] = (uch & 63) | 0x80;
+		uch >>= 6;
+		str[i + 2] = (uch & 63) | 0x80;
+		uch >>= 6;
+		str[i + 1] = (uch & 63) | 0x80;
+		uch >>= 6;
 		str[i + 0] = uch | 0x000000f0U;
 		i += 4;
 		*idx = i;
@@ -357,22 +362,28 @@ void u_set_char(char *str, size_t *idx, uchar uch)
 		*idx = i;
 		return;
 	} else if (uch <= 0x000007ffU) {
-		str[i + 1] = (uch & 63) | 0x80; uch >>= 6;
+		str[i + 1] = (uch & 63) | 0x80;
+		uch >>= 6;
 		str[i + 0] = uch | 0x000000c0U;
 		i += 2;
 		*idx = i;
 		return;
 	} else if (uch <= 0x0000ffffU) {
-		str[i + 2] = (uch & 63) | 0x80; uch >>= 6;
-		str[i + 1] = (uch & 63) | 0x80; uch >>= 6;
+		str[i + 2] = (uch & 63) | 0x80;
+		uch >>= 6;
+		str[i + 1] = (uch & 63) | 0x80;
+		uch >>= 6;
 		str[i + 0] = uch | 0x000000e0U;
 		i += 3;
 		*idx = i;
 		return;
 	} else if (uch <= 0x0010ffffU) {
-		str[i + 3] = (uch & 63) | 0x80; uch >>= 6;
-		str[i + 2] = (uch & 63) | 0x80; uch >>= 6;
-		str[i + 1] = (uch & 63) | 0x80; uch >>= 6;
+		str[i + 3] = (uch & 63) | 0x80;
+		uch >>= 6;
+		str[i + 2] = (uch & 63) | 0x80;
+		uch >>= 6;
+		str[i + 1] = (uch & 63) | 0x80;
+		uch >>= 6;
 		str[i + 0] = uch | 0x000000f0U;
 		i += 4;
 		*idx = i;
@@ -445,14 +456,14 @@ void u_to_utf8(char *dst, const char *src)
 	do {
 		u = u_get_char(src, &s);
 		u_set_char(dst, &d, u);
-	} while (u!=0);
+	} while (u != 0);
 }
 
 int u_print_size(uchar uch)
 {
 	int s = u_char_size(uch);
 	/* control characters and invalid unicode set as <XX> */
-	if (uch < 0x0000001fU && uch != 0){
+	if (uch < 0x0000001fU && uch != 0) {
 		return 4;
 	}
 	return s;
@@ -466,7 +477,7 @@ int u_str_print_size(const char *str)
 	do {
 		u = u_get_char(str, &idx);
 		l += u_print_size(u);
-	} while (u!=0);
+	} while (u != 0);
 	return l;
 }
 
@@ -481,19 +492,22 @@ int u_skip_chars(const char *str, int *width, bool overskip)
 		u = u_get_char(str, &idx);
 		w -= u_char_width(u);
 	}
-	/* undo last get if skipped 'too much' (the last char was double width or invalid (<xx>)) */
+	/* undo last get if skipped 'too much' (the last char was double width
+	 * or invalid (<xx>)) */
 	if (w < 0 && !overskip) {
 		w += u_char_width(u);
 		idx = last_idx;
-	} else while (1) {
-		/* consume any zero-width characters (e.g. combining marks) */
-		last_idx = idx;
-		u = u_get_char(str, &idx);
-		if (u_char_width(u) != 0) {
-			idx = last_idx;
-			break;
+	} else
+		while (1) {
+			/* consume any zero-width characters (e.g. combining
+			 * marks) */
+			last_idx = idx;
+			u = u_get_char(str, &idx);
+			if (u_char_width(u) != 0) {
+				idx = last_idx;
+				break;
+			}
 		}
-	}
 	*width = w;
 	return idx;
 }
@@ -561,7 +575,8 @@ static uchar get_base_from_composed(uchar ch)
 	int begin = 0;
 	int end = N_ELEMENTS(unidecomp_map);
 
-	if (ch < unidecomp_map[begin].composed || ch > unidecomp_map[end - 1].composed)
+	if (ch < unidecomp_map[begin].composed ||
+	    ch > unidecomp_map[end - 1].composed)
 		return ch;
 
 	/* binary search */
@@ -579,7 +594,8 @@ static uchar get_base_from_composed(uchar ch)
 	return ch;
 }
 
-static inline int do_u_strncase_equal(const char *a, const char *b, size_t len, int only_base_chars)
+static inline int do_u_strncase_equal(const char *a, const char *b, size_t len,
+				      int only_base_chars)
 {
 	int ai = 0, bi = 0;
 	size_t i;
@@ -612,7 +628,8 @@ int u_strncase_equal_base(const char *a, const char *b, size_t len)
 	return do_u_strncase_equal(a, b, len, 1);
 }
 
-static inline char *do_u_strcasestr(const char *haystack, const char *needle, int only_base_chars)
+static inline char *do_u_strcasestr(const char *haystack, const char *needle,
+				    int only_base_chars)
 {
 	/* strlen is faster and works here */
 	int haystack_len = strlen(haystack);
@@ -623,7 +640,8 @@ static inline char *do_u_strcasestr(const char *haystack, const char *needle, in
 
 		if (haystack_len < needle_len)
 			return NULL;
-		if (do_u_strncase_equal(needle, haystack, needle_len, only_base_chars))
+		if (do_u_strncase_equal(needle, haystack, needle_len,
+					only_base_chars))
 			return (char *)haystack;
 
 		/* skip one char */

@@ -5,7 +5,7 @@
 #include <stdatomic.h>
 
 struct fifo_mutex {
-	struct fifo_waiter * _Atomic tail;
+	struct fifo_waiter *_Atomic tail;
 	struct fifo_waiter *head;
 	pthread_mutex_t mutex;
 };
@@ -16,9 +16,10 @@ extern pthread_t main_thread;
 #define TERMUS_COND_INITIALIZER PTHREAD_COND_INITIALIZER
 #define TERMUS_RWLOCK_INITIALIZER PTHREAD_RWLOCK_INITIALIZER
 
-#define FIFO_MUTEX_INITIALIZER { \
-		.mutex = PTHREAD_MUTEX_INITIALIZER, \
-		.tail = ATOMIC_VAR_INIT(NULL), \
+#define FIFO_MUTEX_INITIALIZER                                                 \
+	{                                                                      \
+	    .mutex = PTHREAD_MUTEX_INITIALIZER,                                \
+	    .tail = ATOMIC_VAR_INIT(NULL),                                     \
 	}
 
 void termus_mutex_lock(pthread_mutex_t *mutex);

@@ -130,32 +130,27 @@ static void convert_16_1ch_to_16_2ch(void *dst, const void *src, int count)
 
 /* index is ((bits >> 2) & 4) | (is_signed << 1) | (channels - 1) */
 pcm_conv_func pcm_conv[8] = {
-	convert_u8_1ch_to_s16_2ch,
-	convert_u8_2ch_to_s16_2ch,
-	convert_s8_1ch_to_s16_2ch,
-	convert_s8_2ch_to_s16_2ch,
+    convert_u8_1ch_to_s16_2ch, convert_u8_2ch_to_s16_2ch,
+    convert_s8_1ch_to_s16_2ch, convert_s8_2ch_to_s16_2ch,
 
-	convert_16_1ch_to_16_2ch,
-	NULL,
-	convert_16_1ch_to_16_2ch,
-	NULL
-};
+    convert_16_1ch_to_16_2ch,  NULL,
+    convert_16_1ch_to_16_2ch,  NULL};
 
 /* index is ((bits >> 2) & 4) | (is_signed << 1) | bigendian */
 pcm_conv_in_place_func pcm_conv_in_place[8] = {
-	NULL,
-	NULL,
-	NULL,
-	NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
 
-	convert_u16_le_to_s16_le,
-	convert_u16_be_to_s16_le,
+    convert_u16_le_to_s16_le,
+    convert_u16_be_to_s16_le,
 
 #ifdef WORDS_BIGENDIAN
-	swap_s16_byte_order,
-	NULL,
+    swap_s16_byte_order,
+    NULL,
 #else
-	NULL,
-	swap_s16_byte_order,
+    NULL,
+    swap_s16_byte_order,
 #endif
 };

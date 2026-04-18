@@ -1,14 +1,14 @@
 #include "library/lib.h"
-#include "library/editable.h"
-#include "core/track_info.h"
 #include "app/options_library_state.h"
 #include "app/options_playback_state.h"
 #include "app/options_ui_state.h"
-#include "common/xmalloc.h"
-#include "common/rbtree.h"
 #include "common/debug.h"
-#include "common/utils.h"
+#include "common/rbtree.h"
 #include "common/u_collate.h"
+#include "common/utils.h"
+#include "common/xmalloc.h"
+#include "core/track_info.h"
+#include "library/editable.h"
 #include "ui/window.h"
 
 #include <pthread.h>
@@ -34,13 +34,11 @@ static struct expr *live_filter_expr = NULL;
 static struct track_info *cur_track_ti = NULL;
 static struct track_info *sel_track_ti = NULL;
 
-struct window *lib_sorted_win(void)
-{
-	return lib_sorted_window;
-}
+struct window *lib_sorted_win(void) { return lib_sorted_window; }
 
 void lib_sorted_attach_view(void *view_data,
-		const struct editable_view_ops *view_ops, struct window *win)
+			    const struct editable_view_ops *view_ops,
+			    struct window *win)
 {
 	lib_sorted_window = win;
 	editable_shared_set_view(&lib_editable_shared, view_data, view_ops);
@@ -72,7 +70,8 @@ const char *artist_sort_name(const struct artist *a)
 	return a->name;
 }
 
-static inline void sorted_track_to_iter(struct tree_track *track, struct iter *iter)
+static inline void sorted_track_to_iter(struct tree_track *track,
+					struct iter *iter)
 {
 	iter->data0 = &lib_editable.head;
 	iter->data1 = track;
@@ -88,7 +87,8 @@ static void all_wins_changed(void)
 
 static void shuffle_add(struct tree_track *track)
 {
-	shuffle_list_add(&track->simple_track.shuffle_info, &lib_shuffle_root, track->album);
+	shuffle_list_add(&track->simple_track.shuffle_info, &lib_shuffle_root,
+			 track->album);
 }
 
 static void album_shuffle_list_add(struct album *album)
@@ -124,7 +124,9 @@ struct fh_entry {
 };
 
 #define FH_SIZE (1024)
-static struct fh_entry *ti_hash[FH_SIZE] = { NULL, };
+static struct fh_entry *ti_hash[FH_SIZE] = {
+    NULL,
+};
 
 static int hash_insert(struct track_info *ti)
 {
@@ -176,7 +178,8 @@ static int is_filtered(struct track_info *ti)
 {
 	if (live_filter_expr && !expr_eval(live_filter_expr, ti))
 		return 1;
-	if (!live_filter_expr && lib_live_filter && !track_info_matches(ti, lib_live_filter, TI_MATCH_ALL))
+	if (!live_filter_expr && lib_live_filter &&
+	    !track_info_matches(ti, lib_live_filter, TI_MATCH_ALL))
 		return 1;
 	if (filter && !expr_eval(filter, ti))
 		return 1;
@@ -194,7 +197,8 @@ static bool track_exists(struct track_info *ti)
 		return false;
 
 	char *artist_collkey_name = u_strcasecoll_key(tree_artist_name(ti));
-	rb_for_each_entry(artist, node, &lib_artist_root, tree_node) {
+	rb_for_each_entry(artist, node, &lib_artist_root, tree_node)
+	{
 		if (strcmp(artist->collkey_name, artist_collkey_name) == 0)
 			break;
 	}
@@ -204,7 +208,8 @@ static bool track_exists(struct track_info *ti)
 		return false;
 
 	char *album_collkey_name = u_strcasecoll_key(tree_album_name(ti));
-	rb_for_each_entry(album, node, &artist->album_root, tree_node) {
+	rb_for_each_entry(album, node, &artist->album_root, tree_node)
+	{
 		if (strcmp(album->collkey_name, album_collkey_name) == 0)
 			break;
 	}
@@ -213,11 +218,13 @@ static bool track_exists(struct track_info *ti)
 	if (!album)
 		return false;
 
-	rb_for_each_entry(track, node, &album->track_root, tree_node) {
+	rb_for_each_entry(track, node, &album->track_root, tree_node)
+	{
 		struct track_info *iter_ti = tree_track_info(track);
-		if (iter_ti->tracknumber == ti->tracknumber
-				&& iter_ti->discnumber == ti->discnumber
-				&& iter_ti->collkey_title && strcmp(iter_ti->collkey_title, ti->collkey_title) == 0)
+		if (iter_ti->tracknumber == ti->tracknumber &&
+		    iter_ti->discnumber == ti->discnumber &&
+		    iter_ti->collkey_title &&
+		    strcmp(iter_ti->collkey_title, ti->collkey_title) == 0)
 			return true;
 	}
 	return false;
@@ -294,7 +301,8 @@ static int cur_album_filter(const struct album *album)
 
 /* set next/prev (tree) {{{ */
 
-static struct tree_track *normal_get_next(enum aaa_mode aaa, bool allow_repeat, bool skip_album)
+static struct tree_track *normal_get_next(enum aaa_mode aaa, bool allow_repeat,
+					  bool skip_album)
 {
 	if (lib_cur_track == NULL) {
 		if (!allow_repeat)
@@ -318,7 +326,8 @@ static struct tree_track *normal_get_next(enum aaa_mode aaa, bool allow_repeat, 
 	/* not last album of the artist? */
 	if (rb_next(&CUR_ALBUM->tree_node) != NULL) {
 		/* first track of the next album */
-		return album_first_track(to_album(rb_next(&CUR_ALBUM->tree_node)));
+		return album_first_track(
+		    to_album(rb_next(&CUR_ALBUM->tree_node)));
 	}
 
 	if (aaa == AAA_MODE_ARTIST) {
@@ -331,7 +340,8 @@ static struct tree_track *normal_get_next(enum aaa_mode aaa, bool allow_repeat, 
 	/* not last artist of the library? */
 	if (rb_next(&CUR_ARTIST->tree_node) != NULL) {
 		/* first track of the next artist */
-		return artist_first_track(to_artist(rb_next(&CUR_ARTIST->tree_node)));
+		return artist_first_track(
+		    to_artist(rb_next(&CUR_ARTIST->tree_node)));
 	}
 
 	if (!allow_repeat || !options_get_repeat())
@@ -341,7 +351,8 @@ static struct tree_track *normal_get_next(enum aaa_mode aaa, bool allow_repeat, 
 	return normal_get_first();
 }
 
-static struct tree_track *normal_get_prev(enum aaa_mode aaa, bool allow_repeat, bool skip_album)
+static struct tree_track *normal_get_prev(enum aaa_mode aaa, bool allow_repeat,
+					  bool skip_album)
 {
 	if (lib_cur_track == NULL) {
 		if (!allow_repeat)
@@ -365,20 +376,23 @@ static struct tree_track *normal_get_prev(enum aaa_mode aaa, bool allow_repeat, 
 	/* not first album of the artist? */
 	if (rb_prev(&CUR_ALBUM->tree_node) != NULL) {
 		/* last track of the prev album of the artist */
-		return album_last_track(to_album(rb_prev(&CUR_ALBUM->tree_node)));
+		return album_last_track(
+		    to_album(rb_prev(&CUR_ALBUM->tree_node)));
 	}
 
 	if (aaa == AAA_MODE_ARTIST) {
 		if (!allow_repeat || !options_get_repeat())
 			return NULL;
 		/* last track of the last album of the artist */
-		return album_last_track(to_album(rb_last(&CUR_ARTIST->album_root)));
+		return album_last_track(
+		    to_album(rb_last(&CUR_ARTIST->album_root)));
 	}
 
 	/* not first artist of the library? */
 	if (rb_prev(&CUR_ARTIST->tree_node) != NULL) {
 		/* last track of the last album of the prev artist */
-		return artist_last_track(to_artist(rb_prev(&CUR_ARTIST->tree_node)));
+		return artist_last_track(
+		    to_artist(rb_prev(&CUR_ARTIST->tree_node)));
 	}
 
 	if (!allow_repeat || !options_get_repeat())
@@ -395,8 +409,8 @@ static struct tree_track *shuffle_album_get_next(void)
 
 	if (lib_cur_track != NULL)
 		shuffle_info = &lib_cur_track->album->shuffle_info;
-	album = (struct album *)shuffle_list_get_next(&lib_album_shuffle_root,
-			shuffle_info, aaa_mode_filter);
+	album = (struct album *)shuffle_list_get_next(
+	    &lib_album_shuffle_root, shuffle_info, aaa_mode_filter);
 	if (album != NULL)
 		return album_first_track(album);
 	return NULL;
@@ -409,8 +423,8 @@ static struct tree_track *shuffle_album_get_prev(void)
 
 	if (lib_cur_track != NULL)
 		shuffle_info = &lib_cur_track->album->shuffle_info;
-	album = (struct album *)shuffle_list_get_prev(&lib_album_shuffle_root,
-			shuffle_info, aaa_mode_filter);
+	album = (struct album *)shuffle_list_get_prev(
+	    &lib_album_shuffle_root, shuffle_info, aaa_mode_filter);
 	if (album != NULL)
 		return album_last_track(album);
 	return NULL;
@@ -421,8 +435,9 @@ static struct tree_track *sorted_album_first_track(struct tree_track *track)
 	struct tree_track *prev = track;
 
 	while (true) {
-		prev = (struct tree_track *)simple_list_get_prev(&lib_editable.head,
-			   (struct simple_track *)prev, NULL, false);
+		prev = (struct tree_track *)simple_list_get_prev(
+		    &lib_editable.head, (struct simple_track *)prev, NULL,
+		    false);
 		if (prev == NULL)
 			return track;
 		if (prev->album == track->album)
@@ -435,8 +450,9 @@ static struct tree_track *sorted_album_last_track(struct tree_track *track)
 	struct tree_track *next = track;
 
 	while (true) {
-		next = (struct tree_track *)simple_list_get_next(&lib_editable.head,
-			   (struct simple_track *)next, NULL, false);
+		next = (struct tree_track *)simple_list_get_next(
+		    &lib_editable.head, (struct simple_track *)next, NULL,
+		    false);
 		if (next == NULL)
 			return track;
 		if (next->album == track->album)
@@ -451,12 +467,15 @@ void lib_reshuffle(void)
 	shuffle_list_reshuffle(&lib_shuffle_root);
 	shuffle_list_reshuffle(&lib_album_shuffle_root);
 	if (lib_cur_track) {
-		shuffle_insert(&lib_shuffle_root, NULL, &lib_cur_track->simple_track.shuffle_info);
-		shuffle_insert(&lib_album_shuffle_root, NULL, &lib_cur_track->album->shuffle_info);
+		shuffle_insert(&lib_shuffle_root, NULL,
+			       &lib_cur_track->simple_track.shuffle_info);
+		shuffle_insert(&lib_album_shuffle_root, NULL,
+			       &lib_cur_track->album->shuffle_info);
 	}
 }
 
-void lib_sort_artists(void) {
+void lib_sort_artists(void)
+{
 	tree_sort_artists(album_shuffle_list_add, album_shuffle_list_remove);
 }
 
@@ -471,7 +490,8 @@ static void free_lib_track(struct editable *e, struct list_head *item)
 	if (remove_from_hash)
 		hash_remove(ti);
 
-	rb_erase(&track->simple_track.shuffle_info.tree_node, &lib_shuffle_root);
+	rb_erase(&track->simple_track.shuffle_info.tree_node,
+		 &lib_shuffle_root);
 	tree_remove(track, album_shuffle_list_remove);
 
 	track_info_unref(ti);
@@ -496,7 +516,8 @@ struct track_info *lib_set_track(struct tree_track *track)
 		ti = tree_track_info(track);
 		track_info_ref(ti);
 		if (options_get_follow()) {
-			tree_sel_current(options_get_auto_expand_albums_follow());
+			tree_sel_current(
+			    options_get_auto_expand_albums_follow());
 			sorted_sel_current();
 		}
 		all_wins_changed();
@@ -513,12 +534,15 @@ struct track_info *lib_goto_next(void)
 		return NULL;
 	}
 	if (options_get_shuffle() == SHUFFLE_TRACKS) {
-		track = (struct tree_track *)shuffle_list_get_next(&lib_shuffle_root,
-				(struct shuffle_info *)lib_cur_track, aaa_mode_filter);
+		track = (struct tree_track *)shuffle_list_get_next(
+		    &lib_shuffle_root, (struct shuffle_info *)lib_cur_track,
+		    aaa_mode_filter);
 	} else if (options_get_shuffle() == SHUFFLE_ALBUMS) {
 		if (play_sorted)
-			track = (struct tree_track *)simple_list_get_next(&lib_editable.head,
-					(struct simple_track *)lib_cur_track, cur_album_filter, false);
+			track = (struct tree_track *)simple_list_get_next(
+			    &lib_editable.head,
+			    (struct simple_track *)lib_cur_track,
+			    cur_album_filter, false);
 		else
 			track = normal_get_next(AAA_MODE_ALBUM, false, false);
 		if (track == NULL) {
@@ -527,8 +551,9 @@ struct track_info *lib_goto_next(void)
 				track = sorted_album_first_track(track);
 		}
 	} else if (play_sorted) {
-		track = (struct tree_track *)simple_list_get_next(&lib_editable.head,
-				(struct simple_track *)lib_cur_track, aaa_mode_filter, true);
+		track = (struct tree_track *)simple_list_get_next(
+		    &lib_editable.head, (struct simple_track *)lib_cur_track,
+		    aaa_mode_filter, true);
 	} else {
 		track = normal_get_next(aaa_mode, true, false);
 	}
@@ -544,12 +569,15 @@ struct track_info *lib_goto_prev(void)
 		return NULL;
 	}
 	if (options_get_shuffle() == SHUFFLE_TRACKS) {
-		track = (struct tree_track *)shuffle_list_get_prev(&lib_shuffle_root,
-				(struct shuffle_info *)lib_cur_track, aaa_mode_filter);
+		track = (struct tree_track *)shuffle_list_get_prev(
+		    &lib_shuffle_root, (struct shuffle_info *)lib_cur_track,
+		    aaa_mode_filter);
 	} else if (options_get_shuffle() == SHUFFLE_ALBUMS) {
 		if (play_sorted)
-			track = (struct tree_track *)simple_list_get_prev(&lib_editable.head,
-					(struct simple_track *)lib_cur_track, cur_album_filter, false);
+			track = (struct tree_track *)simple_list_get_prev(
+			    &lib_editable.head,
+			    (struct simple_track *)lib_cur_track,
+			    cur_album_filter, false);
 		else
 			track = normal_get_prev(AAA_MODE_ALBUM, false, false);
 		if (track == NULL) {
@@ -558,8 +586,9 @@ struct track_info *lib_goto_prev(void)
 				track = sorted_album_last_track(track);
 		}
 	} else if (play_sorted) {
-		track = (struct tree_track *)simple_list_get_prev(&lib_editable.head,
-				(struct simple_track *)lib_cur_track, aaa_mode_filter, true);
+		track = (struct tree_track *)simple_list_get_prev(
+		    &lib_editable.head, (struct simple_track *)lib_cur_track,
+		    aaa_mode_filter, true);
 	} else {
 		track = normal_get_prev(aaa_mode, true, false);
 	}
@@ -582,8 +611,9 @@ struct track_info *lib_goto_next_album(void)
 			track = sorted_album_first_track(track);
 	} else if (play_sorted) {
 		track = sorted_album_last_track(lib_cur_track);
-		track = (struct tree_track *)simple_list_get_next(&lib_editable.head,
-				(struct simple_track *)track, aaa_mode_filter, true);
+		track = (struct tree_track *)simple_list_get_next(
+		    &lib_editable.head, (struct simple_track *)track,
+		    aaa_mode_filter, true);
 	} else {
 		track = normal_get_next(aaa_mode, true, true);
 	}
@@ -609,8 +639,9 @@ struct track_info *lib_goto_prev_album(void)
 			track = album_first_track(track->album);
 	} else if (play_sorted) {
 		track = sorted_album_first_track(lib_cur_track);
-		track = (struct tree_track *)simple_list_get_prev(&lib_editable.head,
-				(struct simple_track *)track, aaa_mode_filter, true);
+		track = (struct tree_track *)simple_list_get_prev(
+		    &lib_editable.head, (struct simple_track *)track,
+		    aaa_mode_filter, true);
 		track = sorted_album_first_track(track);
 	} else {
 		track = normal_get_prev(aaa_mode, true, true);
@@ -647,7 +678,9 @@ static void hash_add_to_views(void)
 		while (e) {
 			struct track_info *ti = e->ti;
 
-			if (!is_filtered(ti) && !(options_get_ignore_duplicates() && track_exists(ti)))
+			if (!is_filtered(ti) &&
+			    !(options_get_ignore_duplicates() &&
+			      track_exists(ti)))
 				views_add_track(ti);
 			e = e->next;
 		}
@@ -658,7 +691,8 @@ struct tree_track *lib_find_track(struct track_info *ti)
 {
 	struct simple_track *track;
 
-	list_for_each_entry(track, &lib_editable.head, node) {
+	list_for_each_entry(track, &lib_editable.head, node)
+	{
 		if (strcmp(track->info->filename, ti->filename) == 0) {
 			struct tree_track *tt = (struct tree_track *)track;
 			return tt;
@@ -701,14 +735,16 @@ static void do_lib_filter(int clear_before)
 		lib_store_cur_track(tree_track_info(lib_cur_track));
 
 	if (clear_before)
-		d_print("filter results could grow, clear tracks and re-add (slow)\n");
+		d_print("filter results could grow, clear tracks and re-add "
+			"(slow)\n");
 
 	remove_from_hash = 0;
 	if (clear_before) {
 		editable_clear(&lib_editable);
 		hash_add_to_views();
 	} else
-	editable_remove_matching_tracks(&lib_editable, is_filtered_cb, NULL);
+		editable_remove_matching_tracks(&lib_editable, is_filtered_cb,
+						NULL);
 	remove_from_hash = 1;
 
 	window_changed(lib_sorted_win());
@@ -793,7 +829,8 @@ static void restore_sel_track(void)
 	}
 }
 
-/* determine if filter results could grow, in which case all tracks must be cleared and re-added */
+/* determine if filter results could grow, in which case all tracks must be
+ * cleared and re-added */
 static int do_clear_before(const char *str, struct expr *expr)
 {
 	if (!lib_live_filter)
@@ -848,7 +885,8 @@ int lib_remove(struct track_info *ti)
 {
 	struct simple_track *track;
 
-	list_for_each_entry(track, &lib_editable.head, node) {
+	list_for_each_entry(track, &lib_editable.head, node)
+	{
 		if (track->info == ti) {
 			editable_remove_track(&lib_editable, track);
 			return 1;
@@ -893,7 +931,8 @@ static int ti_cmp(const void *a, const void *b)
 	return track_info_cmp(ai, bi, lib_editable.shared->sort_keys);
 }
 
-static int do_lib_for_each(int (*cb)(void *data, struct track_info *ti), void *data, int filtered)
+static int do_lib_for_each(int (*cb)(void *data, struct track_info *ti),
+			   void *data, int filtered)
 {
 	int i, rc = 0, count = 0, size = 1024;
 	struct track_info **tis;
@@ -929,13 +968,13 @@ static int do_lib_for_each(int (*cb)(void *data, struct track_info *ti), void *d
 }
 
 int lib_for_each(int (*cb)(void *data, struct track_info *ti), void *data,
-		void *opaque)
+		 void *opaque)
 {
 	return do_lib_for_each(cb, data, 0);
 }
 
 int lib_for_each_filtered(int (*cb)(void *data, struct track_info *ti),
-		void *data, void *opaque)
+			  void *data, void *opaque)
 {
 	return do_lib_for_each(cb, data, 1);
 }

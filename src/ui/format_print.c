@@ -1,18 +1,18 @@
 #include "ui/format_print.h"
-#include "ui/ui_utils.h"
-#include "library/expr.h"
-#include "common/glob.h"
-#include "common/utils.h"
 #include "app/options_playback_state.h"
 #include "app/options_registry.h"
-#include "common/uchar.h"
-#include "common/xmalloc.h"
 #include "common/debug.h"
+#include "common/glob.h"
+#include "common/uchar.h"
+#include "common/utils.h"
+#include "common/xmalloc.h"
+#include "library/expr.h"
 #include "ui/options_ui.h"
+#include "ui/ui_utils.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 
 static int width;
 static int align_left;
@@ -25,14 +25,14 @@ static GBUF(m_str);
 static GBUF(r_str);
 static struct fp_len str_len = {0, 0, 0};
 static int *len = &str_len.llen;
-static struct gbuf* str = &l_str;
+static struct gbuf *str = &l_str;
 
 static void stack_print(char *stack, int stack_len)
 {
 	int i = 0;
 
 	gbuf_grow(str, width ? width : stack_len);
-	char* buf = str->buffer + str->len;
+	char *buf = str->buffer + str->len;
 
 	if (width) {
 		if (align_left) {
@@ -147,13 +147,15 @@ static void print_str(const char *src)
 			int ws_len = width - str_width;
 			if (ws_len < 0) {
 				int skip = -ws_len;
-				int clipped_mark_len = min_u(u_str_width(clipped_text_internal), width);
+				int clipped_mark_len = min_u(
+				    u_str_width(clipped_text_internal), width);
 				skip += clipped_mark_len;
-				gbuf_add_ustr(str, clipped_text_internal, &clipped_mark_len);
+				gbuf_add_ustr(str, clipped_text_internal,
+					      &clipped_mark_len);
 				s = u_skip_chars(src, &skip, true);
-				/* pad if a wide character caused us to skip too much */
+				/* pad if a wide character caused us to skip too
+				 * much */
 				ws_len = -skip;
-
 			}
 			gbuf_set(str, ' ', ws_len);
 			gbuf_add_ustr(str, src + s, &width);
@@ -172,19 +174,22 @@ static inline int strnequal(const char *a, const char *b, size_t b_len)
 	return a && (strlen(a) == b_len) && (memcmp(a, b, b_len) == 0);
 }
 
-static const struct format_option *find_fopt(const struct format_option *fopts, const char *key)
+static const struct format_option *find_fopt(const struct format_option *fopts,
+					     const char *key)
 {
 	const struct format_option *fo;
 	char ch = strlen(key) == 1 ? *key : 0;
 	for (fo = fopts; fo->type != 0; fo++) {
-		if ((ch != 0 && fo->ch == ch) || strnequal(fo->str, key, strlen(key))) {
+		if ((ch != 0 && fo->ch == ch) ||
+		    strnequal(fo->str, key, strlen(key))) {
 			return fo;
 		}
 	}
 	return NULL;
 }
 
-static const char *str_val(const char *key, const struct format_option *fopts, char *buf)
+static const char *str_val(const char *key, const struct format_option *fopts,
+			   char *buf)
 {
 	const struct format_option *fo;
 	const struct termus_opt *opt;
@@ -204,7 +209,8 @@ static const char *str_val(const char *key, const struct format_option *fopts, c
 	return val;
 }
 
-static int int_val(const char *key, const struct format_option *fopts, char *buf)
+static int int_val(const char *key, const struct format_option *fopts,
+		   char *buf)
 {
 	const struct format_option *fo;
 	int val = -1;
@@ -217,7 +223,8 @@ static int int_val(const char *key, const struct format_option *fopts, char *buf
 	return val;
 }
 
-static int format_eval_cond(struct expr* expr, const struct format_option *fopts)
+static int format_eval_cond(struct expr *expr,
+			    const struct format_option *fopts)
 {
 	if (!expr)
 		return -1;
@@ -267,7 +274,8 @@ static int format_eval_cond(struct expr* expr, const struct format_option *fopts
 		int a = 0, b = 0;
 		const char *sa, *sb;
 		int res = 0;
-		if ((sa = str_val(key, fopts, buf)) && (sb = str_val(expr->eid.key, fopts, buf))) {
+		if ((sa = str_val(key, fopts, buf)) &&
+		    (sb = str_val(expr->eid.key, fopts, buf))) {
 			res = strcmp(sa, sb);
 			return expr_op_to_bool(res, expr->eid.op);
 		} else {
@@ -304,11 +312,12 @@ static int format_eval_cond(struct expr* expr, const struct format_option *fopts
 	return 0;
 }
 
-static struct expr *format_parse_cond(const char* format, int size)
+static struct expr *format_parse_cond(const char *format, int size)
 {
 	gbuf_clear(&cond_buffer);
 	gbuf_add_bytes(&cond_buffer, format, size);
-	return expr_parse_i(cond_buffer.buffer, "condition contains control characters", 0);
+	return expr_parse_i(cond_buffer.buffer,
+			    "condition contains control characters", 0);
 }
 
 static uchar format_skip_cond_expr(const char *format, int *s)
@@ -345,7 +354,8 @@ static uchar format_skip_cond_expr(const char *format, int *s)
 				if (u != '%')
 					continue;
 				u = u_get_char(format, s);
-				if (u == '%' || u == '?' || u == '!' || u == '=')
+				if (u == '%' || u == '?' || u == '!' ||
+				    u == '=')
 					continue;
 				if (u == '-')
 					u = u_get_char(format, s);
@@ -363,7 +373,8 @@ static uchar format_skip_cond_expr(const char *format, int *s)
 	return r;
 }
 
-static int format_read_cond(const char *format, int *s, int *a, int *b, int *end)
+static int format_read_cond(const char *format, int *s, int *a, int *b,
+			    int *end)
 {
 	uchar t = format_skip_cond_expr(format, s);
 	if (t != '?')
@@ -382,14 +393,19 @@ static int format_read_cond(const char *format, int *s, int *a, int *b, int *end
 	return 0;
 }
 
-static void format_parse(int str_width, const char *format, const struct format_option *fopts, int f_size);
+static void format_parse(int str_width, const char *format,
+			 const struct format_option *fopts, int f_size);
 
-static void format_parse_if(int str_width, const char *format, const struct format_option *fopts, int *s)
+static void format_parse_if(int str_width, const char *format,
+			    const struct format_option *fopts, int *s)
 {
-	int cond_pos = *s, then_pos = -1, else_pos = -1, end_pos = -1, cond_res = -1;
-	BUG_ON(format_read_cond(format, s, &then_pos, &else_pos, &end_pos) != 0);
+	int cond_pos = *s, then_pos = -1, else_pos = -1, end_pos = -1,
+	    cond_res = -1;
+	BUG_ON(format_read_cond(format, s, &then_pos, &else_pos, &end_pos) !=
+	       0);
 
-	struct expr *cond = format_parse_cond(format + cond_pos, then_pos - cond_pos);
+	struct expr *cond =
+	    format_parse_cond(format + cond_pos, then_pos - cond_pos);
 	cond_res = format_eval_cond(cond, fopts);
 	if (cond)
 		expr_free(cond);
@@ -397,15 +413,18 @@ static void format_parse_if(int str_width, const char *format, const struct form
 	BUG_ON(cond_res < 0);
 	if (cond_res) {
 		format_parse(str_width, format + then_pos + 1, fopts,
-				(else_pos > 0 ? else_pos : end_pos) - then_pos - 1);
+			     (else_pos > 0 ? else_pos : end_pos) - then_pos -
+				 1);
 	} else if (else_pos > 0) {
-		format_parse(str_width, format + else_pos + 1, fopts, end_pos - else_pos - 1);
+		format_parse(str_width, format + else_pos + 1, fopts,
+			     end_pos - else_pos - 1);
 	}
 
 	*s = end_pos + 1;
 }
 
-static void format_parse(int str_width, const char *format, const struct format_option *fopts, int f_size)
+static void format_parse(int str_width, const char *format,
+			 const struct format_option *fopts, int f_size)
 {
 	int s = 0;
 
@@ -481,7 +500,7 @@ static void format_parse(int str_width, const char *format, const struct format_
 				long_len++;
 			}
 		}
-		for (fo = fopts; ; fo++) {
+		for (fo = fopts;; fo++) {
 			BUG_ON(fo->type == 0);
 			if (long_len ? strnequal(fo->str, long_begin, long_len)
 				     : (fo->ch == u)) {
@@ -506,7 +525,8 @@ static void format_parse(int str_width, const char *format, const struct format_
 	}
 }
 
-static void format_read(int str_width, const char *format, const struct format_option *fopts)
+static void format_read(int str_width, const char *format,
+			const struct format_option *fopts)
 {
 	gbuf_clear(&l_str);
 	gbuf_clear(&m_str);
@@ -522,7 +542,8 @@ static void format_read(int str_width, const char *format, const struct format_o
 static void format_write(struct gbuf *buf, int str_width)
 {
 	if (str_width == 0)
-		str_width = str_len.llen + str_len.mlen + str_len.rlen + (str_len.rlen > 0);
+		str_width = str_len.llen + str_len.mlen + str_len.rlen +
+			    (str_len.rlen > 0);
 
 	/* NOTE: any invalid UTF-8 bytes have already been converted to <xx>
 	 *       (ASCII) where x is hex digit
@@ -530,7 +551,8 @@ static void format_write(struct gbuf *buf, int str_width)
 
 	if (str_len.llen + str_len.mlen + str_len.rlen <= str_width) {
 		/* all fit */
-		int ws_len = str_width - (str_len.llen + str_len.mlen + str_len.rlen);
+		int ws_len =
+		    str_width - (str_len.llen + str_len.mlen + str_len.rlen);
 
 		gbuf_add_bytes(buf, l_str.buffer, l_str.len);
 		gbuf_add_bytes(buf, m_str.buffer, m_str.len);
@@ -538,7 +560,8 @@ static void format_write(struct gbuf *buf, int str_width)
 		gbuf_add_bytes(buf, r_str.buffer, r_str.len);
 	} else {
 		/* keep first character since it's almost always padding */
-		int clipped_mark_len = min_u(u_str_width(clipped_text_internal) + 1, str_width);
+		int clipped_mark_len =
+		    min_u(u_str_width(clipped_text_internal) + 1, str_width);
 		int r_space = str_width - clipped_mark_len;
 		int r_width = min_i(r_space, str_len.rlen);
 		int m_space = r_space - r_width;
@@ -560,7 +583,8 @@ static void format_write(struct gbuf *buf, int str_width)
 	}
 }
 
-struct fp_len format_print(struct gbuf *buf, int str_width, const char *format, const struct format_option *fopts)
+struct fp_len format_print(struct gbuf *buf, int str_width, const char *format,
+			   const struct format_option *fopts)
 {
 	format_read(str_width, format, fopts);
 
@@ -568,13 +592,15 @@ struct fp_len format_print(struct gbuf *buf, int str_width, const char *format, 
 	if (str_len.llen > 0) {
 		int ul = u_str_width(l_str.buffer);
 		if (ul != str_len.llen)
-			d_print("L %d != %d: size=%zu '%s'\n", ul, str_len.llen, l_str.len, l_str.buffer);
+			d_print("L %d != %d: size=%zu '%s'\n", ul, str_len.llen,
+				l_str.len, l_str.buffer);
 	}
 
 	if (str_len.rlen > 0) {
 		int ul = u_str_width(r_str.buffer);
 		if (ul != str_len.rlen)
-			d_print("R %d != %d: size=%zu '%s'\n", ul, str_len.rlen, r_str.len, r_str.buffer);
+			d_print("R %d != %d: size=%zu '%s'\n", ul, str_len.rlen,
+				r_str.len, r_str.buffer);
 	}
 #endif
 
@@ -582,31 +608,37 @@ struct fp_len format_print(struct gbuf *buf, int str_width, const char *format, 
 	return str_len;
 }
 
-static int format_valid_sub(const char *format, const struct format_option *fopts, int f_size);
+static int format_valid_sub(const char *format,
+			    const struct format_option *fopts, int f_size);
 
-static int format_valid_if(const char *format, const struct format_option *fopts, int *s)
+static int format_valid_if(const char *format,
+			   const struct format_option *fopts, int *s)
 {
 	int cond_pos = *s, then_pos = -1, else_pos = -1, end_pos = -1;
 	if (format_read_cond(format, s, &then_pos, &else_pos, &end_pos) != 0)
 		return 0;
 
-	struct expr *cond = format_parse_cond(format + cond_pos, then_pos - cond_pos);
+	struct expr *cond =
+	    format_parse_cond(format + cond_pos, then_pos - cond_pos);
 	if (cond == NULL)
 		return 0;
 	expr_free(cond);
 
 	if (!format_valid_sub(format + then_pos + 1, fopts,
-				(else_pos > 0 ? else_pos : end_pos) - then_pos - 1))
+			      (else_pos > 0 ? else_pos : end_pos) - then_pos -
+				  1))
 		return 0;
 	if (else_pos > 0)
-		if (!format_valid_sub(format + else_pos + 1, fopts, end_pos - else_pos - 1))
+		if (!format_valid_sub(format + else_pos + 1, fopts,
+				      end_pos - else_pos - 1))
 			return 0;
 
 	*s = end_pos + 1;
 	return 1;
 }
 
-static int format_valid_sub(const char *format, const struct format_option *fopts, int f_size)
+static int format_valid_sub(const char *format,
+			    const struct format_option *fopts, int f_size)
 {
 	int s = 0;
 
@@ -655,14 +687,15 @@ static int format_valid_sub(const char *format, const struct format_option *fopt
 				}
 			}
 			for (fo = fopts; fo->type; fo++) {
-				if (long_len ? strnequal(fo->str, long_begin, long_len)
+				if (long_len ? strnequal(fo->str, long_begin,
+							 long_len)
 					     : (fo->ch == u)) {
 					if (pad_zero && !fo->pad_zero)
 						return 0;
 					break;
 				}
 			}
-			if (! fo->type)
+			if (!fo->type)
 				return 0;
 		}
 	}

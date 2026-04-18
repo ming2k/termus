@@ -1,36 +1,34 @@
 #include "app/termus.h"
-#include "ui/job.h"
-#include "library/lib.h"
-#include "library/pl.h"
-#include "core/player.h"
-#include "core/input.h"
-#include "library/play_queue.h"
-#include "library/cache.h"
-#include "common/misc.h"
-#include "common/file.h"
-#include "common/msg.h"
-#include "common/utils.h"
-#include "common/path.h"
 #include "app/options_core_state.h"
 #include "app/options_playback_state.h"
-#include "common/xmalloc.h"
 #include "common/debug.h"
-#include "library/load_dir.h"
-#include "library/cache.h"
+#include "common/file.h"
 #include "common/gbuf.h"
-#include "core/discid.h"
 #include "common/locking.h"
+#include "common/misc.h"
+#include "common/msg.h"
+#include "common/path.h"
+#include "common/utils.h"
+#include "common/xmalloc.h"
+#include "core/input.h"
+#include "core/player.h"
+#include "library/cache.h"
+#include "library/lib.h"
+#include "library/load_dir.h"
+#include "library/pl.h"
 #include "library/pl_env.h"
+#include "library/play_queue.h"
+#include "ui/job.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
+#include <ctype.h>
 #include <dirent.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <strings.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 /* save_playlist_cb, save_ext_playlist_cb */
 typedef int (*save_tracks_cb)(void *data, struct track_info *ti);
@@ -40,7 +38,7 @@ int ui_initialized = 0;
 static int termus_client_fd = -1;
 
 static char **playable_exts;
-static const char * const playlist_exts[] = { "m3u", "pl", "pls", NULL };
+static const char *const playlist_exts[] = {"m3u", "pl", "pls", NULL};
 
 int termus_next_track_request_fd;
 static bool play_queue_active = false;
@@ -145,11 +143,6 @@ enum file_type termus_detect_ft(const char *name, char **ret)
 		return FILE_TYPE_URL;
 	}
 
-	if (is_cdda_url(name)) {
-		*ret = complete_cdda_url(cdda_device, name);
-		return FILE_TYPE_CDDA;
-	}
-
 	*ret = NULL;
 	absolute = path_absolute(name);
 	if (absolute == NULL)
@@ -179,8 +172,8 @@ enum file_type termus_detect_ft(const char *name, char **ret)
 	return FILE_TYPE_FILE;
 }
 
-void termus_add(add_ti_cb add, const char *name, enum file_type ft, int jt, int force,
-		void *opaque)
+void termus_add(add_ti_cb add, const char *name, enum file_type ft, int jt,
+		int force, void *opaque)
 {
 	struct add_data *data = xnew(struct add_data, 1);
 
@@ -204,9 +197,8 @@ static int save_ext_playlist_cb(void *data, struct track_info *ti)
 	gbuf_addf(&buf, "codec %s\n", ti->codec);
 	gbuf_addf(&buf, "bitrate %ld\n", ti->bitrate);
 	for (i = 0; ti->comments[i].key; i++)
-		gbuf_addf(&buf, "tag %s %s\n",
-				ti->comments[i].key,
-				escape(ti->comments[i].val));
+		gbuf_addf(&buf, "tag %s %s\n", ti->comments[i].key,
+			  escape(ti->comments[i].val));
 
 	rc = write_all(fd, buf.buffer, buf.len);
 	gbuf_free(&buf);
@@ -236,17 +228,17 @@ static int save_playlist_cb(void *data, struct track_info *ti)
 }
 
 static int do_termus_save(for_each_ti_cb for_each_ti, const char *filename,
-		save_tracks_cb save_tracks, void *opaque)
+			  save_tracks_cb save_tracks, void *opaque)
 {
 	int fd, rc;
 
-		if (strcmp(filename, "-") == 0) {
-			if (termus_get_client_fd() == -1) {
-				error_msg("saving to stdout works only remotely");
-				return 0;
-			}
-			fd = dup(termus_get_client_fd());
-		} else
+	if (strcmp(filename, "-") == 0) {
+		if (termus_get_client_fd() == -1) {
+			error_msg("saving to stdout works only remotely");
+			return 0;
+		}
+		fd = dup(termus_get_client_fd());
+	} else
 		fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, 0666);
 	if (fd == -1)
 		return -1;
@@ -261,10 +253,10 @@ int termus_save(for_each_ti_cb for_each_ti, const char *filename, void *opaque)
 }
 
 int termus_save_ext(for_each_ti_cb for_each_ti, const char *filename,
-		void *opaque)
+		    void *opaque)
 {
 	return do_termus_save(for_each_ti, filename, save_ext_playlist_cb,
-			opaque);
+			      opaque);
 }
 
 static int update_cb(void *data, struct track_info *ti)
@@ -325,7 +317,7 @@ static const char *get_ext(const char *filename)
 	return ext;
 }
 
-static int str_in_array(const char *str, const char * const *array)
+static int str_in_array(const char *str, const char *const *array)
 {
 	int i;
 
@@ -347,15 +339,15 @@ int termus_is_playable(const char *filename)
 {
 	const char *ext = get_ext(filename);
 
-	return ext && str_in_array(ext, (const char * const *)playable_exts);
+	return ext && str_in_array(ext, (const char *const *)playable_exts);
 }
 
 int termus_is_supported(const char *filename)
 {
 	const char *ext = get_ext(filename);
 
-	return ext && (str_in_array(ext, (const char * const *)playable_exts) ||
-			str_in_array(ext, playlist_exts));
+	return ext && (str_in_array(ext, (const char *const *)playable_exts) ||
+		       str_in_array(ext, playlist_exts));
 }
 
 struct pl_data {
@@ -392,10 +384,10 @@ static int pls_handle_line(void *data, const char *line)
 }
 
 int termus_playlist_for_each(const char *buf, int size, int reverse,
-		int (*cb)(void *data, const char *line),
-		void *data)
+			     int (*cb)(void *data, const char *line),
+			     void *data)
 {
-	struct pl_data d = { cb, data };
+	struct pl_data d = {cb, data};
 	int (*handler)(void *, const char *);
 
 	handler = pl_handle_line;
@@ -422,7 +414,8 @@ static struct track_info *termus_get_next_from_main_thread(void)
 		play_queue_active = true;
 	} else {
 		if (!play_queue_active || !stop_after_queue)
-			ti = options_get_play_library() ? lib_goto_next() : pl_goto_next();
+			ti = options_get_play_library() ? lib_goto_next()
+							: pl_goto_next();
 		play_queue_active = false;
 	}
 	return ti;
@@ -439,7 +432,8 @@ static struct track_info *termus_get_next_from_other_thread(void)
 
 	termus_next_file_lock();
 	while (!termus_next_file_provided)
-		pthread_cond_wait(&termus_next_file_cond, &termus_next_file_mutex);
+		pthread_cond_wait(&termus_next_file_cond,
+				  &termus_next_file_mutex);
 	struct track_info *ti = termus_next_file;
 	termus_next_file_provided = 0;
 	termus_next_file_unlock();
@@ -471,7 +465,8 @@ void termus_provide_next_track(void)
 
 void termus_track_request_init(void)
 {
-	init_pipes(&termus_next_track_request_fd, &termus_next_track_request_fd_priv);
+	init_pipes(&termus_next_track_request_fd,
+		   &termus_next_track_request_fd_priv);
 }
 
 static int termus_can_raise_vte_x11(void)
@@ -479,15 +474,9 @@ static int termus_can_raise_vte_x11(void)
 	return getenv("DISPLAY") && getenv("WINDOWID");
 }
 
-int termus_can_raise_vte(void)
-{
-	return termus_can_raise_vte_x11();
-}
+int termus_can_raise_vte(void) { return termus_can_raise_vte_x11(); }
 
-static int termus_raise_vte_x11_error(void)
-{
-	return 0;
-}
+static int termus_raise_vte_x11_error(void) { return 0; }
 
 void termus_raise_vte(void)
 {
@@ -522,7 +511,7 @@ void termus_raise_vte(void)
 
 				display = x11_open(NULL);
 				if (display) {
-					x11_raise(display, (int) xid);
+					x11_raise(display, (int)xid);
 					x11_close(display);
 				}
 			}
@@ -530,16 +519,8 @@ void termus_raise_vte(void)
 	}
 }
 
-bool termus_queue_active(void) {
-	return play_queue_active;
-}
+bool termus_queue_active(void) { return play_queue_active; }
 
-void termus_set_client_fd(int fd)
-{
-	termus_client_fd = fd;
-}
+void termus_set_client_fd(int fd) { termus_client_fd = fd; }
 
-int termus_get_client_fd(void)
-{
-	return termus_client_fd;
-}
+int termus_get_client_fd(void) { return termus_client_fd; }

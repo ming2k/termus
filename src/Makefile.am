@@ -10,6 +10,8 @@ bin_PROGRAMS = termus termus-remote
 noinst_LTLIBRARIES = libcommon.la
 
 libcommon_la_SOURCES = \
+	app/options_parse.c app/options_parse.h \
+	app/options_store.c \
 	common/file.c common/file.h \
 	common/locale.c common/locale.h \
 	common/misc.c common/misc.h \
@@ -32,13 +34,11 @@ termus_SOURCES = \
 	app/options_library_state.h \
 	app/options_loader.c app/options_loader.h \
 	app/options_misc.c app/options_misc.h \
-	app/options_parse.c app/options_parse.h \
 	app/options_playback.c app/options_playback.h app/options_playback_state.c \
 	app/options_playback_state.h \
 	app/options_persist.c \
 	app/options_plugins.c app/options_plugins.h \
 	app/options_registry.h \
-	app/options_store.c \
 	app/options_ui_state.c \
 	app/options_ui_state.h \
 	app/resume.c app/resume.h \
@@ -64,7 +64,6 @@ termus_SOURCES = \
 	core/comment.c core/comment.h \
 	core/convert.c core/convert.h \
 	core/cue_utils.c core/cue_utils.h \
-	core/discid.c core/discid.h \
 	core/history.c core/history.h \
 	core/http.c core/http.h \
 	core/id3.c core/id3.h \
@@ -121,7 +120,6 @@ termus_CFLAGS = \
 	$(NCURSES_CFLAGS) \
 	$(ICONV_CFLAGS) \
 	$(DL_CFLAGS) \
-	$(DISCID_CFLAGS) \
 	$(LIBSYSTEMD_CFLAGS)
 
 # Export all symbols so dlopen'd plugins can resolve termus internals
@@ -136,7 +134,6 @@ termus_LDADD = \
 	$(DL_LIBS) \
 	$(MATH_LIBS) \
 	$(COMPAT_LIBS) \
-	$(DISCID_LIBS) \
 	$(LIBSYSTEMD_LIBS)
 
 # ------------------------------------------------------------

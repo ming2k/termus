@@ -1,16 +1,16 @@
-#include <sys/types.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <string.h>
-#include <unistd.h>
 #include <sndio.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-#include "core/op.h"
-#include "core/mixer.h"
-#include "core/sf.h"
 #include "common/xmalloc.h"
+#include "core/mixer.h"
+#include "core/op.h"
+#include "core/sf.h"
 
 static sample_format_t sndio_sf;
 static struct sio_par par;
@@ -100,15 +100,9 @@ static int sndio_set_sf(sample_format_t sf)
 	return OP_ERROR_SUCCESS;
 }
 
-static int sndio_init(void)
-{
-	return OP_ERROR_SUCCESS;
-}
+static int sndio_init(void) { return OP_ERROR_SUCCESS; }
 
-static int sndio_exit(void)
-{
-	return OP_ERROR_SUCCESS;
-}
+static int sndio_exit(void) { return OP_ERROR_SUCCESS; }
 
 static int sndio_close(void)
 {
@@ -177,15 +171,9 @@ static int sndio_buffer_space(void)
 	return par.bufsz * par.bps * par.pchan;
 }
 
-static int sndio_mixer_init(void)
-{
-	return OP_ERROR_SUCCESS;
-}
+static int sndio_mixer_init(void) { return OP_ERROR_SUCCESS; }
 
-static int sndio_mixer_exit(void)
-{
-	return OP_ERROR_SUCCESS;
-}
+static int sndio_mixer_exit(void) { return OP_ERROR_SUCCESS; }
 
 static int sndio_mixer_open(int *volume_max)
 {
@@ -194,37 +182,34 @@ static int sndio_mixer_open(int *volume_max)
 	return OP_ERROR_SUCCESS;
 }
 
-static int sndio_mixer_close(void)
-{
-	return OP_ERROR_SUCCESS;
-}
+static int sndio_mixer_close(void) { return OP_ERROR_SUCCESS; }
 
 const struct output_plugin_ops op_pcm_ops = {
-	.init = sndio_init,
-	.exit = sndio_exit,
-	.open = sndio_open,
-	.close = sndio_close,
-	.write = sndio_write,
-	.pause = sndio_pause,
-	.unpause = sndio_unpause,
-	.buffer_space = sndio_buffer_space,
+    .init = sndio_init,
+    .exit = sndio_exit,
+    .open = sndio_open,
+    .close = sndio_close,
+    .write = sndio_write,
+    .pause = sndio_pause,
+    .unpause = sndio_unpause,
+    .buffer_space = sndio_buffer_space,
 };
 
 const struct mixer_plugin_ops op_mixer_ops = {
-	.init = sndio_mixer_init,
-	.exit = sndio_mixer_exit,
-	.open = sndio_mixer_open,
-	.close = sndio_mixer_close,
-	.set_volume = sndio_mixer_set_volume,
-	.get_volume = sndio_mixer_get_volume,
+    .init = sndio_mixer_init,
+    .exit = sndio_mixer_exit,
+    .open = sndio_mixer_open,
+    .close = sndio_mixer_close,
+    .set_volume = sndio_mixer_set_volume,
+    .get_volume = sndio_mixer_get_volume,
 };
 
 const struct output_plugin_opt op_pcm_options[] = {
-	{ NULL },
+    {NULL},
 };
 
 const struct mixer_plugin_opt op_mixer_options[] = {
-	{ NULL },
+    {NULL},
 };
 
 const int op_priority = 2;

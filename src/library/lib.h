@@ -1,11 +1,11 @@
 #ifndef TERMUS_LIB_H
 #define TERMUS_LIB_H
 
-#include "library/editable.h"
-#include "library/search.h"
-#include "core/track_info.h"
-#include "library/expr.h"
 #include "common/rbtree.h"
+#include "core/track_info.h"
+#include "library/editable.h"
+#include "library/expr.h"
+#include "library/search.h"
 
 struct window;
 
@@ -27,7 +27,6 @@ static inline struct tree_track *to_tree_track(const struct rb_node *node)
 {
 	return container_of(node, struct tree_track, tree_node);
 }
-
 
 struct album {
 	struct shuffle_info shuffle_info;
@@ -70,11 +69,7 @@ struct artist {
 
 const char *artist_sort_name(const struct artist *);
 
-enum aaa_mode {
-	AAA_MODE_ALL,
-	AAA_MODE_ARTIST,
-	AAA_MODE_ALBUM
-};
+enum aaa_mode { AAA_MODE_ALL, AAA_MODE_ARTIST, AAA_MODE_ALBUM };
 
 extern struct editable lib_editable;
 extern struct tree_track *lib_cur_track;
@@ -87,14 +82,15 @@ extern char *lib_live_filter;
 extern struct searchable *tree_searchable;
 extern struct rb_root lib_artist_root;
 
-#define CUR_ALBUM	(lib_cur_track->album)
-#define CUR_ARTIST	(lib_cur_track->album->artist)
+#define CUR_ALBUM (lib_cur_track->album)
+#define CUR_ARTIST (lib_cur_track->album->artist)
 
 struct window;
 
 void lib_init(void);
 void lib_sorted_attach_view(void *view_data,
-		const struct editable_view_ops *view_ops, struct window *win);
+			    const struct editable_view_ops *view_ops,
+			    struct window *win);
 void tree_init(void);
 void tree_attach_views(struct window *tree_win, struct window *track_win);
 int tree_view_get_prev(struct iter *iter);
@@ -123,9 +119,9 @@ void lib_reshuffle(void);
 void lib_sort_artists(void);
 void lib_set_view(int view);
 int lib_for_each(int (*cb)(void *data, struct track_info *ti), void *data,
-		void *opaque);
+		 void *opaque);
 int lib_for_each_filtered(int (*cb)(void *data, struct track_info *ti),
-		void *data, void *opaque);
+			  void *data, void *opaque);
 
 struct tree_track *lib_find_track(struct track_info *ti);
 struct track_info *lib_set_track(struct tree_track *track);
@@ -134,11 +130,14 @@ struct track_info *lib_get_cur_stored_track(void);
 
 struct tree_track *tree_get_selected(void);
 struct track_info *tree_activate_selected(void);
-const char *tree_artist_name(const struct track_info* ti);
-const char *tree_album_name(const struct track_info* ti);
-void tree_sort_artists(void (*add_album_cb)(struct album *), void (*remove_album_cb)(struct album *));
-void tree_add_track(struct tree_track *track, void (*add_album_cb)(struct album *));
-void tree_remove(struct tree_track *track, void (*remove_album_cb)(struct album *));
+const char *tree_artist_name(const struct track_info *ti);
+const char *tree_album_name(const struct track_info *ti);
+void tree_sort_artists(void (*add_album_cb)(struct album *),
+		       void (*remove_album_cb)(struct album *));
+void tree_add_track(struct tree_track *track,
+		    void (*add_album_cb)(struct album *));
+void tree_remove(struct tree_track *track,
+		 void (*remove_album_cb)(struct album *));
 void tree_remove_sel(void);
 void tree_toggle_active_window(void);
 void tree_toggle_expand_artist(void);
@@ -148,8 +147,10 @@ void tree_sel_update(int changed);
 void tree_sel_current(int auto_expand_albums);
 void tree_sel_first(void);
 void tree_sel_track(struct tree_track *t, int auto_expand_albums);
-int tree_for_each_sel(int (*cb)(void *data, struct track_info *ti), void *data, int reverse, int advance);
-int _tree_for_each_sel(int (*cb)(void *data, struct track_info *ti), void *data, int reverse);
+int tree_for_each_sel(int (*cb)(void *data, struct track_info *ti), void *data,
+		      int reverse, int advance);
+int _tree_for_each_sel(int (*cb)(void *data, struct track_info *ti), void *data,
+		       int reverse);
 
 struct track_info *sorted_activate_selected(void);
 void sorted_sel_current(void);

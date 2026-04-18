@@ -1,18 +1,14 @@
 #include "common/glob.h"
-#include "common/uchar.h"
-#include "common/list.h"
-#include "common/xmalloc.h"
 #include "common/debug.h"
+#include "common/list.h"
+#include "common/uchar.h"
+#include "common/xmalloc.h"
 
 #include <string.h>
 
 struct glob_item {
 	struct list_head node;
-	enum {
-		GLOB_STAR,
-		GLOB_QMARK,
-		GLOB_TEXT
-	} type;
+	enum { GLOB_STAR, GLOB_QMARK, GLOB_TEXT } type;
 	char text[];
 };
 
@@ -164,7 +160,8 @@ void glob_free(struct list_head *head)
 	}
 }
 
-static int do_glob_match(struct list_head *head, struct list_head *first, const char *text)
+static int do_glob_match(struct list_head *head, struct list_head *first,
+			 const char *text)
 {
 	struct list_head *item = first;
 

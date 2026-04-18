@@ -1,13 +1,13 @@
-#include "core/mixer.h"
-#include "core/op.h"
+#include "common/debug.h"
 #include "common/utils.h"
 #include "common/xmalloc.h"
-#include "common/debug.h"
+#include "core/mixer.h"
+#include "core/op.h"
 
-#include <strings.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <strings.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
 #if defined(__OpenBSD__)
 #include <soundcard.h>
 #else
@@ -62,9 +62,10 @@ static int mixer_open(const char *device)
 	if (mixer_fd == -1)
 		return -1;
 	ioctl(mixer_fd, SOUND_MIXER_READ_DEVMASK, &mixer_devmask);
-/* 	ioctl(mixer_fd, SOUND_MIXER_READ_RECMASK, &mixer_recmask); */
-/* 	ioctl(mixer_fd, SOUND_MIXER_READ_RECSRC, &mixer_recsrc); */
-/* 	ioctl(mixer_fd, SOUND_MIXER_READ_STEREODEVS, &mixer_stereodevs); */
+	/* 	ioctl(mixer_fd, SOUND_MIXER_READ_RECMASK, &mixer_recmask); */
+	/* 	ioctl(mixer_fd, SOUND_MIXER_READ_RECSRC, &mixer_recsrc); */
+	/* 	ioctl(mixer_fd, SOUND_MIXER_READ_STEREODEVS, &mixer_stereodevs);
+	 */
 	i = 0;
 	while (i < min_i(SOUND_MIXER_NRDEVICES, OSS_MIXER_CHANNEL_MAX)) {
 		mixer_channels[i] = (mixer_devmask >> i) & 1;
@@ -211,16 +212,16 @@ static int oss_mixer_get_device(char **val)
 }
 
 const struct mixer_plugin_ops op_mixer_ops = {
-	.init = oss_mixer_init,
-	.exit = oss_mixer_exit,
-	.open = oss_mixer_open,
-	.close = oss_mixer_close,
-	.set_volume = oss_mixer_set_volume,
-	.get_volume = oss_mixer_get_volume,
+    .init = oss_mixer_init,
+    .exit = oss_mixer_exit,
+    .open = oss_mixer_open,
+    .close = oss_mixer_close,
+    .set_volume = oss_mixer_set_volume,
+    .get_volume = oss_mixer_get_volume,
 };
 
 const struct mixer_plugin_opt op_mixer_options[] = {
-	OPT(oss_mixer, channel),
-	OPT(oss_mixer, device),
-	{ NULL },
+    OPT(oss_mixer, channel),
+    OPT(oss_mixer, device),
+    {NULL},
 };

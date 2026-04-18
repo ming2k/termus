@@ -1,20 +1,20 @@
 #include "library/expr.h"
-#include "common/glob.h"
-#include "common/uchar.h"
-#include "core/track_info.h"
-#include "core/comment.h"
-#include "common/xmalloc.h"
-#include "common/utils.h"
 #include "common/debug.h"
-#include "common/locale.h"
+#include "common/glob.h"
 #include "common/list.h"
+#include "common/locale.h"
+#include "common/uchar.h"
+#include "common/utils.h"
+#include "common/xmalloc.h"
+#include "core/comment.h"
 #include "core/convert.h"
+#include "core/track_info.h"
 
+#include <ctype.h>
+#include <limits.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
-#include <stdarg.h>
-#include <limits.h>
 
 enum token_type {
 	/* special chars */
@@ -55,17 +55,16 @@ struct token {
 /* same order as TOK_* */
 static const char specials[NR_SPECIALS] TERMUS_NONSTRING = "!<>=&|()";
 
-static const int tok_to_op[NR_TOKS] = {
-	-1, OP_LT, OP_GT, OP_EQ, -1, -1, -1, -1, OP_NE, OP_LE, OP_GE, -1, -1, -1
+static const int tok_to_op[NR_TOKS] = {-1, OP_LT, OP_GT, OP_EQ, -1, -1, -1,
+				       -1, OP_NE, OP_LE, OP_GE, -1, -1, -1};
+
+static const char *const op_names[NR_OPS] = {"<", "<=", "=", ">=", ">", "!="};
+static const char *const expr_names[NR_EXPRS] = {
+    "&", "|", "!", "a string", "an integer", "a boolean"};
+
+static char error_buf[64] = {
+    0,
 };
-
-static const char * const op_names[NR_OPS] = { "<", "<=", "=", ">=", ">", "!=" };
-static const char * const expr_names[NR_EXPRS] = {
-	"&", "|", "!", "a string", "an integer", "a boolean"
-};
-
-static char error_buf[64] = { 0, };
-
 
 static void set_error(const char *format, ...)
 {
@@ -215,9 +214,11 @@ static struct expr *expr_new(int type)
 	return new;
 }
 
-static int parse(struct expr **rootp, struct list_head *head, struct list_head **itemp, int level);
+static int parse(struct expr **rootp, struct list_head *head,
+		 struct list_head **itemp, int level);
 
-static int parse_one(struct expr **exprp, struct list_head *head, struct list_head **itemp)
+static int parse_one(struct expr **exprp, struct list_head *head,
+		     struct list_head **itemp)
 {
 	struct list_head *item = *itemp;
 	struct token *tok;
@@ -276,7 +277,8 @@ static int parse_one(struct expr **exprp, struct list_head *head, struct list_he
 		*itemp = item->next;
 		if (type == TOK_STR) {
 			if (op != OP_EQ && op != OP_NE) {
-				set_error("invalid string operator '%s'", op_names[op]);
+				set_error("invalid string operator '%s'",
+					  op_names[op]);
 				return -1;
 			}
 			new = expr_new(EXPR_STR);
@@ -343,7 +345,8 @@ static void add(struct expr **rootp, struct expr *expr)
 	*rootp = expr;
 }
 
-static int parse(struct expr **rootp, struct list_head *head, struct list_head **itemp, int level)
+static int parse(struct expr **rootp, struct list_head *head,
+		 struct list_head **itemp, int level)
 {
 	struct list_head *item = *itemp;
 
@@ -392,48 +395,51 @@ static const struct {
 	char short_key;
 	const char *long_key;
 } map_short2long[] = {
-	{ 'A',	"albumartist"	},
-	{ 'D',	"discnumber"	},
-	{ 'T',	"tag",		},
-	{ 'a',	"artist"	},
-	{ 'c',	"comment"	},
-	{ 'd',	"duration"	},
-	{ 'f',	"filename"	},
-	{ 'g',	"genre"		},
-	{ 'l',	"album"		},
-	{ 'n',	"tracknumber"	},
-	{ 'X',	"play_count"	},
-	{ 's',	"stream"	},
-	{ 't',	"title"		},
-	{ 'y',	"date"		},
-	{ '\0',	NULL		},
+    {'A', "albumartist"},
+    {'D', "discnumber"},
+    {
+	'T',
+	"tag",
+    },
+    {'a', "artist"},
+    {'c', "comment"},
+    {'d', "duration"},
+    {'f', "filename"},
+    {'g', "genre"},
+    {'l', "album"},
+    {'n', "tracknumber"},
+    {'X', "play_count"},
+    {'s', "stream"},
+    {'t', "title"},
+    {'y', "date"},
+    {'\0', NULL},
 };
 
 static const struct {
 	const char *key;
 	enum expr_type type;
 } builtin[] = {
-	{ "album",	EXPR_STR	},
-	{ "albumartist",EXPR_STR	},
-	{ "artist",	EXPR_STR	},
-	{ "bitrate",	EXPR_INT	},
-	{ "bpm",	EXPR_INT	},
-	{ "codec",	EXPR_STR	},
-	{ "codec_profile",EXPR_STR	},
-	{ "comment",	EXPR_STR	},
-	{ "date",	EXPR_INT	},
-	{ "discnumber", EXPR_INT	},
-	{ "duration",	EXPR_INT	},
-	{ "filename",	EXPR_STR	},
-	{ "genre",	EXPR_STR	},
-	{ "media",	EXPR_STR	},
-	{ "originaldate",EXPR_INT	},
-	{ "play_count", EXPR_INT	},
-	{ "stream",	EXPR_BOOL	},
-	{ "tag",	EXPR_BOOL	},
-	{ "title",	EXPR_STR	},
-	{ "tracknumber",EXPR_INT	},
-	{ NULL,		-1		},
+    {"album", EXPR_STR},
+    {"albumartist", EXPR_STR},
+    {"artist", EXPR_STR},
+    {"bitrate", EXPR_INT},
+    {"bpm", EXPR_INT},
+    {"codec", EXPR_STR},
+    {"codec_profile", EXPR_STR},
+    {"comment", EXPR_STR},
+    {"date", EXPR_INT},
+    {"discnumber", EXPR_INT},
+    {"duration", EXPR_INT},
+    {"filename", EXPR_STR},
+    {"genre", EXPR_STR},
+    {"media", EXPR_STR},
+    {"originaldate", EXPR_INT},
+    {"play_count", EXPR_INT},
+    {"stream", EXPR_BOOL},
+    {"tag", EXPR_BOOL},
+    {"title", EXPR_STR},
+    {"tracknumber", EXPR_INT},
+    {NULL, -1},
 };
 
 static const char *lookup_long_key(char c)
@@ -459,22 +465,13 @@ static enum expr_type lookup_key_type(const char *key)
 	return -1;
 }
 
-static unsigned long stack4_new(void)
-{
-	return 0;
-}
+static unsigned long stack4_new(void) { return 0; }
 static void stack4_push(unsigned long *s, unsigned long e)
 {
 	*s = (*s << 4) | e;
 }
-static void stack4_pop(unsigned long *s)
-{
-	*s = *s >> 4;
-}
-static unsigned long stack4_top(unsigned long s)
-{
-	return s & 0xf;
-}
+static void stack4_pop(unsigned long *s) { *s = *s >> 4; }
+static unsigned long stack4_top(unsigned long s) { return s & 0xf; }
 static void stack4_replace_top(unsigned long *s, unsigned long e)
 {
 	*s = (*s & ~0xf) | e;
@@ -572,7 +569,7 @@ static char *expand_short_expr(const char *expr_short)
 			} else if (etype != EXPR_BOOL) {
 				BUG("wrong etype: %d\n", etype);
 			}
-			strcpy(out+k, key);
+			strcpy(out + k, key);
 			k += strlen(key);
 			stack4_push(&state_stack, ST_SKIP_SPACE);
 			break;
@@ -616,13 +613,14 @@ static char *expand_short_expr(const char *expr_short)
 				if (c == '-') {
 					out[k++] = '>';
 					out[k++] = '=';
-					stack4_replace_top(&state_stack, ST_IN_2ND_INT);
+					stack4_replace_top(&state_stack,
+							   ST_IN_2ND_INT);
 				} else {
 					out[k++] = '=';
 					i--;
 					stack4_pop(&state_stack);
 				}
-				strncpy(out+k, num, i_num);
+				strncpy(out + k, num, i_num);
 				k += i_num;
 				i_num = 0;
 				if (c != '-')
@@ -637,11 +635,11 @@ static char *expand_short_expr(const char *expr_short)
 				stack4_pop(&state_stack);
 				if (i_num > 0) {
 					out[k++] = '&';
-					strcpy(out+k, key);
+					strcpy(out + k, key);
 					k += strlen(key);
 					out[k++] = '<';
 					out[k++] = '=';
-					strncpy(out+k, num, i_num);
+					strncpy(out + k, num, i_num);
 					k += i_num;
 				}
 				out[k++] = ')';
@@ -650,7 +648,8 @@ static char *expand_short_expr(const char *expr_short)
 		case ST_EXPECT_STR:
 			out[k++] = '=';
 			if (c == '"') {
-				stack4_replace_top(&state_stack, ST_IN_QUOTE_STR);
+				stack4_replace_top(&state_stack,
+						   ST_IN_QUOTE_STR);
 				out[k++] = c;
 			} else {
 				stack4_replace_top(&state_stack, ST_IN_STR);
@@ -660,18 +659,18 @@ static char *expand_short_expr(const char *expr_short)
 			}
 			break;
 		case ST_IN_QUOTE_STR:
-			if (c == '"' && expr_short[i-1] != '\\') {
+			if (c == '"' && expr_short[i - 1] != '\\') {
 				stack4_pop(&state_stack);
 			}
 			out[k++] = c;
 			break;
 		case ST_IN_STR:
 			/* isalnum() doesn't work for multi-byte characters */
-			if (c != '~' && c != '!' && c != '|' &&
-					c != '(' && c != ')' && c != '\0') {
+			if (c != '~' && c != '!' && c != '|' && c != '(' &&
+			    c != ')' && c != '\0') {
 				out[k++] = c;
 			} else {
-				while (k > 0 && out[k-1] == ' ')
+				while (k > 0 && out[k - 1] == ' ')
 					k--;
 				out[k++] = '*';
 				out[k++] = '"';
@@ -759,7 +758,8 @@ out:
 	return root;
 }
 
-int expr_check_leaves(struct expr **exprp, const char *(*get_filter)(const char *name))
+int expr_check_leaves(struct expr **exprp,
+		      const char *(*get_filter)(const char *name))
 {
 	struct expr *expr = *exprp;
 	struct expr *e;
@@ -784,7 +784,8 @@ int expr_check_leaves(struct expr **exprp, const char *(*get_filter)(const char 
 
 		if (builtin[i].type != expr->type) {
 			/* type mismatch */
-			set_error("%s is %s", builtin[i].key, expr_names[builtin[i].type]);
+			set_error("%s is %s", builtin[i].key,
+				  expr_names[builtin[i].type]);
 			return -1;
 		}
 		return 0;
@@ -869,7 +870,8 @@ int expr_is_harmless(const struct expr *expr)
 	return 1;
 }
 
-static const char *str_val(const char *key, struct track_info *ti, char **need_free)
+static const char *str_val(const char *key, struct track_info *ti,
+			   char **need_free)
 {
 	const char *val;
 	*need_free = NULL;
@@ -901,7 +903,8 @@ static int int_val(const char *key, struct track_info *ti)
 	} else if (strcmp(key, "originaldate") == 0) {
 		val = (ti->originaldate >= 0) ? (ti->originaldate / 10000) : -1;
 	} else if (strcmp(key, "bitrate") == 0) {
-		val = (ti->bitrate >= 0) ? (int) (ti->bitrate / 1000. + 0.5) : -1;
+		val =
+		    (ti->bitrate >= 0) ? (int)(ti->bitrate / 1000. + 0.5) : -1;
 	} else if (strcmp(key, "play_count") == 0) {
 		val = ti->play_count;
 	} else if (strcmp(key, "bpm") == 0) {
@@ -1030,7 +1033,4 @@ void expr_free(struct expr *expr)
 	free(expr);
 }
 
-const char *expr_error(void)
-{
-	return error_buf;
-}
+const char *expr_error(void) { return error_buf; }

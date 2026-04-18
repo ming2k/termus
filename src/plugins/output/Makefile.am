@@ -23,35 +23,11 @@ alsa_la_LIBADD   = $(ALSA_LIBS) -lm
 alsa_la_LDFLAGS  = $(common_ldflags)
 endif
 
-if CONFIG_JACK
-output_LTLIBRARIES += jack.la
-jack_la_SOURCES  = jack.c
-jack_la_CFLAGS   = $(JACK_CFLAGS) $(SAMPLERATE_CFLAGS)
-jack_la_LIBADD   = $(JACK_LIBS) $(SAMPLERATE_LIBS)
-jack_la_LDFLAGS  = $(common_ldflags)
-endif
-
-if CONFIG_AO
-output_LTLIBRARIES += ao.la
-ao_la_SOURCES  = ao.c
-ao_la_CFLAGS   = $(AO_CFLAGS)
-ao_la_LIBADD   = $(AO_LIBS)
-ao_la_LDFLAGS  = $(common_ldflags)
-endif
-
 if CONFIG_COREAUDIO
 output_LTLIBRARIES += coreaudio.la
 coreaudio_la_SOURCES = coreaudio.c
 coreaudio_la_LIBADD  = $(COREAUDIO_LIBS)
 coreaudio_la_LDFLAGS = $(common_ldflags)
-endif
-
-if CONFIG_ARTS
-output_LTLIBRARIES += arts.la
-arts_la_SOURCES  = arts.c
-arts_la_CFLAGS   = $(ARTS_CFLAGS)
-arts_la_LIBADD   = $(ARTS_LIBS)
-arts_la_LDFLAGS  = $(common_ldflags)
 endif
 
 if CONFIG_OSS
@@ -67,33 +43,4 @@ output_LTLIBRARIES += sndio.la
 sndio_la_SOURCES = sndio.c
 sndio_la_LIBADD  = $(SNDIO_LIBS)
 sndio_la_LDFLAGS = $(common_ldflags)
-endif
-
-if CONFIG_SUN
-output_LTLIBRARIES += sun.la
-sun_la_SOURCES  = sun.c mixer_sun.c mixer_sun.h
-sun_la_LDFLAGS  = $(common_ldflags)
-endif
-
-if CONFIG_WAVEOUT
-output_LTLIBRARIES += waveout.la
-waveout_la_SOURCES = waveout.c
-waveout_la_LIBADD  = $(WAVEOUT_LIBS)
-waveout_la_LDFLAGS = $(common_ldflags)
-endif
-
-if CONFIG_ROAR
-output_LTLIBRARIES += roar.la
-roar_la_SOURCES  = roar.c
-roar_la_CFLAGS   = $(ROAR_CFLAGS)
-roar_la_LIBADD   = $(ROAR_LIBS)
-roar_la_LDFLAGS  = $(common_ldflags)
-endif
-
-if CONFIG_AAUDIO
-output_LTLIBRARIES += aaudio.la
-aaudio_la_SOURCES = aaudio.c
-aaudio_la_CFLAGS  = $(AAUDIO_CFLAGS)
-aaudio_la_LIBADD  = $(AAUDIO_LIBS)
-aaudio_la_LDFLAGS = $(common_ldflags)
 endif

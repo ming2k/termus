@@ -1,8 +1,8 @@
 #ifndef TERMUS_EXPR_H
 #define TERMUS_EXPR_H
 
-#include "core/track_info.h"
 #include "common/list.h"
+#include "core/track_info.h"
 
 enum { OP_LT, OP_LE, OP_EQ, OP_GE, OP_GT, OP_NE };
 #define NR_OPS (OP_NE + 1)
@@ -27,10 +27,7 @@ struct expr {
 	union {
 		struct {
 			struct list_head glob_head;
-			enum {
-				SOP_EQ = OP_EQ,
-				SOP_NE = OP_NE
-			} op;
+			enum { SOP_EQ = OP_EQ, SOP_NE = OP_NE } op;
 		} estr;
 		struct {
 			int val;
@@ -44,7 +41,7 @@ struct expr {
 			} op;
 		} eint;
 		struct {
-			char* key;
+			char *key;
 			enum {
 				KOP_LT = OP_LT,
 				KOP_LE = OP_LE,
@@ -58,8 +55,10 @@ struct expr {
 };
 
 struct expr *expr_parse(const char *str);
-struct expr* expr_parse_i(const char *str, const char *err_msg, int check_short);
-int expr_check_leaves(struct expr **exprp, const char *(*get_filter)(const char *name));
+struct expr *expr_parse_i(const char *str, const char *err_msg,
+			  int check_short);
+int expr_check_leaves(struct expr **exprp,
+		      const char *(*get_filter)(const char *name));
 int expr_op_to_bool(int res, int op);
 int expr_eval(struct expr *expr, struct track_info *ti);
 void expr_free(struct expr *expr);
@@ -67,7 +66,8 @@ const char *expr_error(void);
 int expr_is_short(const char *str);
 
 unsigned int expr_get_match_type(struct expr *expr);
-/* "harmless" expressions will reduce filter results when adding characters at the beginning/end */
+/* "harmless" expressions will reduce filter results when adding characters at
+ * the beginning/end */
 int expr_is_harmless(const struct expr *expr);
 
 #endif

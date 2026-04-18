@@ -1,15 +1,15 @@
 #include "ui/tabexp_file.h"
-#include "ui/tabexp.h"
-#include "library/load_dir.h"
 #include "common/misc.h"
 #include "common/xmalloc.h"
 #include "common/xstrjoin.h"
+#include "library/load_dir.h"
+#include "ui/tabexp.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <pwd.h>
 #include <dirent.h>
+#include <pwd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 static char *get_home(const char *user)
 {
@@ -55,9 +55,9 @@ static char *get_full_dir_name(const char *dir)
 	return full;
 }
 
-static void load_dir(struct ptr_array *array,
-		const char *dirname, const char *start,
-		int (*filter)(const char *, const struct stat *))
+static void load_dir(struct ptr_array *array, const char *dirname,
+		     const char *start,
+		     int (*filter)(const char *, const struct stat *))
 {
 	int start_len = strlen(start);
 	struct directory dir;
@@ -107,7 +107,7 @@ out:
  * filtered with 'filter'
  */
 static void tabexp_load_dir(const char *dirname, const char *start,
-		int (*filter)(const char *, const struct stat *))
+			    int (*filter)(const char *, const struct stat *))
 {
 	PTR_ARRAY(array);
 
@@ -124,7 +124,8 @@ static void tabexp_load_dir(const char *dirname, const char *start,
 }
 
 static void tabexp_load_env_path(const char *env_path, const char *start,
-		int (*filter)(const char *, const struct stat *))
+				 int (*filter)(const char *,
+					       const struct stat *))
 {
 	char *path = xstrdup(env_path);
 	PTR_ARRAY(array);
@@ -154,8 +155,8 @@ static void tabexp_load_env_path(const char *env_path, const char *start,
 	free(path);
 }
 
-void expand_files_and_dirs(const char *src,
-		int (*filter)(const char *name, const struct stat *s))
+void expand_files_and_dirs(const char *src, int (*filter)(const char *name,
+							  const struct stat *s))
 {
 	char *slash;
 
@@ -188,7 +189,7 @@ void expand_files_and_dirs(const char *src,
 }
 
 void expand_env_path(const char *src,
-		int (*filter)(const char *name, const struct stat *s))
+		     int (*filter)(const char *name, const struct stat *s))
 {
 	const char *env_path = getenv("PATH");
 

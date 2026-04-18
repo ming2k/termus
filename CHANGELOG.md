@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-04-19
+
+### Added
+- Core: Integrated `-fanalyzer` and `-Werror` strict compilation modes to prevent memory leaks and pointer bugs.
+- Build: Added automatic test integration for playback logic (`make check`).
+- Build: Re-organized `libcommon.la` to provide better static analysis and testability.
+
+### Changed
+- Refactoring: The entire codebase is now strictly formatted using `clang-format` (LLVM style) for long-term maintainability.
+- Input: Promoted `FLAC` 24-bit streams to 32-bit natively inside the decoder to solve historical hardware misalignment issues on Linux.
+
+### Fixed
+- Player: Fixed a critical loop condition where changing playback speeds (`:speed`) on unsupported hardware rates (especially Hi-Res files) would cause a 100% CPU lockup and severe continuous white noise. The player will now detect write failures and smoothly fallback to 1.0x playback speed.
+- Memory: Fixed a hidden memory leak in the options string setter (`generic_set_str`) caught by the new static analysis suite.
+
 ## [1.0.4] - 2026-04-13
 
 ### Added

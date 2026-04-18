@@ -1,22 +1,22 @@
-#include "common/misc.h"
-#include "common/prog.h"
 #include "common/file.h"
+#include "common/misc.h"
 #include "common/path.h"
-#include "common/xmalloc.h"
+#include "common/prog.h"
 #include "common/utils.h"
+#include "common/xmalloc.h"
 
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
-#include <errno.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
+#include <unistd.h>
 
 static int sock;
 static int raw_args = 0;
@@ -91,13 +91,12 @@ static int remote_connect(const char *address)
 		passwd = NULL;
 
 		addr.sa.sa_family = AF_UNIX;
-		strncpy(addr.un.sun_path, address, sizeof(addr.un.sun_path) - 1);
+		strncpy(addr.un.sun_path, address,
+			sizeof(addr.un.sun_path) - 1);
 
 		addrlen = sizeof(addr.un);
 	} else {
-		const struct addrinfo hints = {
-			.ai_socktype = SOCK_STREAM
-		};
+		const struct addrinfo hints = {.ai_socktype = SOCK_STREAM};
 		const char *port = STRINGIZE(DEFAULT_PORT);
 		struct addrinfo *result;
 		char *s = strrchr(address, ':');
@@ -125,7 +124,8 @@ static int remote_connect(const char *address)
 
 	if (connect(sock, &addr.sa, addrlen)) {
 		if (errno == ENOENT || errno == ECONNREFUSED) {
-			/* "termus-remote -C" can be used to check if termus is running */
+			/* "termus-remote -C" can be used to check if termus is
+			 * running */
 			if (!raw_args)
 				warn("termus is not running\n");
 			exit(1);
@@ -180,75 +180,66 @@ enum flags {
 };
 
 static struct option options[NR_FLAGS + 1] = {
-	{ 0, "server", 1 },
-	{ 0, "passwd", 1 },
-	{ 0, "help", 0 },
-	{ 0, "version", 0 },
+    {0, "server", 1},	 {0, "passwd", 1},     {0, "help", 0},
+    {0, "version", 0},
 
-	{ 'p', "play", 0 },
-	{ 'u', "pause", 0 },
-	{ 'U', "pause-playback", 0 },
-	{ 's', "stop", 0 },
-	{ 'n', "next", 0 },
-	{ 'r', "prev", 0 },
-	{ 'f', "file", 1 },
-	{ 'R', "repeat", 0 },
-	{ 'S', "shuffle", 0 },
-	{ 'v', "volume", 1 },
-	{ 'k', "seek", 1 },
-	{ 'Q', "query", 0 },
+    {'p', "play", 0},	 {'u', "pause", 0},    {'U', "pause-playback", 0},
+    {'s', "stop", 0},	 {'n', "next", 0},     {'r', "prev", 0},
+    {'f', "file", 1},	 {'R', "repeat", 0},   {'S', "shuffle", 0},
+    {'v', "volume", 1},	 {'k', "seek", 1},     {'Q', "query", 0},
 
-	{ 'l', "library", 0 },
-	{ 'P', "playlist", 0 },
-	{ 'q', "queue", 0 },
-	{ 'c', "clear", 0 },
+    {'l', "library", 0}, {'P', "playlist", 0}, {'q', "queue", 0},
+    {'c', "clear", 0},
 
-	{ 'C', "raw", 0 },
-	{ 0, NULL, 0 }
+    {'C', "raw", 0},	 {0, NULL, 0}};
+
+static int flags[NR_FLAGS] = {
+    0,
 };
 
-static int flags[NR_FLAGS] = { 0, };
-
 static const char *usage =
-"Usage: %s [OPTION]... [FILE|DIR|PLAYLIST]...\n"
-"   or: %s -C COMMAND...\n"
-"   or: %s\n"
-"Control termus through socket.\n"
-"\n"
-"      --server ADDR    connect using ADDR instead of $TERMUS_SOCKET or $XDG_RUNTIME_DIR/termus-socket\n"
-"                       ADDR is either a UNIX socket or host[:port]\n"
-"                       WARNING: using TCP/IP is insecure!\n"
-"      --passwd PASSWD  password to use for TCP/IP connection\n"
-"      --help           display this help and exit\n"
-"      --version        " VERSION "\n"
-"\n"
-"Cooked mode:\n"
-"  -p, --play           player-play\n"
-"  -u, --pause          player-pause\n"
-"  -U, --pause-playback player-pause-playback\n"
-"  -s, --stop           player-stop\n"
-"  -n, --next           player-next\n"
-"  -r, --prev           player-prev\n"
-"  -f, --file           player-play FILE\n"
-"  -R, --repeat         toggle repeat\n"
-"  -S, --shuffle        toggle shuffle\n"
-"  -v, --volume VOL     vol VOL\n"
-"  -k, --seek SEEK      seek SEEK\n"
-"  -Q, --query          get player status (same as -C status)\n"
-"\n"
-"  -l, --library        modify library instead of playlist\n"
-"  -P, --playlist       modify playlist (default)\n"
-"  -q, --queue          modify play queue instead of playlist\n"
-"  -c, --clear          clear playlist, library (-l) or play queue (-q)\n"
-"\n"
-"  Add FILE/DIR/PLAYLIST to playlist, library (-l) or play queue (-q).\n"
-"\n"
-"Raw mode:\n"
-"  -C, --raw            treat arguments (instead of stdin) as raw commands\n"
-"\n"
-"  By default termus-remote reads raw commands from stdin (one command per line).\n"
-"\n"
-"Report bugs to <termus-devel@lists.sourceforge.net>.\n";
+    "Usage: %s [OPTION]... [FILE|DIR|PLAYLIST]...\n"
+    "   or: %s -C COMMAND...\n"
+    "   or: %s\n"
+    "Control termus through socket.\n"
+    "\n"
+    "      --server ADDR    connect using ADDR instead of $TERMUS_SOCKET or "
+    "$XDG_RUNTIME_DIR/termus-socket\n"
+    "                       ADDR is either a UNIX socket or host[:port]\n"
+    "                       WARNING: using TCP/IP is insecure!\n"
+    "      --passwd PASSWD  password to use for TCP/IP connection\n"
+    "      --help           display this help and exit\n"
+    "      --version        " VERSION "\n"
+    "\n"
+    "Cooked mode:\n"
+    "  -p, --play           player-play\n"
+    "  -u, --pause          player-pause\n"
+    "  -U, --pause-playback player-pause-playback\n"
+    "  -s, --stop           player-stop\n"
+    "  -n, --next           player-next\n"
+    "  -r, --prev           player-prev\n"
+    "  -f, --file           player-play FILE\n"
+    "  -R, --repeat         toggle repeat\n"
+    "  -S, --shuffle        toggle shuffle\n"
+    "  -v, --volume VOL     vol VOL\n"
+    "  -k, --seek SEEK      seek SEEK\n"
+    "  -Q, --query          get player status (same as -C status)\n"
+    "\n"
+    "  -l, --library        modify library instead of playlist\n"
+    "  -P, --playlist       modify playlist (default)\n"
+    "  -q, --queue          modify play queue instead of playlist\n"
+    "  -c, --clear          clear playlist, library (-l) or play queue (-q)\n"
+    "\n"
+    "  Add FILE/DIR/PLAYLIST to playlist, library (-l) or play queue (-q).\n"
+    "\n"
+    "Raw mode:\n"
+    "  -C, --raw            treat arguments (instead of stdin) as raw "
+    "commands\n"
+    "\n"
+    "  By default termus-remote reads raw commands from stdin (one command per "
+    "line).\n"
+    "\n"
+    "Report bugs to <termus-devel@lists.sourceforge.net>.\n";
 
 int main(int argc, char *argv[])
 {

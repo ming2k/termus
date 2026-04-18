@@ -19,7 +19,7 @@ struct cue_meta {
 };
 
 struct cue_track {
-	char *file;	/* owned by cue_sheet */
+	char *file; /* owned by cue_sheet */
 	double offset;
 	double length;
 	size_t number;

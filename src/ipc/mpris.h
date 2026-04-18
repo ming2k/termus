@@ -22,16 +22,36 @@ void mpris_seeked(void);
 #else
 
 #define mpris_fd -1
-#define mpris_init() { }
-#define mpris_process() { }
-#define mpris_free() { }
-#define mpris_playback_status_changed() { }
-#define mpris_loop_status_changed() { }
-#define mpris_rate_changed() { }
-#define mpris_shuffle_changed() { }
-#define mpris_volume_changed() { }
-#define mpris_metadata_changed() { }
-#define mpris_seeked() { }
+#define mpris_init()                                                           \
+	{                                                                      \
+	}
+#define mpris_process()                                                        \
+	{                                                                      \
+	}
+#define mpris_free()                                                           \
+	{                                                                      \
+	}
+#define mpris_playback_status_changed()                                        \
+	{                                                                      \
+	}
+#define mpris_loop_status_changed()                                            \
+	{                                                                      \
+	}
+#define mpris_rate_changed()                                                   \
+	{                                                                      \
+	}
+#define mpris_shuffle_changed()                                                \
+	{                                                                      \
+	}
+#define mpris_volume_changed()                                                 \
+	{                                                                      \
+	}
+#define mpris_metadata_changed()                                               \
+	{                                                                      \
+	}
+#define mpris_seeked()                                                         \
+	{                                                                      \
+	}
 
 #endif
 

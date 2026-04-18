@@ -1,15 +1,16 @@
 #include "common/xmalloc.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 extern char *program_name;
 
 void malloc_fail(void)
 {
-	fprintf(stderr, "%s: could not allocate memory: %s\n", program_name, strerror(errno));
+	fprintf(stderr, "%s: could not allocate memory: %s\n", program_name,
+		strerror(errno));
 	exit(42);
 }
 

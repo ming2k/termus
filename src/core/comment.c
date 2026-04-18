@@ -1,7 +1,7 @@
 #include "core/comment.h"
-#include "common/xmalloc.h"
-#include "common/utils.h"
 #include "common/uchar.h"
+#include "common/utils.h"
+#include "common/xmalloc.h"
 
 #include <string.h>
 #include <strings.h>
@@ -9,9 +9,8 @@
 static int is_various_artists(const char *a)
 {
 	return strcasecmp(a, "Various Artists") == 0 ||
-	       strcasecmp(a, "Various")         == 0 ||
-	       strcasecmp(a, "VA")              == 0 ||
-	       strcasecmp(a, "V/A")             == 0;
+	       strcasecmp(a, "Various") == 0 || strcasecmp(a, "VA") == 0 ||
+	       strcasecmp(a, "V/A") == 0;
 }
 
 int track_is_compilation(const struct keyval *comments)
@@ -107,14 +106,16 @@ int comments_get_int(const struct keyval *comments, const char *key)
 	return ival;
 }
 
-int comments_get_signed_int(const struct keyval *comments, const char *key, long int *ival)
+int comments_get_signed_int(const struct keyval *comments, const char *key,
+			    long int *ival)
 {
 	const char *val;
 
 	val = keyvals_get_val(comments, key);
 	if (val == NULL)
 		return -1;
-	while (*val && !(*val == '+' || *val == '-' || (*val >= '0' && *val <= '9')))
+	while (*val &&
+	       !(*val == '+' || *val == '-' || (*val >= '0' && *val <= '9')))
 		val++;
 	return str_to_int(val, ival);
 }
@@ -159,74 +160,89 @@ int comments_get_date(const struct keyval *comments, const char *key)
 	ival = year * 10000;
 
 	if (*endptr == '-' || *endptr == ' ' || *endptr == '/') {
-		month = strtol(endptr+1, &endptr, 10);
+		month = strtol(endptr + 1, &endptr, 10);
 		if (month < 1 || month > 12)
 			return ival;
 		ival += month * 100;
 	}
 
 	if (*endptr == '-' || *endptr == ' ' || *endptr == '/') {
-		day = strtol(endptr+1, &endptr, 10);
+		day = strtol(endptr + 1, &endptr, 10);
 		if (day < 1 || day > 31)
 			return ival;
 		ival += day;
 	}
 
-
 	return ival;
 }
 
-static const char *interesting[] = {
-	"artist", "album", "title", "tracknumber", "discnumber", "totaldiscs", "genre",
-	"date", "compilation", "partofacompilation", "albumartist", "artistsort", "albumartistsort",
-	"albumsort",
-	"originaldate",
-	"r128_track_gain",
-	"r128_album_gain",
-	"replaygain_track_gain",
-	"replaygain_track_peak",
-	"replaygain_album_gain",
-	"replaygain_album_peak",
-	"musicbrainz_trackid",
-	"comment",
-	"bpm",
-	"arranger", "composer", "conductor", "lyricist", "performer",
-	"remixer", "label", "publisher", "work", "opus",
-	"subtitle", "media",
-	NULL
-};
+static const char *interesting[] = {"artist",
+				    "album",
+				    "title",
+				    "tracknumber",
+				    "discnumber",
+				    "totaldiscs",
+				    "genre",
+				    "date",
+				    "compilation",
+				    "partofacompilation",
+				    "albumartist",
+				    "artistsort",
+				    "albumartistsort",
+				    "albumsort",
+				    "originaldate",
+				    "r128_track_gain",
+				    "r128_album_gain",
+				    "replaygain_track_gain",
+				    "replaygain_track_peak",
+				    "replaygain_album_gain",
+				    "replaygain_album_peak",
+				    "musicbrainz_trackid",
+				    "comment",
+				    "bpm",
+				    "arranger",
+				    "composer",
+				    "conductor",
+				    "lyricist",
+				    "performer",
+				    "remixer",
+				    "label",
+				    "publisher",
+				    "work",
+				    "opus",
+				    "subtitle",
+				    "media",
+				    NULL};
 
 static struct {
 	const char *old;
 	const char *new;
-} key_map[] = {
-	{ "album_artist", "albumartist" },
-	{ "album artist", "albumartist" },
-	{ "disc", "discnumber" },
-	{ "part", "discnumber" },
-	{ "partnumber", "discnumber" },
-	{ "disctotal", "totaldiscs" },
-	{ "tempo", "bpm" },
-	{ "track", "tracknumber" },
-	{ "WM/Year", "date" },
-	{ "WM/ArtistSortOrder", "artistsort" },
-	{ "WM/AlbumArtistSortOrder", "albumartistsort" },
-	{ "WM/AlbumSortOrder", "albumsort" },
-	{ "WM/OriginalReleaseYear", "originaldate" },
-	{ "WM/Media", "media" },
-	{ "sourcemedia", "media" },
-	{ "MusicBrainz Track Id", "musicbrainz_trackid" },
-	{ "version", "subtitle" },
-	/* ffmpeg id3 */
-	{ "artist-sort", "artistsort" },
-	{ "TSO2", "albumartistsort" },
-	{ "album-sort", "albumsort" },
-	/* ffmpeg mp4 */
-	{ "sort_artist", "artistsort" },
-	{ "sort_album_artist", "albumartistsort" },
-	{ "sort_album", "albumsort" },
-	{ NULL, NULL }
-};
+} key_map[] = {{"album_artist", "albumartist"},
+	       {"album artist", "albumartist"},
+	       {"disc", "discnumber"},
+	       {"part", "discnumber"},
+	       {"partnumber", "discnumber"},
+	       {"disctotal", "totaldiscs"},
+	       {"tempo", "bpm"},
+	       {"track", "tracknumber"},
+	       {"WM/Year", "date"},
+	       {"WM/ArtistSortOrder", "artistsort"},
+	       {"WM/AlbumArtistSortOrder", "albumartistsort"},
+	       {"WM/AlbumSortOrder", "albumsort"},
+	       {"WM/OriginalReleaseYear", "originaldate"},
+	       {"WM/Media", "media"},
+	       {"sourcemedia", "media"},
+	       {"MusicBrainz Track Id", "musicbrainz_trackid"},
+	       {"version", "subtitle"},
+	       /* ffmpeg id3 */
+	       {"artist-sort", "artistsort"},
+	       {"TSO2", "albumartistsort"},
+	       {"album-sort", "albumsort"},
+	       /* ffmpeg mp4 */
+	       {"sort_artist", "artistsort"},
+	       {"sort_album_artist", "albumartistsort"},
+	       {"sort_album", "albumsort"},
+	       {NULL, NULL}};
 
 static const char *fix_key(const char *key)
 {
@@ -272,7 +288,8 @@ int comments_add(struct growing_keyvals *c, const char *key, char *val)
 	return 1;
 }
 
-int comments_add_const(struct growing_keyvals *c, const char *key, const char *val)
+int comments_add_const(struct growing_keyvals *c, const char *key,
+		       const char *val)
 {
 	return comments_add(c, key, xstrdup(val));
 }

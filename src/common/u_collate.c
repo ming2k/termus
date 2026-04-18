@@ -4,9 +4,9 @@
 #include "common/xmalloc.h"
 #include "core/convert.h"
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
 
 int u_strcoll(const char *str1, const char *str2)
 {
@@ -66,7 +66,7 @@ char *u_strcoll_key(const char *str)
 
 	if (using_utf8) {
 		size_t xfrm_len = strxfrm(NULL, str, 0);
-		if ((ssize_t) xfrm_len >= 0 && xfrm_len < INT_MAX - 2) {
+		if ((ssize_t)xfrm_len >= 0 && xfrm_len < INT_MAX - 2) {
 			result = xnew(char, xfrm_len + 1);
 			strxfrm(result, str, xfrm_len + 1);
 		}
@@ -79,7 +79,7 @@ char *u_strcoll_key(const char *str)
 
 		if (str_locale) {
 			size_t xfrm_len = strxfrm(NULL, str_locale, 0);
-			if ((ssize_t) xfrm_len >= 0 && xfrm_len < INT_MAX - 2) {
+			if ((ssize_t)xfrm_len >= 0 && xfrm_len < INT_MAX - 2) {
 				result = xnew(char, xfrm_len + 2);
 				result[0] = 'A';
 				strxfrm(result + 1, str_locale, xfrm_len + 1);
@@ -93,7 +93,7 @@ char *u_strcoll_key(const char *str)
 		result = xmalloc(xfrm_len + 2);
 		result[0] = 'B';
 		memcpy(result + 1, str, xfrm_len);
-		result[xfrm_len+1] = '\0';
+		result[xfrm_len + 1] = '\0';
 	}
 
 	return result;

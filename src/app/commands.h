@@ -3,9 +3,9 @@
 
 enum {
 	/* executing command is disabled over net */
-	CMD_UNSAFE	= 1 << 0,
+	CMD_UNSAFE = 1 << 0,
 	/* execute command after every typed/deleted character */
-	CMD_LIVE	= 1 << 1,
+	CMD_LIVE = 1 << 1,
 };
 
 struct command {

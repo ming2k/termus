@@ -28,7 +28,8 @@ extern unsigned long pl_visible_resume_row;
 
 void pl_init(void);
 void pl_track_attach_view(void *view_data,
-		const struct editable_view_ops *view_ops, struct window *win);
+			  const struct editable_view_ops *view_ops,
+			  struct window *win);
 void pl_init_options(void);
 void pl_exit(void);
 void pl_save(void);
@@ -72,11 +73,11 @@ int pl_playing_pl_row(void);
 void pl_mark_for_redraw(void);
 int pl_needs_redraw(void);
 void pl_draw(void (*list)(struct window *win),
-		void (*tracks)(struct window *win), int full);
+	     void (*tracks)(struct window *win), int full);
 void pl_list_iter_to_info(struct iter *iter, struct pl_list_info *info);
 
 static inline void pl_add_track_to_marked_pl2(struct track_info *ti,
-		void *opaque)
+					      void *opaque)
 {
 	pl_add_track_to_marked_pl(ti);
 }

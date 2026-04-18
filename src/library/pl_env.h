@@ -13,8 +13,8 @@
  *   The array of environment variables to substitute. These are checked in the
  *   order they are specified in, and the first matching variable is used.
  *   Note that it is safe for the configuration to be changed regardless of if
- *   termus is currently running, but termus must be restarted for this to take full
- *   effect.
+ *   termus is currently running, but termus must be restarted for this to take
+ * full effect.
  *
  * - options.c / get_pl_env_vars + set_pl_env_vars
  *   Encodes and decodes the config entry to/from a comma-separated list.
@@ -72,16 +72,16 @@
  *   4. Adding a configuration option for a base directory, and only storing
  *      relative paths against that. This seems simple at first, but it's has
  *      all the disadvantages of the aforementioned approaches, is more complex
- *      to implement, makes it harder to handle configuration changes while termus
- *      is not running, and is a lot less flexible.
+ *      to implement, makes it harder to handle configuration changes while
+ * termus is not running, and is a lot less flexible.
  *
  * - What are the advantages of this approach?
  *    1. This approach is mostly self-contained. There are very few places which
  *       this needs to hook, and the mechanism is easy to reason about.
  *    2. This approach works well with termus. It takes advantage of the way it
  *       keeps all metadata in-memory during runtime.
- *    3. This approach does not have a risk of causing incidental compatibility issues,
- *       behaviour changes, or regressions for users who do not enable this
+ *    3. This approach does not have a risk of causing incidental compatibility
+ * issues, behaviour changes, or regressions for users who do not enable this
  *       feature.
  *    4. This approach can handle configuration changes regardless of whether
  *       termus is running.
@@ -101,7 +101,8 @@
  *      termus for searching for individual tracks.
  *
  * - What are some potential uses of pl_env_vars?
- *   1. Syncing a $TERMUS_HOME with multiple devices with different home folders.
+ *   1. Syncing a $TERMUS_HOME with multiple devices with different home
+ * folders.
  *   2. Syncing a $TERMUS_HOME with multiple devices with one or more different
  *      music paths.
  *   3. The above case, but also with a path which only exists on certain

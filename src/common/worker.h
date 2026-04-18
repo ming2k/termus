@@ -4,16 +4,16 @@
 #include <stdint.h>
 
 #define JOB_TYPE_NONE 0
-#define JOB_TYPE_ANY  ~0
+#define JOB_TYPE_ANY ~0
 
-#define JOB_TYPE_LIB   (1 << 0)
-#define JOB_TYPE_PL    (1 << 1)
+#define JOB_TYPE_LIB (1 << 0)
+#define JOB_TYPE_PL (1 << 1)
 #define JOB_TYPE_QUEUE (1 << 2)
 
-#define JOB_TYPE_ADD          (1 << 16)
-#define JOB_TYPE_UPDATE       (1 << 17)
+#define JOB_TYPE_ADD (1 << 16)
+#define JOB_TYPE_UPDATE (1 << 17)
 #define JOB_TYPE_UPDATE_CACHE (1 << 18)
-#define JOB_TYPE_DELETE       (1 << 19)
+#define JOB_TYPE_DELETE (1 << 19)
 
 typedef int (*worker_match_cb)(uint32_t type, void *job_data, void *opaque);
 
@@ -22,7 +22,7 @@ void worker_start(void);
 void worker_exit(void);
 
 void worker_add_job(uint32_t type, void (*job_cb)(void *job_data),
-		void (*free_cb)(void *job_data), void *job_data);
+		    void (*free_cb)(void *job_data), void *job_data);
 
 /* NOTE: The callbacks below run in parallel with the job_cb function. Access to
  * job_data must by synchronized.

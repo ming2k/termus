@@ -1,8 +1,8 @@
 #ifndef TERMUS_OP_H
 #define TERMUS_OP_H
 
-#include "core/sf.h"
 #include "core/channelmap.h"
+#include "core/sf.h"
 
 #ifndef __GNUC__
 #include <fcntl.h>
@@ -43,11 +43,9 @@ struct output_plugin_ops {
 	/* these can be NULL */
 	int (*pause)(void);
 	int (*unpause)(void);
-
 };
 
-#define OPT(prefix, name) { #name, prefix ## _set_ ## name, \
-	prefix ## _get_ ## name }
+#define OPT(prefix, name) {#name, prefix##_set_##name, prefix##_get_##name}
 
 struct output_plugin_opt {
 	const char *name;

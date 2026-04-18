@@ -4,8 +4,8 @@
 #include "common/compiler.h"
 #include "common/uchar.h"
 
-#include <stddef.h> /* size_t */
 #include <stdarg.h>
+#include <stddef.h> /* size_t */
 
 struct gbuf {
 	char *buffer;
@@ -15,7 +15,7 @@ struct gbuf {
 
 extern char gbuf_empty_buffer[];
 
-#define GBUF(name) struct gbuf name = { gbuf_empty_buffer, 0, 0 }
+#define GBUF(name) struct gbuf name = {gbuf_empty_buffer, 0, 0}
 
 static inline void gbuf_clear(struct gbuf *buf)
 {

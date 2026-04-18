@@ -1,12 +1,12 @@
 #include "common/locking.h"
 #include "common/debug.h"
 
-#include <string.h>
 #include <stdatomic.h>
 #include <stdbool.h>
+#include <string.h>
 
 struct fifo_waiter {
-	struct fifo_waiter * _Atomic next;
+	struct fifo_waiter *_Atomic next;
 	pthread_cond_t cond;
 };
 
@@ -50,14 +50,15 @@ void termus_rwlock_unlock(pthread_rwlock_t *lock)
 void fifo_mutex_lock(struct fifo_mutex *fifo)
 {
 	struct fifo_waiter self = {
-		.cond = PTHREAD_COND_INITIALIZER,
-		.next = ATOMIC_VAR_INIT(NULL),
+	    .cond = PTHREAD_COND_INITIALIZER,
+	    .next = ATOMIC_VAR_INIT(NULL),
 	};
 
-	struct fifo_waiter *old_tail = atomic_exchange_explicit(&fifo->tail, &self,
-			memory_order_relaxed);
+	struct fifo_waiter *old_tail =
+	    atomic_exchange_explicit(&fifo->tail, &self, memory_order_relaxed);
 	if (old_tail)
-		atomic_store_explicit(&old_tail->next, &self, memory_order_release);
+		atomic_store_explicit(&old_tail->next, &self,
+				      memory_order_release);
 
 	termus_mutex_lock(&fifo->mutex);
 	if (old_tail) {
@@ -67,11 +68,13 @@ void fifo_mutex_lock(struct fifo_mutex *fifo)
 	}
 
 	struct fifo_waiter *self_addr = &self;
-	bool was_tail = atomic_compare_exchange_strong_explicit(&fifo->tail, &self_addr,
-			NULL, memory_order_relaxed, memory_order_relaxed);
+	bool was_tail = atomic_compare_exchange_strong_explicit(
+	    &fifo->tail, &self_addr, NULL, memory_order_relaxed,
+	    memory_order_relaxed);
 	struct fifo_waiter *next = NULL;
 	if (!was_tail) {
-		while (!(next = atomic_load_explicit(&self.next, memory_order_consume)))
+		while (!(next = atomic_load_explicit(&self.next,
+						     memory_order_consume)))
 			;
 	}
 	fifo->head = next;
@@ -86,7 +89,8 @@ void fifo_mutex_unlock(struct fifo_mutex *fifo)
 
 void fifo_mutex_yield(struct fifo_mutex *fifo)
 {
-	if (fifo->head || atomic_load_explicit(&fifo->tail, memory_order_relaxed)) {
+	if (fifo->head ||
+	    atomic_load_explicit(&fifo->tail, memory_order_relaxed)) {
 		fifo_mutex_unlock(fifo);
 		fifo_mutex_lock(fifo);
 	}

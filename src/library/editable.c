@@ -1,12 +1,12 @@
 #include "library/editable.h"
-#include "library/search.h"
+#include "common/locking.h"
+#include "common/mergesort.h"
+#include "common/xmalloc.h"
 #include "core/track.h"
 #include "core/track_info.h"
 #include "library/expr.h"
 #include "library/filters.h"
-#include "common/locking.h"
-#include "common/mergesort.h"
-#include "common/xmalloc.h"
+#include "library/search.h"
 
 static void shared_view_mark_changed(struct editable_shared *shared)
 {
@@ -40,14 +40,14 @@ static void shared_view_down(struct editable_shared *shared, int n)
 }
 
 static void shared_view_row_vanishes(struct editable_shared *shared,
-		struct iter *iter)
+				     struct iter *iter)
 {
 	if (shared->view_ops && shared->view_ops->row_vanishes)
 		shared->view_ops->row_vanishes(shared->view_data, iter);
 }
 
 static int shared_view_get_sel(struct editable_shared *shared,
-		struct iter *iter)
+			       struct iter *iter)
 {
 	if (shared->view_ops && shared->view_ops->get_sel)
 		return shared->view_ops->get_sel(shared->view_data, iter);
@@ -55,7 +55,7 @@ static int shared_view_get_sel(struct editable_shared *shared,
 }
 
 static void shared_view_set_sel(struct editable_shared *shared,
-		struct iter *iter)
+				struct iter *iter)
 {
 	if (shared->view_ops && shared->view_ops->set_sel)
 		shared->view_ops->set_sel(shared->view_data, iter);
@@ -73,13 +73,15 @@ static void shared_view_set_contents(struct editable_shared *shared, void *head)
 		shared->view_ops->set_contents(shared->view_data, head);
 }
 
-static int simple_track_search_get_current(void *data, struct iter *iter, enum search_direction dir)
+static int simple_track_search_get_current(void *data, struct iter *iter,
+					   enum search_direction dir)
 {
 	struct editable_shared *shared = data;
 	return shared_view_get_sel(shared, iter);
 }
 
-static int simple_track_search_matches(void *data, struct iter *iter, const char *text)
+static int simple_track_search_matches(void *data, struct iter *iter,
+				       const char *text)
 {
 	struct editable_shared *shared = data;
 	int rc = _simple_track_search_matches(iter, text);
@@ -89,11 +91,10 @@ static int simple_track_search_matches(void *data, struct iter *iter, const char
 }
 
 static const struct searchable_ops simple_search_ops = {
-	.get_prev = simple_track_get_prev,
-	.get_next = simple_track_get_next,
-	.get_current = simple_track_search_get_current,
-	.matches = simple_track_search_matches
-};
+    .get_prev = simple_track_get_prev,
+    .get_next = simple_track_get_next,
+    .get_current = simple_track_search_get_current,
+    .matches = simple_track_search_matches};
 
 static struct simple_track *get_selected(struct editable *e)
 {
@@ -105,7 +106,7 @@ static struct simple_track *get_selected(struct editable *e)
 }
 
 void editable_shared_init(struct editable_shared *shared,
-		editable_free_track free_track)
+			  editable_free_track free_track)
 {
 	shared->view_data = NULL;
 	shared->view_ops = NULL;
@@ -115,13 +116,12 @@ void editable_shared_init(struct editable_shared *shared,
 	shared->free_track = free_track;
 	shared->owner = NULL;
 
-	struct iter iter = { 0 };
-	shared->searchable = searchable_new(shared, &iter,
-			&simple_search_ops);
+	struct iter iter = {0};
+	shared->searchable = searchable_new(shared, &iter, &simple_search_ops);
 }
 
-void editable_shared_set_view(struct editable_shared *shared,
-		void *view_data, const struct editable_view_ops *view_ops)
+void editable_shared_set_view(struct editable_shared *shared, void *view_data,
+			      const struct editable_view_ops *view_ops)
 {
 	shared->view_data = view_data;
 	shared->view_ops = view_ops;
@@ -133,7 +133,7 @@ void editable_shared_set_view(struct editable_shared *shared,
 }
 
 void editable_init(struct editable *e, struct editable_shared *shared,
-		int take_ownership)
+		   int take_ownership)
 {
 	list_init(&e->head);
 	e->tree_root = RB_ROOT;
@@ -141,7 +141,6 @@ void editable_init(struct editable *e, struct editable_shared *shared,
 	e->nr_marked = 0;
 	e->total_time = 0;
 	e->shared = shared;
-
 
 	if (take_ownership)
 		editable_take_ownership(e);
@@ -159,15 +158,16 @@ void editable_take_ownership(struct editable *e)
 		shared_view_set_contents(e->shared, &e->head);
 		shared_view_mark_changed(e->shared);
 
-		struct iter iter = { .data0 = &e->head };
+		struct iter iter = {.data0 = &e->head};
 		searchable_set_head(e->shared->searchable, &iter);
 	}
 }
 
-static void do_editable_add(struct editable *e, struct simple_track *track, int tiebreak)
+static void do_editable_add(struct editable *e, struct simple_track *track,
+			    int tiebreak)
 {
 	sorted_list_add_track(&e->head, &e->tree_root, track,
-			e->shared->sort_keys, tiebreak);
+			      e->shared->sort_keys, tiebreak);
 	e->nr_tracks++;
 	if (track->info->duration != -1)
 		e->total_time += track->info->duration;
@@ -238,7 +238,7 @@ void editable_sort(struct editable *e)
 }
 
 void editable_shared_set_sort_keys(struct editable_shared *shared,
-		sort_key_t *keys)
+				   sort_key_t *keys)
 {
 	free(shared->sort_keys);
 	shared->sort_keys = keys;
@@ -320,7 +320,8 @@ void editable_toggle_mark(struct editable *e)
 	}
 }
 
-static void move_item(struct editable *e, struct list_head *head, struct list_head *item)
+static void move_item(struct editable *e, struct list_head *head,
+		      struct list_head *item)
 {
 	struct simple_track *t = to_simple_track(item);
 	struct iter iter;
@@ -340,7 +341,8 @@ static void reset_tree(struct editable *e)
 	old = tree_node_to_simple_track(rb_first(&e->tree_root));
 	first_track = to_simple_track(e->head.next);
 	if (old != first_track) {
-		rb_replace_node(&old->tree_node, &first_track->tree_node, &e->tree_root);
+		rb_replace_node(&old->tree_node, &first_track->tree_node,
+				&e->tree_root);
 		RB_CLEAR_NODE(&old->tree_node);
 	}
 }
@@ -387,7 +389,8 @@ static void move_sel(struct editable *e, struct list_head *after)
 	}
 }
 
-static struct list_head *find_insert_after_point(struct editable *e, struct list_head *item)
+static struct list_head *find_insert_after_point(struct editable *e,
+						 struct list_head *item)
 {
 	if (e->nr_marked == 0) {
 		/* move the selected track down one row */
@@ -409,7 +412,8 @@ static struct list_head *find_insert_after_point(struct editable *e, struct list
 	return item;
 }
 
-static struct list_head *find_insert_before_point(struct editable *e, struct list_head *item)
+static struct list_head *find_insert_before_point(struct editable *e,
+						  struct list_head *item)
 {
 	item = item->prev;
 	if (e->nr_marked == 0) {
@@ -461,15 +465,18 @@ void editable_clear(struct editable *e)
 	struct list_head *item, *tmp;
 
 	list_for_each_safe(item, tmp, &e->head)
-		editable_remove_track(e, to_simple_track(item));
+	    editable_remove_track(e, to_simple_track(item));
 }
 
 void editable_remove_matching_tracks(struct editable *e,
-		int (*cb)(void *data, struct track_info *ti), void *data)
+				     int (*cb)(void *data,
+					       struct track_info *ti),
+				     void *data)
 {
 	struct list_head *item, *tmp;
 
-	list_for_each_safe(item, tmp, &e->head) {
+	list_for_each_safe(item, tmp, &e->head)
+	{
 		struct simple_track *t = to_simple_track(item);
 		if (cb(data, t->info))
 			editable_remove_track(e, t);
@@ -487,7 +494,8 @@ void editable_mark(struct editable *e, const char *filter)
 			return;
 	}
 
-	list_for_each_entry(t, &e->head, node) {
+	list_for_each_entry(t, &e->head, node)
+	{
 		e->nr_marked -= t->marked;
 		t->marked = 0;
 		if (expr == NULL || expr_eval(expr, t->info)) {
@@ -504,7 +512,8 @@ void editable_unmark(struct editable *e)
 {
 	struct simple_track *t;
 
-	list_for_each_entry(t, &e->head, node) {
+	list_for_each_entry(t, &e->head, node)
+	{
 		e->nr_marked -= t->marked;
 		t->marked = 0;
 	}
@@ -517,7 +526,8 @@ void editable_invert_marks(struct editable *e)
 {
 	struct simple_track *t;
 
-	list_for_each_entry(t, &e->head, node) {
+	list_for_each_entry(t, &e->head, node)
+	{
 		e->nr_marked -= t->marked;
 		t->marked ^= 1;
 		e->nr_marked += t->marked;
@@ -528,7 +538,7 @@ void editable_invert_marks(struct editable *e)
 }
 
 int _editable_for_each_sel(struct editable *e, track_info_cb cb, void *data,
-		int reverse)
+			   int reverse)
 {
 	int rc = 0;
 
@@ -545,7 +555,7 @@ int _editable_for_each_sel(struct editable *e, track_info_cb cb, void *data,
 }
 
 int editable_for_each_sel(struct editable *e, track_info_cb cb, void *data,
-		int reverse, int advance)
+			  int reverse, int advance)
 {
 	int rc;
 
@@ -556,17 +566,19 @@ int editable_for_each_sel(struct editable *e, track_info_cb cb, void *data,
 }
 
 int editable_for_each(struct editable *e, track_info_cb cb, void *data,
-		int reverse)
+		      int reverse)
 {
 	return simple_list_for_each(&e->head, cb, data, reverse);
 }
 
-void editable_update_track(struct editable *e, struct track_info *old, struct track_info *new)
+void editable_update_track(struct editable *e, struct track_info *old,
+			   struct track_info *new)
 {
 	struct list_head *item, *tmp;
 	int changed = 0;
 
-	list_for_each_safe(item, tmp, &e->head) {
+	list_for_each_safe(item, tmp, &e->head)
+	{
 		struct simple_track *track = to_simple_track(item);
 		if (track->info == old) {
 			if (new) {
@@ -585,7 +597,7 @@ void editable_update_track(struct editable *e, struct track_info *old, struct tr
 
 void editable_rand(struct editable *e)
 {
-	if (e->nr_tracks <=1)
+	if (e->nr_tracks <= 1)
 		return;
 	rand_list_rebuild(&e->head, &e->tree_root);
 
@@ -595,7 +607,4 @@ void editable_rand(struct editable *e)
 	}
 }
 
-int editable_empty(struct editable *e)
-{
-	return list_empty(&e->head);
-}
+int editable_empty(struct editable *e) { return list_empty(&e->head); }

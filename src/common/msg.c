@@ -1,6 +1,6 @@
 #include "common/msg.h"
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 static void default_handler(const char *format, ...)
 {
@@ -11,10 +11,7 @@ static void default_handler(const char *format, ...)
 	fprintf(stderr, "\n");
 }
 
-static int default_query_handler(const char *format, ...)
-{
-	return 0;
-}
+static int default_query_handler(const char *format, ...) { return 0; }
 
 msg_handler_t info_handler = default_handler;
 msg_handler_t error_handler = default_handler;

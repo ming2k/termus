@@ -1,6 +1,6 @@
 #include "ui/editable_view.h"
-#include "ui/window.h"
 #include "common/xmalloc.h"
+#include "ui/window.h"
 
 struct editable_view {
 	struct window *window;
@@ -57,20 +57,20 @@ static void editable_view_ops_set_contents(void *view_data, void *head)
 }
 
 static const struct editable_view_ops editable_view_ops = {
-	.mark_changed = editable_view_ops_mark_changed,
-	.needs_redraw = editable_view_ops_needs_redraw,
-	.clear_changed = editable_view_ops_clear_changed,
-	.goto_top = editable_view_ops_goto_top,
-	.down = editable_view_ops_down,
-	.row_vanishes = editable_view_ops_row_vanishes,
-	.get_sel = editable_view_ops_get_sel,
-	.set_sel = editable_view_ops_set_sel,
-	.set_nr_rows = editable_view_ops_set_nr_rows,
-	.set_contents = editable_view_ops_set_contents,
+    .mark_changed = editable_view_ops_mark_changed,
+    .needs_redraw = editable_view_ops_needs_redraw,
+    .clear_changed = editable_view_ops_clear_changed,
+    .goto_top = editable_view_ops_goto_top,
+    .down = editable_view_ops_down,
+    .row_vanishes = editable_view_ops_row_vanishes,
+    .get_sel = editable_view_ops_get_sel,
+    .set_sel = editable_view_ops_set_sel,
+    .set_nr_rows = editable_view_ops_set_nr_rows,
+    .set_contents = editable_view_ops_set_contents,
 };
 
 struct editable_view *editable_view_new(int (*get_prev)(struct iter *),
-		int (*get_next)(struct iter *))
+					int (*get_next)(struct iter *))
 {
 	struct editable_view *view = xnew(struct editable_view, 1);
 

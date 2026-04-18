@@ -1,15 +1,15 @@
 #include "ui/search_mode.h"
 #include "app/cmdline.h"
-#include "core/history.h"
-#include "ui/ui_curses.h"
-#include "library/search.h"
+#include "app/options_ui_state.h"
+#include "common/misc.h"
 #include "common/xmalloc.h"
 #include "common/xstrjoin.h"
-#include "common/misc.h"
+#include "core/history.h"
 #include "library/lib.h"
-#include "app/options_ui_state.h"
+#include "library/search.h"
 #include "ui/command_mode.h"
 #include "ui/keys.h"
+#include "ui/ui_curses.h"
 #include "ui/window.h"
 
 #include <ctype.h>
@@ -86,7 +86,7 @@ static void backspace(void)
 	}
 }
 
-static void delete(void)
+static void delete (void)
 {
 	/* save old value */
 	int restricted = search_restricted;
@@ -108,7 +108,8 @@ void search_text(const char *text, int restricted, int beginning)
 		if (search_str) {
 			/* use old search string */
 			search_restricted = restricted;
-			if (!search_next(searchable, search_str, search_direction))
+			if (!search_next(searchable, search_str,
+					 search_direction))
 				search_not_found();
 		}
 	} else {
@@ -119,7 +120,8 @@ void search_text(const char *text, int restricted, int beginning)
 
 		/* search not yet done if up or down arrow was pressed */
 		search_restricted = restricted;
-		if (!search(searchable, search_str, search_direction, beginning))
+		if (!search(searchable, search_str, search_direction,
+			    beginning))
 			search_not_found();
 	}
 }
@@ -137,7 +139,7 @@ void search_mode_ch(uchar ch)
 		cmdline_move_left();
 		break;
 	case 0x04: // ^D
-		delete();
+		delete ();
 		break;
 	case 0x05: // ^E
 		cmdline_move_end();
@@ -185,7 +187,8 @@ void search_mode_ch(uchar ch)
 			return;
 		} else {
 			/* start from beginning if this is first char */
-			int beginning = options_get_search_resets_position() && search_line_empty();
+			int beginning = options_get_search_resets_position() &&
+					search_line_empty();
 
 			/* save old value
 			 *
@@ -233,7 +236,7 @@ void search_mode_key(int key)
 
 	switch (key) {
 	case KEY_DC:
-		delete();
+		delete ();
 		break;
 	case KEY_BACKSPACE:
 		backspace();
@@ -254,18 +257,21 @@ void search_mode_key(int key)
 		parse_line(&text, &restricted);
 		if (history_search_text == NULL)
 			history_search_text = xstrdup(text);
-		text = history_search_forward(&search_history, history_search_text);
+		text = history_search_forward(&search_history,
+					      history_search_text);
 		if (text)
 			update_search_line(text, restricted);
 		return;
 	case KEY_DOWN:
 		if (history_search_text) {
 			parse_line(&text, &restricted);
-			text = history_search_backward(&search_history, history_search_text);
+			text = history_search_backward(&search_history,
+						       history_search_text);
 			if (text) {
 				update_search_line(text, restricted);
 			} else {
-				update_search_line(history_search_text, restricted);
+				update_search_line(history_search_text,
+						   restricted);
 			}
 		}
 		return;
@@ -277,7 +283,8 @@ void search_mode_key(int key)
 
 void search_mode_mouse(MEVENT *event)
 {
-	if ((event->bstate & BUTTON1_PRESSED) || (event->bstate & BUTTON3_PRESSED)) {
+	if ((event->bstate & BUTTON1_PRESSED) ||
+	    (event->bstate & BUTTON3_PRESSED)) {
 		const char *text;
 		int restricted;
 		if (event->y <= window_get_nr_rows(current_win()) + 2) {

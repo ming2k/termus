@@ -1,18 +1,19 @@
 #include "library/ape.h"
 #include "common/file.h"
-#include "common/xmalloc.h"
 #include "common/utils.h"
+#include "common/xmalloc.h"
 
 #include <errno.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <strings.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 /* http://www.personal.uni-jena.de/~pfk/mpp/sv8/apetag.html */
 
 #define PREAMBLE_SIZE (8)
-static const char preamble[PREAMBLE_SIZE] = { 'A', 'P', 'E', 'T', 'A', 'G', 'E', 'X' };
+static const char preamble[PREAMBLE_SIZE] = {'A', 'P', 'E', 'T',
+					     'A', 'G', 'E', 'X'};
 
 /* NOTE: not sizeof(struct ape_header)! */
 #define HEADER_SIZE (32)
@@ -125,8 +126,10 @@ static int ape_parse_one(const char *buf, int size, char **keyp, char **valp)
 		char *key, *val;
 		int64_t max_key_len, key_len;
 
-		val_len = read_le32(buf + pos); pos += 4;
-		flags = read_le32(buf + pos); pos += 4;
+		val_len = read_le32(buf + pos);
+		pos += 4;
+		flags = read_le32(buf + pos);
+		pos += 4;
 
 		max_key_len = size - pos - (int64_t)val_len - 1;
 		if (max_key_len < 0) {
@@ -134,7 +137,8 @@ static int ape_parse_one(const char *buf, int size, char **keyp, char **valp)
 			break;
 		}
 
-		for (key_len = 0; key_len < max_key_len && buf[pos + key_len]; key_len++)
+		for (key_len = 0; key_len < max_key_len && buf[pos + key_len];
+		     key_len++)
 			; /* nothing */
 		if (buf[pos + key_len]) {
 			/* corrupt */
@@ -154,8 +158,10 @@ static int ape_parse_one(const char *buf, int size, char **keyp, char **valp)
 		val = xstrndup(buf + pos, val_len);
 		pos += val_len;
 
-		/* could be moved to comment.c but I don't think anyone else would use it */
-		if (!strcasecmp(key, "record date") || !strcasecmp(key, "year")) {
+		/* could be moved to comment.c but I don't think anyone else
+		 * would use it */
+		if (!strcasecmp(key, "record date") ||
+		    !strcasecmp(key, "year")) {
 			free(key);
 			key = xstrdup("date");
 		}
@@ -172,7 +178,8 @@ static int ape_parse_one(const char *buf, int size, char **keyp, char **valp)
 			 *
 			 * convert to year, pl.c supports only years anyways
 			 *
-			 * FIXME: which one is the most common tag (year or record date)?
+			 * FIXME: which one is the most common tag (year or
+			 * record date)?
 			 */
 			if (strlen(val) > 4)
 				val[4] = 0;

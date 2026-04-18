@@ -1,23 +1,23 @@
 #include "library/pl.h"
-#include "common/prog.h"
-#include "library/editable.h"
 #include "app/options_library_state.h"
 #include "app/options_playback_state.h"
-#include "common/msg.h"
-#include "common/xmalloc.h"
-#include "library/load_dir.h"
 #include "common/list.h"
-#include "ui/job.h"
-#include "common/misc.h"
-#include "ui/window.h"
-#include "common/xstrjoin.h"
-#include "common/worker.h"
-#include "common/uchar.h"
 #include "common/mergesort.h"
+#include "common/misc.h"
+#include "common/msg.h"
+#include "common/prog.h"
+#include "common/uchar.h"
+#include "common/worker.h"
+#include "common/xmalloc.h"
+#include "common/xstrjoin.h"
+#include "library/editable.h"
+#include "library/load_dir.h"
+#include "ui/job.h"
+#include "ui/window.h"
 
-#include <unistd.h>
-#include <stdio.h>
 #include <signal.h>
+#include <stdio.h>
+#include <unistd.h>
 
 struct playlist {
 	struct list_head node;
@@ -35,7 +35,7 @@ char *pl_visible_resume_name;
 unsigned long pl_visible_resume_row;
 
 static struct playlist *pl_visible; /* never NULL */
-static struct playlist *pl_marked; /* never NULL */
+static struct playlist *pl_marked;  /* never NULL */
 struct window *pl_list_win;
 
 /* pl_playing_track shares its track_info reference with the playlist it's in.
@@ -59,10 +59,7 @@ static char *pl_name_to_pl_file(const char *name)
 
 static void pl_to_iter(struct playlist *pl, struct iter *iter)
 {
-	*iter = (struct iter) {
-		.data0 = &pl_head,
-		.data1 = &pl->node
-	};
+	*iter = (struct iter){.data0 = &pl_head, .data1 = &pl->node};
 }
 
 static struct playlist *pl_from_list(const struct list_head *list)
@@ -75,9 +72,10 @@ static struct playlist *pl_from_editable(const struct editable *editable)
 	return container_of(editable, struct playlist, editable);
 }
 
-static int pl_search_get_generic(struct iter *iter,
-		struct list_head *(*list_step)(struct list_head *list),
-		int (*iter_step)(struct iter *iter))
+static int
+pl_search_get_generic(struct iter *iter,
+		      struct list_head *(*list_step)(struct list_head *list),
+		      int (*iter_step)(struct iter *iter))
 {
 	struct list_head *pl_node = iter->data2;
 	struct playlist *pl;
@@ -109,7 +107,8 @@ static int pl_search_get_next(struct iter *iter)
 	return pl_search_get_generic(iter, list_next, simple_track_get_next);
 }
 
-static int pl_search_get_current(void *data, struct iter *iter, enum search_direction dir)
+static int pl_search_get_current(void *data, struct iter *iter,
+				 enum search_direction dir)
 {
 	editable_shared_get_sel(&pl_editable_shared, iter);
 	iter->data2 = &pl_visible->node;
@@ -147,7 +146,8 @@ static int pl_search_matches(void *data, struct iter *iter, const char *text)
 		if (iter->data1) {
 			struct iter track_iter = *iter;
 			track_iter.data2 = NULL;
-			editable_shared_set_sel(&pl_editable_shared, &track_iter);
+			editable_shared_set_sel(&pl_editable_shared,
+						&track_iter);
 		}
 
 		pl_cursor_in_track_window = !!iter->data1;
@@ -157,10 +157,10 @@ static int pl_search_matches(void *data, struct iter *iter, const char *text)
 }
 
 static const struct searchable_ops pl_searchable_ops = {
-	.get_prev = pl_search_get_prev,
-	.get_next = pl_search_get_next,
-	.get_current = pl_search_get_current,
-	.matches = pl_search_matches,
+    .get_prev = pl_search_get_prev,
+    .get_next = pl_search_get_next,
+    .get_current = pl_search_get_current,
+    .matches = pl_search_matches,
 };
 
 static void pl_free_track(struct editable *e, struct list_head *item)
@@ -204,8 +204,8 @@ static void pl_add_track(struct playlist *pl, struct track_info *ti)
 
 static void pl_loaded(struct playlist *pl)
 {
-	if (pl_resume_name && strcmp(pl->name, pl_resume_name) == 0
-			&& pl_resume_row < pl->editable.nr_tracks) {
+	if (pl_resume_name && strcmp(pl->name, pl_resume_name) == 0 &&
+	    pl_resume_row < pl->editable.nr_tracks) {
 		struct list_head *li = pl->editable.head.next;
 		for (int i = 0; i < pl_resume_row; i++)
 			li = li->next;
@@ -217,7 +217,8 @@ static void pl_loaded(struct playlist *pl)
 		pl_resume_name = NULL;
 	}
 
-	if (pl_visible_resume_name && strcmp(pl->name, pl_visible_resume_name) == 0) {
+	if (pl_visible_resume_name &&
+	    strcmp(pl->name, pl_visible_resume_name) == 0) {
 		pl_set_visible_by_name(pl->name);
 		if (pl_visible_resume_row < pl->editable.nr_tracks) {
 			pl_visible_set_sel_row(pl_visible_resume_row);
@@ -258,10 +259,7 @@ static int pl_list_compare(const struct list_head *l, const struct list_head *r)
 	return strcmp(pl->name, pr->name);
 }
 
-static void pl_sort_all(void)
-{
-	list_mergesort(&pl_head, pl_list_compare);
-}
+static void pl_sort_all(void) { list_mergesort(&pl_head, pl_list_compare); }
 
 static void pl_load_one(const char *file)
 {
@@ -278,14 +276,15 @@ static void pl_load_all(void)
 {
 	struct directory dir;
 	if (dir_open(&dir, termus_playlist_dir))
-		die_errno("error: cannot open playlist directory %s", termus_playlist_dir);
+		die_errno("error: cannot open playlist directory %s",
+			  termus_playlist_dir);
 	const char *file;
 	while ((file = dir_read(&dir))) {
 		if (strcmp(file, ".") == 0 || strcmp(file, "..") == 0)
 			continue;
 		if (!S_ISREG(dir.st.st_mode)) {
 			error_msg("error: %s in %s is not a regular file", file,
-					termus_playlist_dir);
+				  termus_playlist_dir);
 			continue;
 		}
 		pl_load_one(file);
@@ -330,14 +329,16 @@ static struct simple_track *pl_get_first_track(struct playlist *pl)
 	/* pl is not empty */
 
 	if (options_get_shuffle()) {
-		struct shuffle_info *si = shuffle_list_get_next(&pl->shuffle_root, NULL, NULL);
+		struct shuffle_info *si =
+		    shuffle_list_get_next(&pl->shuffle_root, NULL, NULL);
 		return shuffle_info_to_simple_track(si);
 	} else {
 		return to_simple_track(pl->editable.head.next);
 	}
 }
 
-static struct track_info *pl_play_track(struct playlist *pl, struct simple_track *t, bool force_follow)
+static struct track_info *
+pl_play_track(struct playlist *pl, struct simple_track *t, bool force_follow)
 {
 	/* t is a track in pl */
 
@@ -378,13 +379,14 @@ static struct track_info *pl_play_first_in_pl_playing(void)
 	return pl_play_track(pl_playing, pl_get_first_track(pl_playing), false);
 }
 
-static struct simple_track *pl_get_next(struct playlist *pl, struct simple_track *cur)
+static struct simple_track *pl_get_next(struct playlist *pl,
+					struct simple_track *cur)
 {
 	return simple_list_get_next(&pl->editable.head, cur, NULL, true);
 }
 
 static struct simple_track *pl_get_next_shuffled(struct playlist *pl,
-		struct simple_track *cur)
+						 struct simple_track *cur)
 {
 	struct shuffle_info *si = &cur->shuffle_info;
 	si = shuffle_list_get_next(&pl->shuffle_root, si, NULL);
@@ -392,13 +394,13 @@ static struct simple_track *pl_get_next_shuffled(struct playlist *pl,
 }
 
 static struct simple_track *pl_get_prev(struct playlist *pl,
-		struct simple_track *cur)
+					struct simple_track *cur)
 {
 	return simple_list_get_prev(&pl->editable.head, cur, NULL, true);
 }
 
 static struct simple_track *pl_get_prev_shuffled(struct playlist *pl,
-		struct simple_track *cur)
+						 struct simple_track *cur)
 {
 	struct shuffle_info *si = &cur->shuffle_info;
 	si = shuffle_list_get_prev(&pl->shuffle_root, si, NULL);
@@ -411,7 +413,7 @@ static int pl_match_add_job(uint32_t type, void *job_data, void *opaque)
 	if (type != pat)
 		return 0;
 
-	struct add_data *add_data= job_data;
+	struct add_data *add_data = job_data;
 	return add_data->opaque == opaque;
 }
 
@@ -436,8 +438,7 @@ static void pl_save_one(struct playlist *pl)
 static void pl_save_all(void)
 {
 	struct playlist *pl;
-	list_for_each_entry(pl, &pl_head, node)
-		pl_save_one(pl);
+	list_for_each_entry(pl, &pl_head, node) pl_save_one(pl);
 }
 
 static void pl_delete(struct playlist *pl)
@@ -484,7 +485,8 @@ static void pl_delete_selected_pl(void)
 void pl_delete_by_name(char *name)
 {
 	struct playlist *pl;
-	list_for_each_entry(pl, &pl_head, node) {
+	list_for_each_entry(pl, &pl_head, node)
+	{
 		if (strcmp(pl->name, name) == 0) {
 			pl_delete(pl);
 			return;
@@ -497,7 +499,8 @@ void pl_delete_all(void)
 {
 	struct playlist *pl;
 	struct playlist *temp;
-	list_for_each_entry_safe(pl, temp, &pl_head, node) {
+	list_for_each_entry_safe(pl, temp, &pl_head, node)
+	{
 		if (list_len(&pl_head) == 1)
 			break;
 		pl_delete(pl);
@@ -512,12 +515,12 @@ static void pl_mark_selected_pl(void)
 }
 
 typedef struct simple_track *(*pl_shuffled_move)(struct playlist *pl,
-		struct simple_track *cur);
+						 struct simple_track *cur);
 typedef struct simple_track *(*pl_normal_move)(struct playlist *pl,
-		struct simple_track *cur);
+					       struct simple_track *cur);
 
 static struct track_info *pl_goto_generic(pl_shuffled_move shuffled,
-		pl_normal_move normal)
+					  pl_normal_move normal)
 {
 	if (!pl_playing_track)
 		return pl_play_first_in_pl_playing();
@@ -547,7 +550,8 @@ static void pl_clear_visible_pl(void)
 static int pl_name_exists(const char *name)
 {
 	struct playlist *pl;
-	list_for_each_entry(pl, &pl_head, node) {
+	list_for_each_entry(pl, &pl_head, node)
+	{
 		if (strcmp(pl->name, name) == 0)
 			return 1;
 	}
@@ -617,12 +621,13 @@ void pl_init(void)
 	/* pl_visible set by window_set_contents */
 	pl_marked = pl_visible;
 
-	struct iter iter = { 0 };
+	struct iter iter = {0};
 	pl_searchable = searchable_new(NULL, &iter, &pl_searchable_ops);
 }
 
 void pl_track_attach_view(void *view_data,
-		const struct editable_view_ops *view_ops, struct window *win)
+			  const struct editable_view_ops *view_ops,
+			  struct window *win)
 {
 	pl_track_window = win;
 	editable_shared_set_view(&pl_editable_shared, view_data, view_ops);
@@ -634,15 +639,9 @@ void pl_init_options(void)
 		pl_cursor_in_track_window = 1;
 }
 
-void pl_exit(void)
-{
-	pl_save_all();
-}
+void pl_exit(void) { pl_save_all(); }
 
-void pl_save(void)
-{
-	pl_save_all();
-}
+void pl_save(void) { pl_save_all(); }
 
 void pl_import(const char *path)
 {
@@ -672,20 +671,15 @@ void pl_import(const char *path)
 void pl_export_selected_pl(const char *path)
 {
 	char *tmp = expand_filename(path);
-	if (access(tmp, F_OK) != 0 || yes_no_query("File exists. Overwrite? [y/N]") == QUERY_ANSWER_YES)
+	if (access(tmp, F_OK) != 0 ||
+	    yes_no_query("File exists. Overwrite? [y/N]") == QUERY_ANSWER_YES)
 		termus_save(pl_save_cb, tmp, pl_visible);
 	free(tmp);
 }
 
-struct searchable *pl_get_searchable(void)
-{
-	return pl_searchable;
-}
+struct searchable *pl_get_searchable(void) { return pl_searchable; }
 
-struct window *pl_track_win(void)
-{
-	return pl_track_window;
-}
+struct window *pl_track_win(void) { return pl_track_window; }
 
 struct track_info *pl_goto_next(void)
 {
@@ -713,8 +707,10 @@ struct track_info *pl_play_selected_row(void)
 
 	if (!pl_cursor_in_track_window) {
 		if (options_get_shuffle() && !pl_empty(pl_visible)) {
-			struct shuffle_info *si = shuffle_list_get_next(&pl_visible->shuffle_root, NULL, NULL);
-			struct simple_track *track = shuffle_info_to_simple_track(si);
+			struct shuffle_info *si = shuffle_list_get_next(
+			    &pl_visible->shuffle_root, NULL, NULL);
+			struct simple_track *track =
+			    shuffle_info_to_simple_track(si);
 			rv = pl_play_track(pl_visible, track, true);
 		}
 	}
@@ -722,7 +718,8 @@ struct track_info *pl_play_selected_row(void)
 	if (!rv)
 		rv = pl_play_selected_track();
 
-	if (options_get_shuffle() && rv && (pl_playing == prev_pl) && prev_track) {
+	if (options_get_shuffle() && rv && (pl_playing == prev_pl) &&
+	    prev_track) {
 		struct shuffle_info *prev_si = &prev_track->shuffle_info;
 		struct shuffle_info *cur_si = &pl_playing_track->shuffle_info;
 		shuffle_insert(&pl_playing->shuffle_root, prev_si, cur_si);
@@ -759,7 +756,8 @@ void pl_reshuffle(void)
 	if (pl_playing) {
 		shuffle_list_reshuffle(&pl_playing->shuffle_root);
 		if (pl_playing_track)
-			shuffle_insert(&pl_playing->shuffle_root, NULL, &pl_playing_track->shuffle_info);
+			shuffle_insert(&pl_playing->shuffle_root, NULL,
+				       &pl_playing_track->shuffle_info);
 	}
 }
 
@@ -777,11 +775,10 @@ void pl_set_sort_str(const char *buf)
 
 	editable_shared_set_sort_keys(&pl_editable_shared, keys);
 	sort_keys_to_str(keys, pl_editable_shared.sort_str,
-			sizeof(pl_editable_shared.sort_str));
+			 sizeof(pl_editable_shared.sort_str));
 
 	struct playlist *pl;
-	list_for_each_entry(pl, &pl_head, node)
-		editable_sort(&pl->editable);
+	list_for_each_entry(pl, &pl_head, node) editable_sort(&pl->editable);
 }
 
 void pl_rename_selected_pl(const char *name)
@@ -820,7 +817,8 @@ void pl_mark_for_redraw(void)
 
 int pl_needs_redraw(void)
 {
-	return pl_list_win->changed || editable_shared_needs_redraw(&pl_editable_shared);
+	return pl_list_win->changed ||
+	       editable_shared_needs_redraw(&pl_editable_shared);
 }
 
 struct window *pl_cursor_win(void)
@@ -834,46 +832,44 @@ struct window *pl_cursor_win(void)
 int _pl_for_each_sel(track_info_cb cb, void *data, int reverse)
 {
 	if (pl_cursor_in_track_window)
-		return _editable_for_each_sel(&pl_visible->editable, cb, data, reverse);
+		return _editable_for_each_sel(&pl_visible->editable, cb, data,
+					      reverse);
 	else
-		return editable_for_each(&pl_visible->editable, cb, data, reverse);
+		return editable_for_each(&pl_visible->editable, cb, data,
+					 reverse);
 }
 
 int pl_for_each_sel(track_info_cb cb, void *data, int reverse, int advance)
 {
 	if (pl_cursor_in_track_window)
-		return editable_for_each_sel(&pl_visible->editable, cb, data, reverse, advance);
+		return editable_for_each_sel(&pl_visible->editable, cb, data,
+					     reverse, advance);
 	else
-		return editable_for_each(&pl_visible->editable, cb, data, reverse);
+		return editable_for_each(&pl_visible->editable, cb, data,
+					 reverse);
 }
 
-#define pl_tw_only(cmd) if (!pl_cursor_in_track_window) { \
-	info_msg(":%s only works in the track window", cmd); \
-} else
+#define pl_tw_only(cmd)                                                        \
+	if (!pl_cursor_in_track_window) {                                      \
+		info_msg(":%s only works in the track window", cmd);           \
+	} else
 
 void pl_invert_marks(void)
 {
-	pl_tw_only("invert")
-		editable_invert_marks(&pl_visible->editable);
+	pl_tw_only("invert") editable_invert_marks(&pl_visible->editable);
 }
 
 void pl_mark(char *arg)
 {
-	pl_tw_only("mark")
-		editable_mark(&pl_visible->editable, arg);
+	pl_tw_only("mark") editable_mark(&pl_visible->editable, arg);
 }
 
 void pl_unmark(void)
 {
-	pl_tw_only("unmark")
-		editable_unmark(&pl_visible->editable);
+	pl_tw_only("unmark") editable_unmark(&pl_visible->editable);
 }
 
-void pl_rand(void)
-{
-	pl_tw_only("rand")
-		editable_rand(&pl_visible->editable);
-}
+void pl_rand(void) { pl_tw_only("rand") editable_rand(&pl_visible->editable); }
 
 void pl_win_mv_after(void)
 {
@@ -931,13 +927,11 @@ void pl_set_nr_rows(int h)
 
 bool pl_show_panel(void)
 {
-	return !options_get_auto_hide_playlists_panel() || !pl_cursor_in_track_window;
+	return !options_get_auto_hide_playlists_panel() ||
+	       !pl_cursor_in_track_window;
 }
 
-char *pl_visible_get_name(void)
-{
-	return pl_visible->name;
-}
+char *pl_visible_get_name(void) { return pl_visible->name; }
 
 unsigned int pl_visible_total_time(void)
 {
@@ -963,7 +957,7 @@ void pl_list_iter_to_info(struct iter *iter, struct pl_list_info *info)
 }
 
 void pl_draw(void (*list)(struct window *win),
-		void (*tracks)(struct window *win), int full)
+	     void (*tracks)(struct window *win), int full)
 {
 	if (full || pl_list_win->changed)
 		list(pl_list_win);
@@ -973,22 +967,16 @@ void pl_draw(void (*list)(struct window *win),
 	editable_shared_clear_changed(&pl_editable_shared);
 }
 
-struct simple_track *pl_get_playing_track(void)
-{
-	return pl_playing_track;
-}
+struct simple_track *pl_get_playing_track(void) { return pl_playing_track; }
 
 void pl_update_track(struct track_info *old, struct track_info *new)
 {
 	struct playlist *pl;
 	list_for_each_entry(pl, &pl_head, node)
-		editable_update_track(&pl->editable, old, new);
+	    editable_update_track(&pl->editable, old, new);
 }
 
-int pl_get_cursor_in_track_window(void)
-{
-	return pl_cursor_in_track_window;
-}
+int pl_get_cursor_in_track_window(void) { return pl_cursor_in_track_window; }
 
 void pl_create(const char *name)
 {
@@ -1000,20 +988,15 @@ void pl_create(const char *name)
 	pl_list_win->changed = 1;
 }
 
-int pl_visible_is_marked(void)
-{
-	return pl_visible == pl_marked;
-}
+int pl_visible_is_marked(void) { return pl_visible == pl_marked; }
 
-const char *pl_marked_pl_name(void)
-{
-	return pl_marked->name;
-}
+const char *pl_marked_pl_name(void) { return pl_marked->name; }
 
 void pl_set_marked_pl_by_name(const char *name)
 {
 	struct playlist *pl;
-	list_for_each_entry(pl, &pl_head, node) {
+	list_for_each_entry(pl, &pl_head, node)
+	{
 		if (strcmp(pl->name, name) == 0) {
 			pl_marked = pl;
 			return;
@@ -1024,7 +1007,8 @@ void pl_set_marked_pl_by_name(const char *name)
 void pl_set_visible_by_name(const char *name)
 {
 	struct playlist *pl;
-	list_for_each_entry(pl, &pl_head, node) {
+	list_for_each_entry(pl, &pl_head, node)
+	{
 		if (strcmp(pl->name, name) == 0) {
 			struct iter iter;
 			pl_to_iter(pl, &iter);
@@ -1043,7 +1027,8 @@ int pl_visible_get_sel_row(void)
 	if (!editable_shared_get_sel(&pl_editable_shared, &sel))
 		return -1;
 
-	list_for_each(li, &pl_visible->editable.head) {
+	list_for_each(li, &pl_visible->editable.head)
+	{
 		if (li == sel.data1)
 			return row;
 		row++;
@@ -1085,7 +1070,8 @@ int pl_playing_pl_row(void)
 	if (!pl_playing_track)
 		return n;
 
-	list_for_each(li, &pl_playing->editable.head) {
+	list_for_each(li, &pl_playing->editable.head)
+	{
 		if (li == &pl_playing_track->node)
 			break;
 		n++;

@@ -6,16 +6,16 @@
 #include "config.h"
 #endif
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
+#include <dirent.h>
 #include <errno.h>
+#include <pwd.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <dirent.h>
-#include <stdarg.h>
-#include <pwd.h>
+#include <unistd.h>
 
 const char *termus_config_dir = NULL;
 const char *termus_state_dir = NULL;
@@ -273,15 +273,18 @@ int misc_init(void)
 
 	termus_playlist_dir = get_non_empty_env("TERMUS_PLAYLIST_DIR");
 	if (!termus_playlist_dir)
-		termus_playlist_dir = xstrjoin(termus_user_data_dir, "/playlists");
+		termus_playlist_dir =
+		    xstrjoin(termus_user_data_dir, "/playlists");
 	make_dir_recursive(termus_playlist_dir);
 
 	termus_socket_path = get_non_empty_env("TERMUS_SOCKET");
 	if (termus_socket_path == NULL) {
 		if (xdg_runtime_dir == NULL) {
-			termus_socket_path = xstrjoin(termus_config_dir, "/socket");
+			termus_socket_path =
+			    xstrjoin(termus_config_dir, "/socket");
 		} else {
-			termus_socket_path = xstrjoin(xdg_runtime_dir, "/termus-socket");
+			termus_socket_path =
+			    xstrjoin(xdg_runtime_dir, "/termus-socket");
 		}
 	}
 
@@ -382,7 +385,7 @@ void shuffle_array(void *array, size_t n, size_t size)
 	char tmp[size];
 	char *arr = array;
 	for (ssize_t i = 0; i < (ssize_t)n - 1; ++i) {
-		size_t rnd = (size_t) rand();
+		size_t rnd = (size_t)rand();
 		size_t j = i + rnd / (RAND_MAX / (n - i) + 1);
 		memcpy(tmp, arr + j * size, size);
 		memcpy(arr + j * size, arr + i * size, size);

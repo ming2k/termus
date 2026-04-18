@@ -1,10 +1,11 @@
 #include "common/read_wrapper.h"
-#include "core/ip.h"
 #include "common/file.h"
+#include "core/ip.h"
 
 #include <unistd.h>
 
-ssize_t read_wrapper(struct input_plugin_data *ip_data, void *buffer, size_t count)
+ssize_t read_wrapper(struct input_plugin_data *ip_data, void *buffer,
+		     size_t count)
 {
 	int rc;
 
