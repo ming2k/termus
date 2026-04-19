@@ -29,6 +29,7 @@
 #include "ui/job.h"
 #include "ui/keys.h"
 #include "ui/options_display.h"
+#include "ui/popup.h"
 #include "ui/search_mode.h"
 #include "ui/tabexp.h"
 #include "ui/tabexp_file.h"
@@ -332,9 +333,8 @@ struct window *current_win(void)
 		return pl_cursor_win();
 	case QUEUE_VIEW:
 		return play_queue_win();
-	case FILTERS_VIEW:
 	default:
-		return filters_get_window();
+		return lib_sorted_win();
 	}
 }
 
@@ -1252,18 +1252,38 @@ static void cmd_prev_view(char *arg)
 
 static void cmd_left_view(char *arg)
 {
-	if (cur_view == LIBRARY_VIEW)
-		set_view(FILTERS_VIEW);
-	else
+	if (cur_view > 0)
 		set_view(cur_view - 1);
 }
 
 static void cmd_right_view(char *arg)
 {
-	if (cur_view == FILTERS_VIEW)
-		set_view(LIBRARY_VIEW);
-	else
+	if (cur_view < NR_VIEWS - 1)
 		set_view(cur_view + 1);
+}
+
+static void cmd_popup_open(char *arg)
+{
+	enum popup_type type = POPUP_NONE;
+
+	if (!arg)
+		return;
+	if (strcmp(arg, "filters") == 0)
+		type = POPUP_FILTERS;
+	else if (strcmp(arg, "track-info") == 0)
+		type = POPUP_TRACK_INFO;
+	else {
+		error_msg("unknown popup: %s", arg);
+		return;
+	}
+	popup_open(type);
+	update_full();
+}
+
+static void cmd_popup_close(char *arg)
+{
+	popup_cancel();
+	update_full();
 }
 
 static void cmd_pl_create(char *arg) { pl_create(arg); }
@@ -1314,7 +1334,7 @@ static void cmd_view(char *arg)
 {
 	int view;
 
-	if (parse_enum(arg, 1, NR_VIEWS, view_names, &view) &&
+	if (parse_enum_silent(arg, 1, NR_VIEWS, view_names, &view) &&
 	    (view - 1) != cur_view) {
 		set_view(view - 1);
 	}
@@ -1513,6 +1533,12 @@ static void cmd_win_activate(char *arg)
 		}
 	}
 
+	if (popup_is_open() && popup_get_type() == POPUP_FILTERS) {
+		popup_close();
+		update_full();
+		return;
+	}
+
 	switch (cur_view) {
 	case LIBRARY_VIEW:
 		info = sorted_activate_selected();
@@ -1525,16 +1551,6 @@ static void cmd_win_activate(char *arg)
 		info = pl_play_selected_row();
 		break;
 	case QUEUE_VIEW:
-		break;
-	case FILTERS_VIEW:
-		if (!filters_activate()) {
-			char buf[512];
-
-			if (filters_get_edit_command(buf, sizeof(buf))) {
-				cmdline_set_text(buf);
-				enter_command_mode();
-			}
-		}
 		break;
 	}
 
@@ -1593,9 +1609,10 @@ static void cmd_win_remove(char *arg)
 	case QUEUE_VIEW:
 		editable_remove_sel(&pq_editable);
 		break;
-	case FILTERS_VIEW:
-		filters_delete_filter();
-		break;
+	}
+	if (popup_is_open() && popup_get_type() == POPUP_FILTERS) {
+		popup_cancel();
+		update_full();
 	}
 }
 
@@ -1623,9 +1640,10 @@ static void cmd_win_toggle(char *arg)
 	case QUEUE_VIEW:
 		editable_toggle_mark(&pq_editable);
 		break;
-	case FILTERS_VIEW:
-		filters_toggle_filter();
-		break;
+	}
+	if (popup_is_open() && popup_get_type() == POPUP_FILTERS) {
+		popup_cancel();
+		update_full();
 	}
 }
 
@@ -2493,6 +2511,8 @@ struct command commands[] = {
     {"pl-import", cmd_pl_import, 0, -1, NULL, 0, 0},
     {"pl-rename", cmd_pl_rename, 1, -1, NULL, 0, 0},
     {"pl-delete", cmd_pl_delete, 1, 1, NULL, 0, 0},
+    {"popup", cmd_popup_open, 1, 1, NULL, 0, 0},
+    {"popup-close", cmd_popup_close, 0, 0, NULL, 0, 0},
     {"push", cmd_push, 0, -1, expand_commands, 0, 0},
     {"pwd", cmd_pwd, 0, 0, NULL, 0, 0},
     {"raise-vte", cmd_raise_vte, 0, 0, NULL, 0, 0},

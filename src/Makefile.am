@@ -101,6 +101,7 @@ termus_SOURCES = \
 	ui/options_hooks.c ui/options_hooks.h \
 	ui/options.c \
 	ui/options_ui.c ui/options_ui.h \
+	ui/popup.c ui/popup.h \
 	ui/search_mode.c ui/search_mode.h \
 	ui/tabexp.c ui/tabexp.h \
 	ui/tabexp_file.c ui/tabexp_file.h \

@@ -23,8 +23,8 @@ int progress_bar = 1;
 int search_resets_position = 1;
 char *colorscheme = NULL;
 
-const char *const view_names[NR_VIEWS + 1] = {"library",  "playlist",
-					      "queue",    "filters", NULL};
+const char *const view_names[NR_VIEWS + 1] = {"library", "playlist",
+					      "queue",   NULL};
 
 const char *const progress_bar_names[NR_PROGRESS_BAR_MODES + 1] = {
     "disabled", "line", "shuttle", "color", "color-shuttle", NULL};

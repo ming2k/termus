@@ -45,8 +45,7 @@ and can be controlled externally using *termusc*(1).
 
 @h1 VIEWS
 
-There are 4 views in termus. Press keys *1*, *2*, *3*, *4* to change active
-view.
+There are 3 views in termus. Press keys *1*, *2*, *3* to change active view.
 
 Library view (1)
 	Displays all tracks in the *library*. Tracks are automatically sorted by
@@ -60,8 +59,24 @@ Play Queue view (3)
 	(i.e. the playlist or library). Once the queue is empty, playback will
 	resume from the last position in the library.
 
-Filters view (4)
-	Lists user-defined filters.
+
+@h1 POPUPS
+
+Popups are floating modal overlays drawn on top of the current view. Press
+*ESC* to close or cancel any open popup.
+
+Filters popup (*F*)
+	Opens a modal input for the current library filter. The library list
+	updates while you type. Press *enter* to keep the new filter, or *ESC*
+	to cancel and restore the previous value. Leaving the input empty
+	clears the filter back to the full list.
+
+Track Info popup (*I*)
+	Displays metadata for the currently playing track. Two tabs are
+	available: *1:Metadata* (title, artist, album, genre, year, track,
+	duration, bitrate, codec) and *2:File* (path, codec, profile, sample
+	rate, bit depth, channels, file size, modified date). Switch tabs with
+	*Left*/*Right*, *Tab*, or *1*/*2*. Close with *Esc*, *q*, or *Enter*.
 
 @h1 COMMAND LINE
 
@@ -100,9 +115,6 @@ for the previous one. Type *?* to search backwards.
 In the library, playlist and play queue views the query is matched against the
 artist, album and title tags. If the file doesn't have tags, words are compared
 to the filename excluding the path.
-
-Searching also works in the filters view.
-
 
 @h1 PLAYLIST EDITING
 
@@ -148,8 +160,7 @@ changes made to the track order.
 
 Press *D* or *delete* to remove the marked or selected tracks in the current
 view (library, playlist or play queue). The tracks will be removed immediately
-from the view without asking for confirmation. In the filters view, the same
-keys are used to remove a filter after asking for confirmation.
+from the view without asking for confirmation.
 
 
 @h1 STATUS LINE
@@ -213,7 +224,6 @@ M                       toggle play_library
 o                       toggle play_sorted
 r                       toggle repeat
 ^R                      toggle repeat_current
-t                       toggle show_remaining_time
 S                       toggle shuffle
 f                       toggle follow
 @endpre
@@ -222,7 +232,7 @@ f                       toggle follow
 @pre
 ^Q                      quit -i
 ^C                      echo Type :quit<enter> to exit termus.
-I                       echo {}
+I                       popup track-info
 
 !                       push shell<space>
 @endpre
@@ -232,7 +242,6 @@ I                       echo {}
 1                       view library
 2                       view playlist
 3                       view queue
-4                       view filters
 
 mouse_scroll_up_title   left-view
 mouse_scroll_down_title right-view
@@ -290,10 +299,9 @@ U                       win-update-cache
 ^n                      search-next
 ^p                      search-prev
 
-F                       push filter<space>
+F                       popup filters
 L                       push live-filter<space>
 @endpre
-
 
 @h1 LIBRARY VIEW SORTING
 
@@ -368,8 +376,7 @@ bind [-f] <context> <key> <command>
 	Valid contexts: common (i.e. all views), library, playlist,
 	queue, filters
 
-	There's one context for each view. Common is a special context on which
-	bound keys work in every view.
+	Common is a special context on which bound keys work in every view.
 
 	You can override specific keys in common context for a view. For example
 	*i* selects the current track in library/playlist views.
@@ -405,8 +412,8 @@ echo <arg>...
 	*{}* it is replaced with file name of the first selected track.
 
 factivate <user-defined-filter>...
-	Selects and activates the given user defined filters (displayed in the
-	filters view). Filter names are separated by spaces. This command is
+	Selects and activates the given user defined filters. Filter names are
+	separated by spaces. This command is
 	mostly useful when bound to a key to change active filters quickly. If
 	no arguments are provided, all filters are deactivated.
 
@@ -417,8 +424,7 @@ filter <filter-expression>
 	and *factivate* for that).
 
 fset <name>=<filter-expression>
-	Defines or replaces an existing filter and adds it to the filters view
-	(6).
+	Defines or replaces an existing named filter.
 
 help
 	Shows information about help files.
@@ -468,6 +474,20 @@ pl-import [filename]
 pl-rename <name>
 	Renames the selected playlist.
 
+popup <filters|track-info>
+	Opens a popup overlay on top of the current view.
+
+	@li filters (*F*)
+	Opens the filter input popup for the library.
+
+	@li track-info
+	Opens the track info popup showing metadata for the currently playing
+	track.
+
+popup-close
+	Closes the currently open popup. In the filter popup, this cancels the
+	edit and restores the previous filter value.
+
 player-next (*b*)
 	Skips to the next track.
 
@@ -499,13 +519,15 @@ prev-view
 	Goes to the previously used view.
 
 left-view [-n]
-	Goes to the to view to the left of current one.
+	Goes to the view to the left of the current one. Stops at the first
+	view (library).
 
 	@li -n
 	no cycle back to end when reaching the first view
 
 right-view [-n]
-	Goes to view to the right of current one.
+	Goes to the view to the right of the current one. Stops at the last
+	view (queue).
 
 	@li -n
 	no cycle back to start when reaching the last view
@@ -681,8 +703,7 @@ w
 	See *quit*. Intended for use while in command mode.
 
 win-activate (*enter*)
-	In library/playlist views, plays the selected track. In filters view,
-	activates the selected filters.
+	In library/playlist views, plays the selected track.
 
 win-add-l [-n] (*a*)
 	Adds the currently marked or selected track(s) from playlist/queue
@@ -764,7 +785,7 @@ win-page-up (*^B*, *page_up*)
 
 win-remove (*D*, *delete*)
 	Removes the selected entry. For tracks, no confirmation is required. For
-	playlists and filters, the user must confirm the action.
+	playlists, the user must confirm the action.
 
 win-scroll-down (*^E*)
 	Scrolls the current window one row downwards.
@@ -778,8 +799,7 @@ win-sel-cur (*i*)
 
 win-toggle (*space*)
 	Marks tracks in library, playlist and queue views, sets the
-	marked playlist in playlist view, or toggles selection of a filter in
-	filters view.
+	marked playlist in playlist view.
 
 win-top (*home*)
 	Goes to top of the current window.
@@ -1006,6 +1026,9 @@ format_clipped_text [`Plain String`]
 format_current [`Format String`]
 	Format string for the line displaying currently playing track.
 
+	Note: *now_playing_fields* is a higher-level shortcut for the default
+	compact title line.
+
 format_heading_album [`Format String`]
 	Format string for the track window heading line when an album is selected
 	in the tree.
@@ -1018,11 +1041,12 @@ format_heading_playlist [`Format String`]
 	Format string for the heading line in the playlist view (3).
 
 format_playlist [`Format String`]
-	Format string for the list views (2-4).
+	Format string for the library, playlist and queue lists.
 
 format_playlist_va [`Format String`]
-	Format string for the list views (2-4), if a track is assumed to be a
-	part of compilation (see `LIBRARY VIEW SORTING` for details).
+	Format string for the library, playlist and queue lists, if a track is
+	assumed to be a part of compilation (see `LIBRARY VIEW SORTING` for
+	details).
 
 	Note: If empty, *format_playlist* is used instead.
 
@@ -1033,6 +1057,8 @@ format_title [`Format String`]
 	Format string for terminal title.
 
 	Note: Not all terminals support changing window title.
+	Note: *now_playing_fields* is a higher-level shortcut for the default
+	compact title.
 
 format_trackwin [`Format String`]
 	Format string for the tree view's (1) track window.
@@ -1079,6 +1105,16 @@ ignore_duplicates (false)
 lib_add_filter [`Filter`]
 	Apply filter when adding files to the library. See *FILTERS*.
 
+library_columns (artist,title,duration)
+	Comma separated visible columns for the library, playlist and queue
+	lists. This convenience option updates *format_playlist* and
+	*format_playlist_va*.
+
+	Supported names: artist, albumartist, album, track, title, year,
+	duration, filename, genre.
+
+	When *duration* is present it stays aligned to the right edge.
+
 lib_sort (artist album discnumber tracknumber title filename) [`Sort Keys`]
 	Sort keys for the sorted library view (2).
 
@@ -1092,6 +1128,14 @@ mpris (true)
 	Enable MPRIS support. See *D-Bus Interface (MPRIS)*
 
 	Note: This flag has no effect if termus was compiled without MPRIS support.
+
+now_playing_fields (artist,title)
+	Comma separated fields for the compact currently playing line and
+	terminal title. This convenience option updates *format_current* and
+	*format_title*.
+
+	Supported names: artist, albumartist, album, track, title, year,
+	duration, filename, genre.
 
 output_plugin [roar, pipewire, alsa, arts, oss, sndio, sun, coreaudio, aaudio]
 	Name of output plugin.
@@ -1219,7 +1263,7 @@ speed (1.00) [0.1-4.0]
 	case termus keeps the previous speed and reports an error instead of
 	stopping playback.
 
-start_view (library) [library, playlist, queue, filters]
+start_view (library) [library, playlist, queue]
 	Specify the view that gets shown when termus starts.
 
 status_display_program () [command]
@@ -1587,7 +1631,7 @@ For short expressions: *~T* and *~s*
 @h2 Defining Filters
 
 Filters can be defined with the *fset* command. User defined filters appear in
-the filters view (6).
+the configuration and can be activated with *factivate*.
 
 Create a new filter which name is *ogg* and value *filename="\*.ogg"*
 	:fset ogg=filename="\*.ogg"
@@ -1606,16 +1650,13 @@ Activate user defined filters *ogg* and *missing-tags*
 Like above but negate value of *ogg* filter.
 	:factivate !ogg missing-tags
 
-Alternatively, you can filters by pressing *space* in the filters view, then
-activate them by pressing *enter*.
-
 @h2 Throw-away Filters
 
 The *live-filter* and *filter* commands are useful when you want to use a filter
 without saving it. It changes the visible contents of the library.
-*filter* unactivates all filters in the filters view, while *live-filter* is
-applied in addition to all currently activated filters. It persists even after
-leaving command mode.
+*filter* clears active named filters before applying the temporary filter,
+while *live-filter* is applied in addition to all currently activated filters.
+It persists even after leaving command mode.
 
 Filter all rock (anything with *rock* in genre tag) music from 80s-
 	:filter date>=1980&genre="\*rock\*"

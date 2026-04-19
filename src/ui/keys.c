@@ -2,6 +2,7 @@
 #include "common/utils.h"
 #include "common/xmalloc.h"
 #include "ui/command_mode.h"
+#include "ui/popup.h"
 #include "ui/ui_curses.h"
 
 #include "app/options_ui_state.h"
@@ -11,8 +12,7 @@
 #include "ui/window.h"
 
 const char *const key_context_names[NR_CTXS + 1] = {
-    "common", "filters",  "library",
-    "playlist", "queue",  NULL};
+    "common", "library", "playlist", "queue", NULL};
 
 struct binding *key_bindings[NR_CTXS] = {
     NULL,
@@ -20,7 +20,6 @@ struct binding *key_bindings[NR_CTXS] = {
 
 static const enum key_context view_to_context[] = {
     CTX_LIBRARY, CTX_PLAYLIST, CTX_QUEUE,
-    CTX_FILTERS,
 };
 static_assert(N_ELEMENTS(view_to_context) == NR_VIEWS);
 
@@ -661,6 +660,11 @@ static const struct key *mevent_to_key(MEVENT *event, int type)
 
 void normal_mode_ch(uchar ch)
 {
+	if (popup_is_open()) {
+		popup_handle_ch(ch);
+		return;
+	}
+
 	enum key_context c;
 	const struct key *k;
 
@@ -695,6 +699,11 @@ void normal_mode_ch(uchar ch)
 
 void normal_mode_key(int key)
 {
+	if (popup_is_open()) {
+		popup_handle_key(key);
+		return;
+	}
+
 	enum key_context c = view_to_context[cur_view];
 	const struct key *k = keycode_to_key(key);
 
@@ -779,6 +788,11 @@ static const struct key *normal_mode_mouse_handle(MEVENT *event)
 
 void normal_mode_mouse(MEVENT *event)
 {
+	if (popup_is_open()) {
+		popup_handle_mouse(event);
+		return;
+	}
+
 	enum key_context c = view_to_context[cur_view];
 	const struct key *k = normal_mode_mouse_handle(event);
 

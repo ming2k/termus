@@ -39,6 +39,7 @@
 #include "ui/keys.h"
 #include "ui/options_hooks.h"
 #include "ui/options_ui.h"
+#include "ui/popup.h"
 #include "ui/search_mode.h"
 #include "ui/curses_compat.h"
 #include "ui/ui_utils.h"
@@ -130,59 +131,34 @@ static char *title_buf = NULL;
 
 static int in_bracketed_paste = 0;
 
-static int filters_view_get_sel(void *view_data, struct iter *iter)
+static int popup_filters_get_sel(void *view_data, struct iter *iter)
 {
 	return window_get_sel(view_data, iter);
 }
 
-static void filters_view_set_sel(void *view_data, struct iter *iter)
+static void popup_filters_set_sel(void *view_data, struct iter *iter)
 {
 	window_set_sel(view_data, iter);
 }
 
-static void filters_view_row_vanishes(void *view_data, struct iter *iter)
+static void popup_filters_row_vanishes(void *view_data, struct iter *iter)
 {
 	window_row_vanishes(view_data, iter);
 }
 
-static void filters_view_mark_changed(void *view_data)
+static void popup_filters_mark_changed(void *view_data)
 {
 	window_changed(view_data);
 }
 
-static const struct filters_view_ops ui_filters_view_ops = {
-    .get_sel = filters_view_get_sel,
-    .set_sel = filters_view_set_sel,
-    .row_vanishes = filters_view_row_vanishes,
-    .mark_changed = filters_view_mark_changed,
+static const struct filters_view_ops popup_filters_view_ops = {
+    .get_sel = popup_filters_get_sel,
+    .set_sel = popup_filters_set_sel,
+    .row_vanishes = popup_filters_row_vanishes,
+    .mark_changed = popup_filters_mark_changed,
 };
 
-enum {
-	CURSED_WIN,
-	CURSED_WIN_CUR,
-	CURSED_WIN_SEL,
-	CURSED_WIN_SEL_CUR,
-
-	CURSED_WIN_ACTIVE,
-	CURSED_WIN_ACTIVE_CUR,
-	CURSED_WIN_ACTIVE_SEL,
-	CURSED_WIN_ACTIVE_SEL_CUR,
-
-	CURSED_SEPARATOR,
-	CURSED_WIN_TITLE,
-	CURSED_COMMANDLINE,
-	CURSED_STATUSLINE,
-
-	CURSED_STATUSLINE_PROGRESS,
-	CURSED_TITLELINE,
-	CURSED_DIR,
-	CURSED_ERROR,
-
-	CURSED_INFO,
-	CURSED_TRACKWIN_ALBUM,
-
-	NR_CURSED
-};
+/* CURSED_* enum is defined in ui_curses.h */
 
 static unsigned char cursed_to_bg_idx[NR_CURSED] = {
     COLOR_WIN_BG,
@@ -259,8 +235,10 @@ static unsigned char cursed_to_attr_idx[NR_CURSED] = {
     COLOR_TRACKWIN_ALBUM_ATTR,
 };
 
-/* index is CURSED_*, value is fucking color pair */
+/* index is CURSED_*, value is color pair */
 static int pairs[NR_CURSED];
+
+chtype ui_color(int idx) { return (idx >= 0 && idx < NR_CURSED) ? pairs[idx] : 0; }
 
 enum {
 	TF_ALBUMARTIST,
@@ -648,10 +626,10 @@ const struct format_option *get_global_fopts(void)
 		fill_track_fopts_track_info(player_info.ti);
 
 	static const char *status_strs[] = {".", ">", "|"};
-	static const char *cont_strs[] = {" ", "C"};
-	static const char *follow_strs[] = {" ", "F"};
-	static const char *repeat_strs[] = {" ", "R"};
-	static const char *shuffle_strs[] = {" ", "S", "&"};
+	static const char *cont_strs[] = {NULL, "con"};
+	static const char *follow_strs[] = {NULL, "flw"};
+	static const char *repeat_strs[] = {NULL, "rep"};
+	static const char *shuffle_strs[] = {NULL, "shuf", "alb"};
 	int buffer_fill, vol, vol_left, vol_right;
 	int duration = -1;
 
@@ -705,7 +683,7 @@ const struct format_option *get_global_fopts(void)
 	fopt_set_str(&track_fopts[TF_CONTINUE], cont_strs[player_cont]);
 	fopt_set_int(&track_fopts[TF_BITRATE],
 		     player_info.current_bitrate / 1000. + 0.5, 0);
-	fopt_set_double(&track_fopts[TF_SPEED], playback_speed, 0);
+	fopt_set_double(&track_fopts[TF_SPEED], playback_speed, playback_speed == 1.0);
 
 	return track_fopts;
 }
@@ -752,50 +730,6 @@ static void print_editable(struct window *win, int row, struct iter *iter)
 	dump_print_buffer(row + 1, win_x);
 }
 
-static void print_filter(struct window *win, int row, struct iter *iter)
-{
-	char buf[256];
-	struct filter_entry *e = iter_to_filter_entry(iter);
-	struct iter sel;
-	/* window active? */
-	int active = 1;
-	/* row selected? */
-	int selected;
-	/* is the filter currently active? */
-	int current = !!e->act_stat;
-	const char stat_chars[3] TERMUS_NONSTRING = " *!";
-	int ch1, ch2, ch3;
-	const char *e_filter;
-
-	window_get_sel(win, &sel);
-	selected = iters_equal(iter, &sel);
-	bkgdset(pairs[(active << 2) | (selected << 1) | current]);
-
-	if (selected) {
-		cursor_x = 0;
-		cursor_y = 1 + row;
-	}
-
-	ch1 = ' ';
-	ch3 = ' ';
-	if (e->sel_stat != e->act_stat) {
-		ch1 = '[';
-		ch3 = ']';
-	}
-	ch2 = stat_chars[e->sel_stat];
-
-	e_filter = e->filter;
-	if (!using_utf8) {
-		utf8_encode_to_buf(e_filter);
-		e_filter = conv_buffer;
-	}
-
-	snprintf(buf, sizeof(buf), "%c%c%c%-15s  %.235s", ch1, ch2, ch3,
-		 e->name, e_filter);
-	format_str(&print_buffer, buf, win_w - 1);
-	gbuf_add_ch(&print_buffer, ' ');
-	dump_print_buffer(row + 1, 0);
-}
 
 static void update_window(struct window *win, int x, int y, int w,
 			  const char *title,
@@ -964,12 +898,6 @@ static void update_play_queue_window(void)
 			       NULL, 1, 1);
 }
 
-static void update_filters_window(void)
-{
-	update_window(filters_get_window(), 0, 0, win_w, "Library Filters",
-		      print_filter);
-}
-
 static void update_pl_view(int full)
 {
 	current_track = pl_get_playing_track();
@@ -994,9 +922,6 @@ static void do_update_view(int full)
 		break;
 	case QUEUE_VIEW:
 		update_play_queue_window();
-		break;
-	case FILTERS_VIEW:
-		update_filters_window();
 		break;
 	}
 }
@@ -1267,6 +1192,12 @@ static void post_update(void)
 			curs_set(0);
 		}
 	}
+	/* draw popup on top of stdscr after refresh */
+	if (popup_is_open()) {
+		popup_draw();
+		if (popup_wants_cursor())
+			curs_set(1);
+	}
 }
 
 const char *get_stream_title(void) { return player_get_stream_title(); }
@@ -1421,30 +1352,14 @@ static int ui_yes_no_query(const char *format, ...)
 
 void search_not_found(void)
 {
-	const char *what = "Track";
+	const char *what;
 
-	if (search_restricted) {
-		switch (cur_view) {
-		case LIBRARY_VIEW:
-		case PLAYLIST_VIEW:
-		case QUEUE_VIEW:
-			what = "Title";
-			break;
-		case FILTERS_VIEW:
-			what = "Filter";
-			break;
-		}
+	if (popup_is_open() && popup_get_type() == POPUP_FILTERS) {
+		what = "Filter";
+	} else if (search_restricted) {
+		what = "Title";
 	} else {
-		switch (cur_view) {
-		case LIBRARY_VIEW:
-		case PLAYLIST_VIEW:
-		case QUEUE_VIEW:
-			what = "Track";
-			break;
-		case FILTERS_VIEW:
-			what = "Filter";
-			break;
-		}
+		what = "Track";
 	}
 	info_msg("%s not found: %s", what, search_str ? search_str : "");
 }
@@ -1465,9 +1380,6 @@ void set_view(int view)
 		break;
 	case QUEUE_VIEW:
 		searchable = pq_editable.shared->searchable;
-		break;
-	case FILTERS_VIEW:
-		searchable = filters_searchable;
 		break;
 	}
 
@@ -1759,7 +1671,7 @@ static void update_window_size(void)
 		lib_sorted_set_nr_rows(h - 1);
 		pl_set_nr_rows(h - 1);
 		play_queue_set_nr_rows(h - 1);
-		window_set_nr_rows(filters_get_window(), h - 1);
+		popup_resize();
 	}
 	clearok(curscr, TRUE);
 	refresh();
@@ -1817,10 +1729,9 @@ static void update(void)
 	case QUEUE_VIEW:
 		needs_view_update += queue_needs_redraw();
 		break;
-	case FILTERS_VIEW:
-		needs_view_update += filters_get_window()->changed;
-		break;
 	}
+	if (popup_is_open() && popup_get_type() == POPUP_FILTERS)
+		needs_view_update += filters_get_window()->changed;
 
 	/* total time changed? */
 	if (termus_queue_active()) {
@@ -1915,6 +1826,10 @@ static void handle_escape(int c)
 {
 	clear_error();
 	if (input_mode == NORMAL_MODE) {
+		if (popup_is_open()) {
+			popup_handle_escape(c);
+			return;
+		}
 		normal_mode_ch(c + 128);
 	} else if (input_mode == COMMAND_MODE) {
 		command_mode_escape(c);
@@ -2291,7 +2206,7 @@ static void init_all(void)
 	    window_new(filters_get_prev, filters_get_next);
 	window_set_contents(filters_win, &filters_head);
 	window_changed(filters_win);
-	filters_set_view(filters_win, &ui_filters_view_ops);
+	filters_set_view(filters_win, &popup_filters_view_ops);
 	cmdline_init();
 	commands_init();
 	search_mode_init();

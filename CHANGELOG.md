@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-19
+
+### Added
+- UI: New popup system with modal filter editor and track-info overlay (`F` for filters, `I` for track info).
+- UI: Configurable library columns via `library_columns` option (e.g. `set library_columns=artist,title,duration`).
+- UI: Configurable now-playing title fields via `now_playing_fields` option.
+- UI: Left/right view navigation commands.
+- Build: Added `GNUmakefile` at project root so `make` and `make run` work directly from the source directory without entering the build subdirectory.
+
+### Changed
+- Status line: Mode flags now show readable labels (`con`, `flw`, `rep`, `shuf`, `alb`) only when active; hidden when off, eliminating visual noise from inactive flags.
+- Status line: Volume hidden when at 100%; shown as `vol:xx%` when below, stereo channels as `vol:L%/R%`.
+- Status line: Playback speed moved to the right side alongside mode flags and hidden when at the default 1.0×.
+- Status line: Removed `|` separator between volume and mode flags.
+- Config: `show_remaining_time` is no longer bound to `t` by default; set it in the rc file with `toggle show_remaining_time` as needed.
+
 ## [1.1.0] - 2026-04-19
 
 ### Added

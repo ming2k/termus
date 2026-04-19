@@ -1,5 +1,5 @@
 AC_PREREQ([2.69])
-AC_INIT([termus], [4.0.0], [https://github.com/termus/termus/issues])
+AC_INIT([termus], [1.2.0], [https://github.com/termus/termus/issues])
 AC_CONFIG_SRCDIR([src/app/main.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([build-aux])

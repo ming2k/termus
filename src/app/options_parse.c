@@ -13,8 +13,8 @@ int options_parse_bool(const char *buf, int *val)
 	return parse_enum(buf, 0, 1, options_bool_names, val);
 }
 
-int parse_enum(const char *buf, int minval, int maxval,
-	       const char *const names[], int *val)
+static int do_parse_enum(const char *buf, int minval, int maxval,
+			 const char *const names[], int *val, int quiet)
 {
 	long int tmp;
 	int i;
@@ -34,6 +34,9 @@ int parse_enum(const char *buf, int minval, int maxval,
 		}
 	}
 err:
+	if (quiet)
+		return 0;
+
 	for (i = 0; names[i]; i++) {
 		if (i)
 			gbuf_add_str(&names_buf, ", ");
@@ -43,4 +46,16 @@ err:
 		  names_buf.buffer);
 	gbuf_free(&names_buf);
 	return 0;
+}
+
+int parse_enum(const char *buf, int minval, int maxval,
+	       const char *const names[], int *val)
+{
+	return do_parse_enum(buf, minval, maxval, names, val, 0);
+}
+
+int parse_enum_silent(const char *buf, int minval, int maxval,
+		      const char *const names[], int *val)
+{
+	return do_parse_enum(buf, minval, maxval, names, val, 1);
 }

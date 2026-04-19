@@ -20,5 +20,6 @@
 #define TERMUS_OPTIONS_LIBRARY_H
 
 void options_add_library_options(void);
+void options_library_load_defaults(void);
 
 #endif

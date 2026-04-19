@@ -27,6 +27,7 @@ void options_add(void)
 void options_load(void)
 {
 	options_display_load_defaults();
+	options_library_load_defaults();
 	options_load_autosave_or_default_rc();
 	options_load_optional_rc();
 	options_ui_apply_ascii_clipped_text_fallback(

@@ -6,7 +6,6 @@
 
 enum key_context {
 	CTX_COMMON,
-	CTX_FILTERS,
 	CTX_LIBRARY,
 	CTX_PLAYLIST,
 	CTX_QUEUE,

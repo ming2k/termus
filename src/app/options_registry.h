@@ -62,5 +62,7 @@ struct termus_opt *option_find_silent(const char *name);
 void option_set(const char *name, const char *value);
 int parse_enum(const char *buf, int minval, int maxval,
 	       const char *const names[], int *val);
+int parse_enum_silent(const char *buf, int minval, int maxval,
+		      const char *const names[], int *val);
 
 #endif

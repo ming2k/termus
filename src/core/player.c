@@ -1640,6 +1640,16 @@ void player_set_speed(double speed)
 	player_unlock();
 }
 
+sample_format_t player_get_current_sf(void)
+{
+	sample_format_t sf;
+
+	player_lock();
+	sf = buffer_sf;
+	player_unlock();
+	return sf;
+}
+
 void player_metadata_lock(void) { termus_mutex_lock(&player_info_mutex); }
 
 void player_metadata_unlock(void) { termus_mutex_unlock(&player_info_mutex); }
