@@ -1,22 +1,22 @@
-@title TERMUS-REMOTE 1 05/11/2006 termus
+@title TERMUSC 1 05/11/2006 termus
 
 @h1 NAME
 
-termus-remote - control termus
+termusc - control termus
 
 
 @h1 SYNOPSIS
 
-termus-remote [*OPTION*]... [`FILE`|`DIR`|`PLAYLIST`]...@br
-termus-remote *-C* `COMMAND`...@br
-termus-remote
+termusc [*OPTION*]... [`FILE`|`DIR`|`PLAYLIST`]...@br
+termusc *-C* `COMMAND`...@br
+termusc
 
 
 @h1 DESCRIPTION
 
 Add `FILE/DIR/PLAYLIST` to playlist, library (*-l*) or play queue (*-q*).
 
-If no arguments are given termus-remote reads raw commands from stdin (one
+If no arguments are given termusc reads raw commands from stdin (one
 command per line).  Raw commands are termus' command mode commands.  These same
 commands are used in configuration files and key bindings.  *termus*(1) contains
 full list of commands.  For consistency also searching is supported:
@@ -73,7 +73,7 @@ If *-C* is given, all command line arguments are treated as raw commands.
 
 -Q
 	Get player status information.  Same as *-C status*.  Note that
-	*status* is a special command only available to termus-remote.
+	*status* is a special command only available to termusc.
 
 -l, --library
 	Modify library instead of playlist.
@@ -92,7 +92,7 @@ If *-C* is given, all command line arguments are treated as raw commands.
 
 @h1 REMOTE COMMANDS
 
-Special commands only available to termus-remote.
+Special commands only available to termusc.
 
 status
 	Print information about currently playing track.
@@ -102,25 +102,25 @@ format_print
 
 @h1 EXAMPLES
 
-Add playlists/files/directories/URLs to library view (1 & 2):
+Add playlists/files/directories/URLs to library:
 
 	@pre
-	$ termus-remote -l music.m3u \\
+	$ termusc -l music.m3u \
 	http://live.urn1350.net:8080/urn_high.ogg
 	@endpre
 
-Load (clear and add) playlist to playlist view (3):
+Load (clear and add) playlist to playlist view:
 
 	@pre
-	$ termus-remote -c music.m3u
+	$ termusc -c music.m3u
 	@endpre
 
 Three different ways to toggle repeat:
 
 	@pre
-	$ termus-remote -R
-	$ termus-remote -C "toggle repeat"
-	$ termus-remote
+	$ termusc -R
+	$ termusc -C "toggle repeat"
+	$ termusc
 	toggle repeat
 	^D
 	@endpre
@@ -128,23 +128,23 @@ Three different ways to toggle repeat:
 Query settings or key bindings:
 
 	@pre
-	$ termus-remote -C "set repeat?"
+	$ termusc -C "set repeat?"
 	setting: 'repeat=false'
-	$ termus-remote -C "showbind common a"
+	$ termusc -C "showbind common a"
 	bind common a win-add-l
 	@endpre
 
 Dump the playlist to stdout:
 
 	@pre
-	$ termus-remote -C "save -p -"
+	$ termusc -C "save -p -"
 	[...]
 	@endpre
 
 Search works too:
 
 	@pre
-	$ termus-remote -C /beatles
+	$ termusc -C /beatles
 	@endpre
 
 @h1 SEE ALSO

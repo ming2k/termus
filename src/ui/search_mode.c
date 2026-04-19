@@ -86,7 +86,7 @@ static void backspace(void)
 	}
 }
 
-static void delete (void)
+static void delete_char(void)
 {
 	/* save old value */
 	int restricted = search_restricted;
@@ -139,7 +139,7 @@ void search_mode_ch(uchar ch)
 		cmdline_move_left();
 		break;
 	case 0x04: // ^D
-		delete ();
+		delete_char();
 		break;
 	case 0x05: // ^E
 		cmdline_move_end();
@@ -236,7 +236,7 @@ void search_mode_key(int key)
 
 	switch (key) {
 	case KEY_DC:
-		delete ();
+		delete_char();
 		break;
 	case KEY_BACKSPACE:
 		backspace();

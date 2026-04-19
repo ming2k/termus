@@ -38,15 +38,8 @@ struct slice {
 #define STRINGIZE_HELPER(x) #x
 #define STRINGIZE(x) STRINGIZE_HELPER(x)
 
-#define CONCATENATE_HELPER(x, y) x##y
-#define CONCATENATE(x, y) CONCATENATE_HELPER(x, y)
-
 #define getentry(ptr, offset, type)                                            \
 	(*((type *)((void *)((char *)(ptr) + (offset)))))
-
-#define STATIC_ASSERT(cond)                                                    \
-	static uint8_t CONCATENATE(_termus_unused_,                            \
-				   __LINE__)[2 * (cond) - 1] UNUSED
 
 static inline long min_i(long a, long b) { return a < b ? a : b; }
 

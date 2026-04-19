@@ -26,8 +26,6 @@
 #include "library/load_dir.h"
 #include "library/pl.h"
 #include "library/play_queue.h"
-#include "ui/browser.h"
-#include "ui/help.h"
 #include "ui/job.h"
 #include "ui/keys.h"
 #include "ui/options_display.h"
@@ -35,6 +33,7 @@
 #include "ui/tabexp.h"
 #include "ui/tabexp_file.h"
 #include "ui/ui_curses.h"
+#include "ui/window.h"
 
 #include <ctype.h>
 #include <dirent.h>
@@ -55,8 +54,7 @@ static int mute_vol_l = 0, mute_vol_r = 0;
 void view_clear(int view)
 {
 	switch (view) {
-	case TREE_VIEW:
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		worker_remove_jobs_by_type(JOB_TYPE_LIB);
 		editable_clear(&lib_editable);
 
@@ -71,11 +69,11 @@ void view_clear(int view)
 		editable_clear(&pq_editable);
 		break;
 	default:
-		info_msg(":clear only works in views 1-4");
+		info_msg(":clear only works in library, playlist or queue");
 	}
 }
 
-void view_add(int view, char *arg, int prepend)
+void view_add(int view, const char *arg, int prepend)
 {
 	char *tmp, *name;
 	enum file_type ft;
@@ -90,8 +88,7 @@ void view_add(int view, char *arg, int prepend)
 	free(tmp);
 
 	switch (view) {
-	case TREE_VIEW:
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		termus_add(lib_add_track, name, ft, JOB_TYPE_LIB, 0, NULL);
 		break;
 	case PLAYLIST_VIEW:
@@ -107,12 +104,12 @@ void view_add(int view, char *arg, int prepend)
 		}
 		break;
 	default:
-		info_msg(":add only works in views 1-4");
+		info_msg(":add only works in library, playlist or queue");
 	}
 	free(name);
 }
 
-static char *view_load_prepare(char *arg)
+static char *view_load_prepare(const char *arg)
 {
 	char *name, *tmp = expand_filename(arg);
 	enum file_type ft = termus_detect_ft(tmp, &name);
@@ -133,15 +130,14 @@ static char *view_load_prepare(char *arg)
 	return name;
 }
 
-void view_load(int view, char *arg)
+void view_load(int view, const char *arg)
 {
 	char *name = view_load_prepare(arg);
 	if (!name)
 		return;
 
 	switch (view) {
-	case TREE_VIEW:
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		worker_remove_jobs_by_type(JOB_TYPE_LIB);
 		editable_clear(&lib_editable);
 		termus_add(lib_add_track, name, FILE_TYPE_PL, JOB_TYPE_LIB, 0,
@@ -150,7 +146,7 @@ void view_load(int view, char *arg)
 		lib_filename = name;
 		break;
 	default:
-		info_msg(":load only works in views 1-2");
+		info_msg(":load only works in library view");
 		free(name);
 	}
 }
@@ -177,26 +173,28 @@ static void do_save(for_each_ti_cb for_each_ti, const char *arg,
 		error_msg("saving '%s': %s", filename, strerror(errno));
 }
 
-void view_save(int view, char *arg, int to_stdout, int filtered, int extended)
+void view_save(int view, const char *arg, int to_stdout, int filtered,
+	       int extended)
 {
 	char **dest;
+	char *arg_copy = NULL;
 	save_ti_cb save_ti = extended ? termus_save_ext : termus_save;
 	for_each_ti_cb lib_for_each_ti =
 	    filtered ? lib_for_each_filtered : lib_for_each;
 
 	if (arg) {
 		if (to_stdout) {
-			arg = xstrdup(arg);
+			arg_copy = xstrdup(arg);
 		} else {
 			char *tmp = expand_filename(arg);
-			arg = path_absolute(tmp);
+			arg_copy = path_absolute(tmp);
 			free(tmp);
 		}
+		arg = arg_copy;
 	}
 
 	switch (view) {
-	case TREE_VIEW:
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		if (worker_has_job_by_type(JOB_TYPE_LIB))
 			goto worker_running;
 		dest = extended ? &lib_ext_filename : &lib_filename;
@@ -216,13 +214,13 @@ void view_save(int view, char *arg, int to_stdout, int filtered, int extended)
 		do_save(play_queue_for_each, arg, dest, save_ti);
 		break;
 	default:
-		info_msg(":save only works in views 1 - 4");
+		info_msg(":save only works in library, playlist or queue");
 	}
-	free(arg);
+	free(arg_copy);
 	return;
 worker_running:
 	error_msg("can't save when tracks are being added");
-	free(arg);
+	free(arg_copy);
 }
 
 /* }}} */
@@ -314,7 +312,7 @@ static int flag_to_view(int flag)
 	switch (flag) {
 	case 'l':
 	case 'L':
-		return TREE_VIEW;
+		return LIBRARY_VIEW;
 	case 'p':
 		return PLAYLIST_VIEW;
 	case 'q':
@@ -328,18 +326,12 @@ static int flag_to_view(int flag)
 struct window *current_win(void)
 {
 	switch (cur_view) {
-	case TREE_VIEW:
-		return tree_current_win();
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		return lib_sorted_win();
 	case PLAYLIST_VIEW:
 		return pl_cursor_win();
 	case QUEUE_VIEW:
 		return play_queue_win();
-	case BROWSER_VIEW:
-		return browser_win;
-	case HELP_VIEW:
-		return help_win;
 	case FILTERS_VIEW:
 	default:
 		return filters_get_window();
@@ -417,11 +409,7 @@ static void cmd_set(char *arg)
 	}
 	if (value) {
 		option_set(arg, value);
-		help_win->changed = 1;
-		if (cur_view == TREE_VIEW) {
-			tree_track_win()->changed = 1;
-			tree_win()->changed = 1;
-		} else if (cur_view == PLAYLIST_VIEW) {
+		if (cur_view == PLAYLIST_VIEW) {
 			pl_mark_for_redraw();
 		} else {
 			current_win()->changed = 1;
@@ -452,11 +440,7 @@ static void cmd_toggle(char *arg)
 		return;
 	}
 	opt->toggle(opt->data);
-	help_win->changed = 1;
-	if (cur_view == TREE_VIEW) {
-		tree_track_win()->changed = 1;
-		tree_win()->changed = 1;
-	} else if (cur_view == PLAYLIST_VIEW) {
+	if (cur_view == PLAYLIST_VIEW) {
 		pl_mark_for_redraw();
 	} else {
 		current_win()->changed = 1;
@@ -593,7 +577,7 @@ static void cmd_help(char *arg)
 static void cmd_invert(char *arg)
 {
 	switch (cur_view) {
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		editable_invert_marks(&lib_editable);
 		break;
 	case PLAYLIST_VIEW:
@@ -603,14 +587,14 @@ static void cmd_invert(char *arg)
 		editable_invert_marks(&pq_editable);
 		break;
 	default:
-		info_msg(":invert only works in views 2-4");
+		info_msg(":invert only works in playlist or queue");
 	}
 }
 
 static void cmd_mark(char *arg)
 {
 	switch (cur_view) {
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		editable_mark(&lib_editable, arg);
 		break;
 	case PLAYLIST_VIEW:
@@ -620,14 +604,14 @@ static void cmd_mark(char *arg)
 		editable_mark(&pq_editable, arg);
 		break;
 	default:
-		info_msg(":mark only works in views 2-4");
+		info_msg(":mark only works in playlist or queue");
 	}
 }
 
 static void cmd_unmark(char *arg)
 {
 	switch (cur_view) {
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		editable_unmark(&lib_editable);
 		break;
 	case PLAYLIST_VIEW:
@@ -637,7 +621,7 @@ static void cmd_unmark(char *arg)
 		editable_unmark(&pq_editable);
 		break;
 	default:
-		info_msg(":unmark only works in views 2-4");
+		info_msg(":unmark only works in playlist or queue");
 	}
 }
 
@@ -645,31 +629,6 @@ static void cmd_update_cache(char *arg)
 {
 	int flag = parse_flags((const char **)&arg, "f");
 	termus_update_cache(flag == 'f');
-}
-
-static void cmd_cd(char *arg)
-{
-	if (arg) {
-		char *dir, *absolute;
-
-		dir = expand_filename(arg);
-		absolute = path_absolute(dir);
-		if (chdir(dir) == -1) {
-			error_msg("could not cd to '%s': %s", dir,
-				  strerror(errno));
-		} else {
-			browser_chdir(absolute);
-		}
-		free(absolute);
-		free(dir);
-	} else {
-		if (chdir(home_dir) == -1) {
-			error_msg("could not cd to '%s': %s", home_dir,
-				  strerror(errno));
-		} else {
-			browser_chdir(home_dir);
-		}
-	}
 }
 
 static void cmd_bind(char *arg)
@@ -700,8 +659,6 @@ static void cmd_bind(char *arg)
 		goto err;
 
 	key_bind(arg, key, func, flag == 'f');
-	if (cur_view == HELP_VIEW)
-		window_changed(help_win);
 	return;
 err:
 	error_msg("expecting 3 arguments (context, key and function)\n");
@@ -1005,7 +962,8 @@ static void cmd_run(char *arg)
 	struct track_info_selection sel = {.tis = NULL};
 
 	if (cur_view > QUEUE_VIEW) {
-		info_msg("Command execution is supported only in views 1-4");
+		info_msg("Command execution is supported only in library, "
+			 "playlist or queue");
 		return;
 	}
 
@@ -1016,10 +974,7 @@ static void cmd_run(char *arg)
 
 	/* collect selected files (struct track_info) */
 	switch (cur_view) {
-	case TREE_VIEW:
-		_tree_for_each_sel(add_ti, &sel, 0);
-		break;
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		_editable_for_each_sel(&lib_editable, add_ti, &sel, 0);
 		break;
 	case PLAYLIST_VIEW:
@@ -1086,8 +1041,7 @@ static void cmd_run(char *arg)
 					  WTERMSIG(status));
 
 			switch (cur_view) {
-			case TREE_VIEW:
-			case SORTED_VIEW:
+			case LIBRARY_VIEW:
 				/* this must be done before sel.tis are unreffed
 				 */
 				free_str_array(av);
@@ -1148,7 +1102,7 @@ static void cmd_echo(char *arg)
 
 	if (cur_view > QUEUE_VIEW) {
 		info_msg("echo with {} in its arguments is supported only in "
-			 "views 1-4");
+			 "library, playlist or queue");
 		return;
 	}
 
@@ -1159,10 +1113,7 @@ static void cmd_echo(char *arg)
 	sel_ti = NULL;
 
 	switch (cur_view) {
-	case TREE_VIEW:
-		_tree_for_each_sel(get_one_ti, &sel_ti, 0);
-		break;
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		_editable_for_each_sel(&lib_editable, get_one_ti, &sel_ti, 0);
 		break;
 	case PLAYLIST_VIEW:
@@ -1301,28 +1252,18 @@ static void cmd_prev_view(char *arg)
 
 static void cmd_left_view(char *arg)
 {
-	int flag = parse_flags((const char **)&arg, "n");
-
-	if (cur_view == TREE_VIEW) {
-		if (flag != 'n') {
-			set_view(HELP_VIEW);
-		}
-	} else {
+	if (cur_view == LIBRARY_VIEW)
+		set_view(FILTERS_VIEW);
+	else
 		set_view(cur_view - 1);
-	}
 }
 
 static void cmd_right_view(char *arg)
 {
-	int flag = parse_flags((const char **)&arg, "n");
-
-	if (cur_view == HELP_VIEW) {
-		if (flag != 'n') {
-			set_view(TREE_VIEW);
-		}
-	} else {
+	if (cur_view == FILTERS_VIEW)
+		set_view(LIBRARY_VIEW);
+	else
 		set_view(cur_view + 1);
-	}
 }
 
 static void cmd_pl_create(char *arg) { pl_create(arg); }
@@ -1332,21 +1273,7 @@ static void cmd_pl_export(char *arg)
 	if (cur_view == PLAYLIST_VIEW)
 		pl_export_selected_pl(arg);
 	else
-		info_msg(":pl-export only works in view 3");
-}
-
-static char *get_browser_add_file(void)
-{
-	char *sel = browser_get_sel();
-
-	if (sel && (ends_with(sel, "/../") || ends_with(sel, "/.."))) {
-		info_msg("For convenience, you can not add \"..\" directory "
-			 "from the browser view");
-		free(sel);
-		sel = NULL;
-	}
-
-	return sel;
+		info_msg(":pl-export only works in playlist view");
 }
 
 static void cmd_pl_import(char *arg)
@@ -1355,8 +1282,6 @@ static void cmd_pl_import(char *arg)
 
 	if (arg)
 		name = view_load_prepare(arg);
-	else if (cur_view == BROWSER_VIEW)
-		name = get_browser_add_file();
 	else
 		error_msg("not enough arguments");
 
@@ -1371,7 +1296,7 @@ static void cmd_pl_rename(char *arg)
 	if (cur_view == PLAYLIST_VIEW)
 		pl_rename_selected_pl(arg);
 	else
-		info_msg(":pl-rename only works in view 3");
+		info_msg(":pl-rename only works in playlist view");
 }
 
 static void cmd_pl_delete(char *arg)
@@ -1447,9 +1372,7 @@ static void cmd_raise_vte(char *arg) { termus_raise_vte(); }
 static void cmd_rand(char *arg)
 {
 	switch (cur_view) {
-	case TREE_VIEW:
-		break;
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		editable_rand(&lib_editable);
 		break;
 	case PLAYLIST_VIEW:
@@ -1493,8 +1416,8 @@ static int pq_for_each_sel(track_info_cb cb, void *data, int reverse,
 	return editable_for_each_sel(&pq_editable, cb, data, reverse, advance);
 }
 
-static for_each_sel_ti_cb view_for_each_sel[4] = {
-    tree_for_each_sel, sorted_for_each_sel, pl_for_each_sel, pq_for_each_sel};
+static for_each_sel_ti_cb view_for_each_sel[3] = {
+    sorted_for_each_sel, pl_for_each_sel, pq_for_each_sel};
 
 /* wrapper for add_ti_cb, (void *) can't store function pointers */
 struct wrapper_cb_data {
@@ -1510,39 +1433,18 @@ static int wrapper_cb(void *data, struct track_info *ti)
 	return 0;
 }
 
-static void add_from_browser(add_ti_cb add, int job_type, int advance)
-{
-	char *sel = get_browser_add_file();
-
-	if (sel) {
-		enum file_type ft;
-		char *ret;
-
-		ft = termus_detect_ft(sel, &ret);
-		if (ft != FILE_TYPE_INVALID) {
-			termus_add(add, ret, ft, job_type, 0, NULL);
-			if (advance)
-				window_down(browser_win, 1);
-		}
-		free(ret);
-		free(sel);
-	}
-}
-
 static void cmd_win_add_l(char *arg)
 {
 	int flag = parse_flags((const char **)&arg, "n");
 	if (flag == -1)
 		return;
 
-	if (cur_view == TREE_VIEW || cur_view == SORTED_VIEW)
+	if (cur_view == LIBRARY_VIEW)
 		return;
 
 	if (cur_view <= QUEUE_VIEW) {
 		struct wrapper_cb_data add = {lib_add_track};
 		view_for_each_sel[cur_view](wrapper_cb, &add, 0, flag != 'n');
-	} else if (cur_view == BROWSER_VIEW) {
-		add_from_browser(lib_add_track, JOB_TYPE_LIB, flag != 'n');
 	}
 }
 
@@ -1558,13 +1460,6 @@ static void cmd_win_add_p(char *arg)
 	if (cur_view <= QUEUE_VIEW) {
 		struct wrapper_cb_data add = {pl_add_track_to_marked_pl2};
 		view_for_each_sel[cur_view](wrapper_cb, &add, 0, flag != 'n');
-	} else if (cur_view == BROWSER_VIEW) {
-		char *sel = get_browser_add_file();
-		if (sel) {
-			if (pl_add_file_to_marked_pl(sel) && flag != 'n')
-				window_down(browser_win, 1);
-			free(sel);
-		}
 	}
 }
 
@@ -1580,9 +1475,6 @@ static void cmd_win_add_Q(char *arg)
 	if (cur_view <= QUEUE_VIEW) {
 		struct wrapper_cb_data add = {play_queue_prepend};
 		view_for_each_sel[cur_view](wrapper_cb, &add, 1, flag != 'n');
-	} else if (cur_view == BROWSER_VIEW) {
-		add_from_browser(play_queue_prepend, JOB_TYPE_QUEUE,
-				 flag != 'n');
 	}
 }
 
@@ -1598,9 +1490,6 @@ static void cmd_win_add_q(char *arg)
 	if (cur_view <= QUEUE_VIEW) {
 		struct wrapper_cb_data add = {play_queue_append};
 		view_for_each_sel[cur_view](wrapper_cb, &add, 0, flag != 'n');
-	} else if (cur_view == BROWSER_VIEW) {
-		add_from_browser(play_queue_append, JOB_TYPE_QUEUE,
-				 flag != 'n');
 	}
 }
 
@@ -1611,7 +1500,7 @@ static void cmd_win_activate(char *arg)
 	struct rb_root *shuffle_root = NULL;
 	int shuffle = options_get_shuffle();
 
-	if (cur_view == TREE_VIEW || cur_view == SORTED_VIEW) {
+	if (cur_view == LIBRARY_VIEW) {
 		if (shuffle == SHUFFLE_TRACKS) {
 			if (lib_cur_track)
 				previous =
@@ -1625,14 +1514,7 @@ static void cmd_win_activate(char *arg)
 	}
 
 	switch (cur_view) {
-	case TREE_VIEW:
-		info = tree_activate_selected();
-		if (shuffle == SHUFFLE_TRACKS)
-			next = &lib_cur_track->simple_track.shuffle_info;
-		else if (shuffle == SHUFFLE_ALBUMS)
-			next = &lib_cur_track->album->shuffle_info;
-		break;
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		info = sorted_activate_selected();
 		if (shuffle == SHUFFLE_TRACKS)
 			next = &lib_cur_track->simple_track.shuffle_info;
@@ -1644,9 +1526,6 @@ static void cmd_win_activate(char *arg)
 		break;
 	case QUEUE_VIEW:
 		break;
-	case BROWSER_VIEW:
-		browser_enter();
-		break;
 	case FILTERS_VIEW:
 		if (!filters_activate()) {
 			char buf[512];
@@ -1656,9 +1535,6 @@ static void cmd_win_activate(char *arg)
 				enter_command_mode();
 			}
 		}
-		break;
-	case HELP_VIEW:
-		help_select();
 		break;
 	}
 
@@ -1678,7 +1554,7 @@ static void cmd_win_activate(char *arg)
 static void cmd_win_mv_after(char *arg)
 {
 	switch (cur_view) {
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		editable_move_after(&lib_editable);
 		break;
 	case PLAYLIST_VIEW:
@@ -1693,7 +1569,7 @@ static void cmd_win_mv_after(char *arg)
 static void cmd_win_mv_before(char *arg)
 {
 	switch (cur_view) {
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		editable_move_before(&lib_editable);
 		break;
 	case PLAYLIST_VIEW:
@@ -1708,10 +1584,7 @@ static void cmd_win_mv_before(char *arg)
 static void cmd_win_remove(char *arg)
 {
 	switch (cur_view) {
-	case TREE_VIEW:
-		tree_remove_sel();
-		break;
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		editable_remove_sel(&lib_editable);
 		break;
 	case PLAYLIST_VIEW:
@@ -1720,14 +1593,8 @@ static void cmd_win_remove(char *arg)
 	case QUEUE_VIEW:
 		editable_remove_sel(&pq_editable);
 		break;
-	case BROWSER_VIEW:
-		browser_delete();
-		break;
 	case FILTERS_VIEW:
 		filters_delete_filter();
-		break;
-	case HELP_VIEW:
-		help_remove();
 		break;
 	}
 }
@@ -1735,10 +1602,7 @@ static void cmd_win_remove(char *arg)
 static void cmd_win_sel_cur(char *arg)
 {
 	switch (cur_view) {
-	case TREE_VIEW:
-		tree_sel_current(options_get_auto_expand_albums_selcur());
-		break;
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		sorted_sel_current();
 		break;
 	case PLAYLIST_VIEW:
@@ -1750,10 +1614,7 @@ static void cmd_win_sel_cur(char *arg)
 static void cmd_win_toggle(char *arg)
 {
 	switch (cur_view) {
-	case TREE_VIEW:
-		tree_toggle_expand_artist();
-		break;
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		editable_toggle_mark(&lib_editable);
 		break;
 	case PLAYLIST_VIEW:
@@ -1764,9 +1625,6 @@ static void cmd_win_toggle(char *arg)
 		break;
 	case FILTERS_VIEW:
 		filters_toggle_filter();
-		break;
-	case HELP_VIEW:
-		help_toggle();
 		break;
 	}
 }
@@ -1797,9 +1655,7 @@ static void cmd_win_down(char *arg)
 
 static void cmd_win_next(char *arg)
 {
-	if (cur_view == TREE_VIEW)
-		tree_toggle_active_window();
-	else if (cur_view == PLAYLIST_VIEW)
+	if (cur_view == PLAYLIST_VIEW)
 		pl_win_next();
 }
 
@@ -1825,7 +1681,7 @@ static void cmd_win_update_cache(char *arg)
 	struct track_info_selection sel = {.tis = NULL};
 	int flag = parse_flags((const char **)&arg, "f");
 
-	if (cur_view != TREE_VIEW && cur_view != SORTED_VIEW)
+	if (cur_view != LIBRARY_VIEW)
 		return;
 
 	view_for_each_sel[cur_view](add_ti, &sel, 0, 1);
@@ -1855,20 +1711,15 @@ static void cmd_win_up(char *arg)
 static void cmd_win_update(char *arg)
 {
 	switch (cur_view) {
-	case TREE_VIEW:
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		termus_update_lib();
 		break;
 	case PLAYLIST_VIEW:
 		pl_win_update();
 		break;
-	case BROWSER_VIEW:
-		browser_reload();
-		break;
 	}
 }
 
-static void cmd_browser_up(char *arg) { browser_up(); }
 
 static void cmd_refresh(char *arg)
 {
@@ -1940,17 +1791,35 @@ static int *rand_array(int size, int nmax)
 	return r;
 }
 
-static int count_albums(void)
+static const struct album **collect_albums(int *countp)
 {
-	struct artist *artist;
-	struct rb_node *tmp1, *tmp2;
+	const struct album **albums;
+	struct simple_track *track;
 	int count = 0;
+	int size = 16;
 
-	rb_for_each_entry(artist, tmp1, &lib_artist_root, tree_node)
+	albums = xnew(const struct album *, size);
+	list_for_each_entry(track, &lib_editable.head, node)
 	{
-		rb_for_each(tmp2, &artist->album_root) count++;
+		const struct album *album =
+		    ((const struct tree_track *)track)->album;
+		int i;
+
+		for (i = 0; i < count; i++) {
+			if (albums[i] == album)
+				break;
+		}
+		if (i != count)
+			continue;
+
+		if (count == size) {
+			size *= 2;
+			albums = xrenew(const struct album *, albums, size);
+		}
+		albums[count++] = album;
 	}
-	return count;
+	*countp = count;
+	return albums;
 }
 
 struct album_list {
@@ -1962,8 +1831,9 @@ static void cmd_lqueue(char *arg)
 {
 	LIST_HEAD(head);
 	const struct list_head *item;
+	const struct album **albums;
 	const struct album *album;
-	int count = 1, nmax, i, pos;
+	int count = 1, nmax, i;
 	int *r;
 
 	if (arg) {
@@ -1975,33 +1845,22 @@ static void cmd_lqueue(char *arg)
 		}
 		count = val;
 	}
-	nmax = count_albums();
+	albums = collect_albums(&nmax);
 	if (count > nmax)
 		count = nmax;
-	if (!count)
+	if (!count) {
+		free(albums);
 		return;
+	}
 
 	r = rand_array(count, nmax);
-	album = to_album(
-	    rb_first(&to_artist(rb_first(&lib_artist_root))->album_root));
-	pos = 0;
 	for (i = 0; i < count; i++) {
 		struct album_list *a;
-
-		while (pos < r[i]) {
-			struct artist *artist = album->artist;
-			if (!rb_next(&album->tree_node)) {
-				artist = to_artist(rb_next(&artist->tree_node));
-				album = to_album(rb_first(&artist->album_root));
-			} else {
-				album = to_album(rb_next(&album->tree_node));
-			}
-			pos++;
-		}
 		a = xnew(struct album_list, 1);
-		a->album = album;
+		a->album = albums[r[i]];
 		list_add_rand(&head, &a->node, i);
 	}
+	free(albums);
 	free(r);
 
 	item = head.next;
@@ -2009,11 +1868,16 @@ static void cmd_lqueue(char *arg)
 		struct list_head *next = item->next;
 		struct album_list *a =
 		    container_of(item, struct album_list, node);
-		struct tree_track *t;
-		struct rb_node *tmp;
+		struct simple_track *t;
 
-		rb_for_each_entry(t, tmp, &a->album->track_root, tree_node)
-		    play_queue_append(tree_track_info(t), NULL);
+		list_for_each_entry(t, &lib_editable.head, node)
+		{
+			const struct tree_track *tt =
+			    (const struct tree_track *)t;
+
+			if (tt->album == a->album)
+				play_queue_append(tree_track_info(tt), NULL);
+		}
 		free(a);
 		item = next;
 	} while (item != &head);
@@ -2110,11 +1974,6 @@ static int filter_supported(const char *name, const struct stat *s)
 static void expand_files(const char *str)
 {
 	expand_files_and_dirs(str, filter_any);
-}
-
-static void expand_directories(const char *str)
-{
-	expand_files_and_dirs(str, filter_directories);
 }
 
 static void expand_playable(const char *str)
@@ -2464,7 +2323,8 @@ static void expand_options(const char *str)
 {
 	struct termus_opt *opt;
 	int len;
-	char **tails, *sep;
+	char **tails;
+	const char *sep;
 
 	/* tabexp is resetted */
 	len = strlen(str);
@@ -2604,8 +2464,6 @@ static void expand_commands(const char *str);
 struct command commands[] = {
     {"add", cmd_add, 1, 1, expand_add, 0, 0},
     {"bind", cmd_bind, 1, 1, expand_bind_args, 0, CMD_UNSAFE},
-    {"browser-up", cmd_browser_up, 0, 0, NULL, 0, 0},
-    {"cd", cmd_cd, 0, 1, expand_directories, 0, 0},
     {"clear", cmd_clear, 0, 1, NULL, 0, 0},
     {"colorscheme", cmd_colorscheme, 1, 1, expand_colorscheme, 0, 0},
     {"echo", cmd_echo, 1, -1, NULL, 0, 0},
@@ -3163,8 +3021,7 @@ void commands_init(void)
 
 void commands_exit(void)
 {
-	view_clear(TREE_VIEW);
-	view_clear(SORTED_VIEW);
+	view_clear(LIBRARY_VIEW);
 	view_clear(PLAYLIST_VIEW);
 	view_clear(QUEUE_VIEW);
 	history_save(&cmd_history);

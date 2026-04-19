@@ -127,34 +127,6 @@ static void set_passwd(void *data, const char *buf)
 	}
 }
 
-static void get_tree_width_percent(void *data, char *buf, size_t size)
-{
-	options_buf_int(buf, options_get_tree_width_percent(), size);
-}
-
-static void set_tree_width_percent(void *data, const char *buf)
-{
-	int percent;
-
-	if (options_parse_int(buf, 1, 100, &percent))
-		options_set_tree_width_percent(percent);
-	options_hooks_refresh_layout();
-}
-
-static void get_tree_width_max(void *data, char *buf, size_t size)
-{
-	options_buf_int(buf, options_get_tree_width_max(), size);
-}
-
-static void set_tree_width_max(void *data, const char *buf)
-{
-	int cols;
-
-	if (options_parse_int(buf, 0, 9999, &cols))
-		options_set_tree_width_max(cols);
-	options_hooks_refresh_layout();
-}
-
 static void get_pl_env_vars(void *data, char *buf, size_t size)
 {
 	if (!pl_env_vars) {
@@ -220,7 +192,5 @@ void options_add_core_options(void)
 	DN(output_plugin);
 	DN(passwd);
 	DN(pl_sort);
-	DN(tree_width_percent);
-	DN(tree_width_max);
 	DN(pl_env_vars);
 }

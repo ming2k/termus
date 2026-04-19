@@ -4,17 +4,21 @@ See also:
 
 - `docs/README.md` for the documentation index
 - `man/termus.txt` for the full user reference
-- `man/termus-tutorial.txt` for the end-user walkthrough
 
 ## Scope
 
-This document describes the current ncurses interface as implemented in
+This document describes the current ncursesw-based interface as implemented in
 `src/ui/`. It is intended for contributors who need to understand how the
-screen is divided, how the seven views behave, and where to make UI changes.
+screen is divided, how the four views behave, and where to make UI changes.
 
 It is not a full command reference. Keybindings, colors, and visible formats
 are configurable, so treat the layout and interaction model here as the stable
 part and the exact text rendering as user-defined.
+
+For new UI source files, include `src/ui/curses_compat.h` as the single entry
+point for ncursesw headers and the small Sun/Cygwin `termios.h` portability
+hook. Do not add new ad hoc `<curses.h>` or `<ncurses.h>` conditionals in
+individual files.
 
 ## Screen Layout
 
@@ -36,7 +40,7 @@ Important details from `src/ui/ui_curses.c`:
 - Row `LINES-2` is rendered by `do_update_statusline()`.
 - Row `LINES-1` is rendered by `do_update_commandline()`.
 - The optional `filtered: ...` badge is drawn by `update_filterline()` only in
-  library views 1 and 2.
+  library view.
 
 ### Bottom Chrome
 
@@ -55,31 +59,30 @@ The status line can also render a progress indicator according to the
 
 ## Views
 
-termus has seven numbered views. `src/app/options_ui_state.h` defines the stable
+termus has four views. `src/app/options_ui_state.h` defines the stable
 view order and `src/ui/ui_curses.c:set_view()` switches the active searchable
 model for each one.
 
-### 1. Library Tree View
+### 1. Library View
 
-This is a split-pane view:
-
-- Left pane: artist and album tree.
-- Right pane: tracks for the currently selected artist or album.
-- `Tab` switches the active pane.
-
-The split width is controlled by `tree_width_percent` and capped by
-`tree_width_max`. The vertical divider is drawn explicitly by
-`draw_separator()`.
-
-### 2. Sorted Library View
-
-This is the same library content rendered as one flat list. The heading shows
+This is the main view displaying all tracks in the library as one flat list. The heading shows
 track count, total duration, mark count, and current sort expression.
 
-This view is backed by the generic editable list path rather than the tree
-widgets used by view 1.
+```text
++------------------------------------------------------------------+
+| Library (123 tracks, 08:45:12) - sorted by: artist album track   |
++------------------------------------------------------------------+
+| Artist 1 - Album 1 - 01 - Track A                                |
+| Artist 1 - Album 1 - 02 - Track B                                |
+| Artist 1 - Album 2 - 01 - Track C                                |
+| Artist 2 - Album 3 - 01 - Track D                                |
+| ...                                                              |
+|                                                                  |
+|                                         (Row LINES-4)  filtered: |
++------------------------------------------------------------------+
+```
 
-### 3. Playlist View
+### 2. Playlist View
 
 The playlist view can be either split or single-pane:
 
@@ -87,36 +90,55 @@ The playlist view can be either split or single-pane:
 - Right panel: tracks in the visible playlist.
 - If the playlist panel is hidden, the track list expands to full width.
 
+```text
++-----------------------+------------------------------------------+
+| Playlists             | Playlist: Rock Classics                  |
++-----------------------+------------------------------------------+
+| Favorites             |   1. Led Zeppelin - Stairway to Heaven   |
+| Rock Classics         |   2. Pink Floyd - Time                   |
+| Jazz Mix              |   3. Queen - Bohemian Rhapsody           |
+| Workout               |                                          |
+|                       |                                          |
+|                       |                                          |
++-----------------------+------------------------------------------+
+```
+
 The visible header is formatted with `format_heading_playlist`.
 
-### 4. Play Queue View
+### 3. Play Queue View
 
 This is a flat editable list of upcoming tracks. Queue items take priority over
 library or playlist playback until the queue is drained.
 
-### 5. Browser View
+```text
++------------------------------------------------------------------+
+| Queue                                                            |
++------------------------------------------------------------------+
+|   1. Artist X - Upcoming Track 1                                 |
+|   2. Artist Y - Upcoming Track 2                                 |
+|   3. Artist Z - Upcoming Track 3                                 |
+|                                                                  |
+|                                                                  |
+|                                                                  |
++------------------------------------------------------------------+
+```
 
-This is the filesystem browser. The title shows the current directory as
-`Browser - <path>`. From here the selected file or directory can be added to
-the library, the active playlist, or the queue.
-
-### 6. Filters View
+### 4. Filters View
 
 This lists saved library filters. Toggling filters here affects the visible
-contents of the library views.
+contents of the library view.
 
-### 7. Settings View
-
-The visible title is `Settings`, but internally this view is still named
-`HELP_VIEW`. It is a combined inspector/editor for:
-
-- bound keybindings
-- unbound commands
-- options
-
-Pressing `Enter` on a row drops the corresponding `bind` or `set` command into
-the command line for editing. Pressing `Space` toggles an option when that
-option exposes a toggle handler.
+```text
++------------------------------------------------------------------+
+| Filters                                                          |
++------------------------------------------------------------------+
+| [ ] 5-star tracks only                                           |
+| [x] Recently added (30 days)                                     |
+| [ ] High bitrate (> 320kbps)                                     |
+| [ ] Genre: Electronic                                            |
+|                                                                  |
++------------------------------------------------------------------+
+```
 
 ## Input Modes
 
@@ -135,8 +157,7 @@ The active mode changes what the last row means:
 - In search mode it shows `/` or `?` plus the search buffer.
 
 Search uses a per-view `searchable` backend selected by `set_view()`. The same
-`n` and `N` follow-up search behavior works across views 1-7, but the matched
-fields differ by view.
+`n` and `N` follow-up search behavior works across all views.
 
 ## Core Interaction Model
 
@@ -146,40 +167,23 @@ entry points:
 - keybindings dispatch commands through `src/ui/keys.c`
 - `:` commands are parsed in `src/ui/command_mode.c`
 - search editing lives in `src/ui/search_mode.c`
-- remote control uses the same command handlers through IPC
+- remote control uses the same command handlers through IPC via `termusc`
 
 That shared model explains why UI actions often mirror a command exactly. A few
 important examples:
 
-- `1` to `7`: switch views
+- `1` to `4`: switch views
 - `Enter`: activate the selected item for the current view
 - `Space`: expand, mark, toggle, or select depending on the view
 - `a`, `y`, `e`, `E`: copy the selected or marked item to another collection
 - `:`: open command mode
 - `/` and `?`: open search mode
+- `Ctrl+n` and `Ctrl+p`: find next/previous search result
+- `n` and `p`: next/previous track
+- `s`: stop playback
+- `c`: pause/unpause playback
 
-The exact default bindings are documented in `man/termus.txt`, but the important
-contributor detail is that the UI is command-driven rather than hardcoding
-special-case behavior for each key.
-
-## Rendering and Customization
-
-Visible strings are mostly produced from format options registered in
-`src/ui/options_display.c`. The most important ones for UI work are:
-
-- `format_title` and `altformat_title`
-- `format_statusline`
-- `format_heading_album`
-- `format_heading_artist`
-- `format_heading_playlist`
-- `format_trackwin*`
-- `format_playlist*`
-
-Colors and text attributes are also option-backed. The curses color pair lookup
-used by the main renderer lives in `src/ui/ui_curses.c`.
-
-This means many interface changes can be made in formatting and option code
-without changing the underlying window model.
+The exact default bindings are documented in `man/termus.txt`.
 
 ## Implementation Map
 
@@ -189,8 +193,6 @@ For UI work, these files are the main entry points:
   view switching, title/status/command lines, and the main event loop
 - `src/ui/window.c`: generic scrolling window abstraction
 - `src/ui/editable_view.c`: adapter for editable list views
-- `src/ui/browser.c`: browser view model and actions
-- `src/ui/help.c`: settings view content and editing behavior
 - `src/ui/keys.c`: key contexts, bindings, and dispatch
 - `src/ui/command_mode.c`: command-line parser and handlers
 - `src/ui/search_mode.c`: interactive search

@@ -12,7 +12,7 @@ struct client {
 extern int server_socket;
 extern struct list_head client_head;
 
-void server_init(char *address);
+void server_init(const char *address);
 void server_exit(void);
 void server_accept(void);
 void server_serve(struct client *client);

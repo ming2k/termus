@@ -24,6 +24,7 @@
 #include "common/prog.h"
 #include "common/utils.h"
 #include "common/xmalloc.h"
+#include "ui/curses_compat.h"
 #include "ui/options_hooks.h"
 #include "ui/options_ui.h"
 #include "ui/ui.h"
@@ -31,12 +32,6 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
-
-#if defined(__sun__)
-#include <ncurses.h>
-#else
-#include <curses.h>
-#endif
 
 enum format_id {
 	FMT_CLIPPED_TEXT,

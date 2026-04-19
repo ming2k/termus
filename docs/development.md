@@ -22,7 +22,7 @@ to restate repository policy or architecture details.
 
 Required:
 
-- C compiler with C11 atomics support or newer
+- C23-capable C compiler with atomics support
 - autoconf, automake, libtool
 - pkg-config
 - ncursesw
@@ -38,6 +38,21 @@ Primary format libraries (required by default):
 
 Use `autoreconf`, not `autoconf`.
 
+## C23 Baseline
+
+The project now builds only in C23 mode. In practice `configure` will select
+the first working compiler flag among the supported C23 spellings (currently
+`-std=gnu2x`, `-std=c2x`, `-std=gnu23`, or `-std=c23`) and stop if none work.
+
+Practical implications for contributors:
+
+- treat C23 as the baseline, not as an optional newer mode
+- prefer standard `static_assert` and other standard language facilities over
+  local compatibility shims
+- fix const-correctness at the API boundary instead of casting away `const`
+- keep compiler-specific attributes or builtins centralized in
+  `src/common/compiler.h` rather than spreading ad hoc compiler branches
+
 ## Build Toolkit
 
 This project uses a classic Unix build stack centered on Autotools. The layers
@@ -47,17 +62,20 @@ are intentionally separated so contributors know where to change build logic.
   install paths, and generated `Makefile`s
 - top-level `Makefile.am`: subdirectory order, exported docs, and convenience
   targets such as `make run`
-- `src/Makefile.am`: product assembly for `termus`, `termus-remote`, and
+- `src/Makefile.am`: product assembly for `termus`, `termusc`, and
   `libcommon.la`
 - `src/plugins/*/Makefile.am`: optional plugin modules built through Libtool
 - `tests/Makefile.am`: `make check` targets
-- `pkg-config`: external dependency discovery for ncurses and optional backends
+- `pkg-config`: external dependency discovery for ncursesw and optional backends
 
 Practical rule:
 
 - change `configure.ac` when availability or policy changes
 - change `Makefile.am` files when target composition changes
 - rerun `autoreconf` only when Autotools inputs changed
+
+For ncursesw UI code, include `src/ui/curses_compat.h` instead of open-coding
+new `<curses.h>` / `<ncurses.h>` platform branches in individual source files.
 
 ## Contributor Workflow
 
@@ -126,7 +144,7 @@ Format support flags (see `configure.ac` for the full list):
 Artifacts stay under `build/`:
 
 - `build/src/termus`
-- `build/src/termus-remote`
+- `build/src/termusc`
 - `build/src/plugins/input/.libs/`
 - `build/src/plugins/output/.libs/`
 

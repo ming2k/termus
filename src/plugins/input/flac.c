@@ -219,14 +219,15 @@ static void metadata_cb(const Dec *dec, const FLAC__StreamMetadata *metadata,
 				    (const char *)metadata->data.vorbis_comment
 					.comments[i]
 					.entry;
-				char *key, *val;
+				char *key, *value;
+				const char *val;
 
 				val = strchr(str, '=');
 				if (!val)
 					continue;
 				key = xstrndup(str, val - str);
-				val = xstrdup(val + 1);
-				comments_add(&c, key, val);
+				value = xstrdup(val + 1);
+				comments_add(&c, key, value);
 				free(key);
 			}
 			keyvals_terminate(&c);

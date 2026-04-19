@@ -14,7 +14,7 @@ termus [*options*]
 
 termus is a lightweight ncurses music player. It supports various output methods
 by using dynamically-loaded output plugins. termus has configurable keybindings
-and can be controlled externally using *termus-remote*(1).
+and can be controlled externally using *termusc*(1).
 
 @h1 OPTIONS
 
@@ -45,36 +45,23 @@ and can be controlled externally using *termus-remote*(1).
 
 @h1 VIEWS
 
-There are 7 views in termus. Press keys 1-7 to change active view.
+There are 4 views in termus. Press keys *1*, *2*, *3*, *4* to change active
+view.
 
 Library view (1)
-	Displays all tracks in the *library*. Tracks are sorted and displayed in
-	a tree grouped by artist/album. Artist sorting is done alphabetically.
-	Albums are sorted by year.
+	Displays all tracks in the *library*. Tracks are automatically sorted by
+	user criteria.
 
-Sorted library view (2)
-	Displays the same content as view 1, but as a simple list automatically
-	sorted by user criteria.
-
-Playlist view (3)
+Playlist view (2)
 	Displays editable playlists with optional sorting.
 
-Play Queue view (4)
+Play Queue view (3)
 	Displays upcoming tracks. These tracks are played before anything else
 	(i.e. the playlist or library). Once the queue is empty, playback will
 	resume from the last position in the library.
 
-Browser (5)
-	Displays the directory browser. In this view, music from the filesystem
-	can be added to the library, active playlist, or queue.
-
-Filters view (6)
+Filters view (4)
 	Lists user-defined filters.
-
-Settings view (7)
-	Lists keybindings, unbound commands and options. Remove bindings with
-	*D* or *del*, change bindings and variables with *enter*, and toggle
-	variables with *space*.
 
 @h1 COMMAND LINE
 
@@ -110,12 +97,11 @@ Search mode works like the command mode. To enter search mode, press */* and
 type the query then press *ENTER*. Press *n* to move to the next result or *N*
 for the previous one. Type *?* to search backwards.
 
-In views 1-4 the query is matched against the artist, album and title tags. Type
-*//WORDS* or *??WORDS* to search only artists/albums in view 1 and only titles
-in views 2-4. If the file doesn't have tags, words are compared to the filename
-excluding the path.
+In the library, playlist and play queue views the query is matched against the
+artist, album and title tags. If the file doesn't have tags, words are compared
+to the filename excluding the path.
 
-Searching also works in views 5-7.
+Searching also works in the filters view.
 
 
 @h1 PLAYLIST EDITING
@@ -123,46 +109,47 @@ Searching also works in views 5-7.
 @h2 Selecting Tracks
 
 Editing commands affect the currently marked tracks. If there are no marked
-tracks, the currently selected track (or selected artist/album in view 1) is
-used.
+tracks, the currently selected track is used.
 
 To mark the selected track, press *SPACE*. Marked tracks appear with a gray
-background. You can only mark tracks in the list views (2-4).
+background. You can mark tracks in the library, playlist and play queue views.
 
 @h2 Copying Tracks Between Views
 
-You can copy marked or selected tracks in views 1-5.
+You can copy marked or selected tracks in the library, playlist and play queue
+views.
 
 @li *a*
-copy tracks to the library (1-2)
+copy tracks to the library
 
 @li *y*
-copy tracks to the marked playlist (3)
+copy tracks to the marked playlist
 
 @li *e*
-append tracks to the play queue (4)
+append tracks to the play queue
 
 @li *E*
-prepend tracks to the play queue (4)
+prepend tracks to the play queue
 
 @h2 Moving Tracks
 
-In views 2-4, tracks can be moved within the list. Note that moving is disabled
-if the view is auto-sorted (see *lib_sort* and *pl_sort* options).
+In the playlist and play queue views, tracks can be moved within the list. Note
+that moving is disabled if the view is auto-sorted (see *pl_sort* option).
 
-Pressing *p* moves marked tracks to the position immediately after the selected
-track. *P* moves them to the position immediately before the selected track. If
-there are no marked tracks, the selected track is moved down (*p*) or up (*P*).
+Pressing *ctrl+down* moves marked tracks to the position immediately after the
+selected track. *ctrl+up* moves them to the position immediately before the
+selected track. If there are no marked tracks, the selected track is moved
+down (*ctrl+down*) or up (*ctrl+up*).
 
-Note that changing active filters in view 2 reloads it, losing any changes made
-to the track order.
+Note that changing active filters in the library view reloads it, losing any
+changes made to the track order.
 
 @h2 Removing Tracks
 
 Press *D* or *delete* to remove the marked or selected tracks in the current
-view (1-4). The tracks will be removed immediately from the view without asking
-for confirmation. In the browser and filters views, the same keys are used to
-remove a file or filter after asking for confirmation.
+view (library, playlist or play queue). The tracks will be removed immediately
+from the view without asking for confirmation. In the filters view, the same
+keys are used to remove a filter after asking for confirmation.
 
 
 @h1 STATUS LINE
@@ -188,14 +175,13 @@ commands in the COMMANDS section.
 
 @h2 Common: Playback
 @pre
-b                           player-next
+n                           player-next
 c                           player-pause
-x                           player-play
-z                           player-prev
-v                           player-stop
+p                           player-prev
+s                           player-stop
 
-B                           player-next-album
-Z                           player-prev-album
+N                           player-next-album
+P                           player-prev-album
 
 ]                           vol +0 +1%
 [                           vol +1% +0
@@ -228,13 +214,13 @@ o                       toggle play_sorted
 r                       toggle repeat
 ^R                      toggle repeat_current
 t                       toggle show_remaining_time
-s                       toggle shuffle
+S                       toggle shuffle
 f                       toggle follow
 @endpre
 
 @h2 Common: Commands
 @pre
-q                       quit -i
+^Q                      quit -i
 ^C                      echo Type :quit<enter> to exit termus.
 I                       echo {}
 
@@ -243,13 +229,10 @@ I                       echo {}
 
 @h2 Common: View/Window Navigation
 @pre
-1                       view tree
-2                       view sorted
-3                       view playlist
-4                       view queue
-5                       view browser
-6                       view filters
-7                       view settings
+1                       view library
+2                       view playlist
+3                       view queue
+4                       view filters
 
 mouse_scroll_up_title   left-view
 mouse_scroll_down_title right-view
@@ -288,8 +271,8 @@ mlb_click_selected      win-activate
 space                   win-toggle
 D                       win-remove
 delete                  win-remove
-p                       win-mv-after
-P                       win-mv-before
+^down                   win-mv-after
+^up                     win-mv-before
 
 E                       win-add-Q
 a                       win-add-l
@@ -304,27 +287,19 @@ U                       win-update-cache
 @pre
 /                       search-start
 ?                       search-b-start
-n                       search-next
-N                       search-prev
+^n                      search-next
+^p                      search-prev
 
 F                       push filter<space>
 L                       push live-filter<space>
 @endpre
 
-@h2 File Browser
-@pre
-space                   win-activate
-backspace               browser-up
-i                       toggle show_hidden
-u                       win-update
-@endpre
-
 
 @h1 LIBRARY VIEW SORTING
 
-The library view (the tree-like one; not the sorted library view, which is
-configured with lib_sort - see `CONFIGURATION OPTIONS`), is sorted automatically
-using tags from the audio files.
+The library view is sorted automatically using the sort keys defined in the
+*lib_sort* option. By default, it sorts by artist, album, discnumber,
+tracknumber and finally filename.
 
 Note: Albums which feature various artists (e.g. samplers or compilations) are
 treated specially. If an album artist tag or the ID3v2 *TPE2* frame is set, it
@@ -358,7 +333,7 @@ filename (not the track name).
 
 This section describes termus' commands, which can be bound to keys and mouse
 events, put in configuration files, executed in command mode, or passed to
-termus-remote.
+termusc.
 
 Optional parameters are in [brackets], required parameters in <angle brackets>
 and default key bindings are (parenthesized).
@@ -390,15 +365,14 @@ bind [-f] <context> <key> <command>
 	@li -f
 	overwrite existing binding
 
-	Valid contexts: common (i.e. all views), library (1-2), playlist (3),
-	queue (4), browser (5), filters (6)
+	Valid contexts: common (i.e. all views), library, playlist,
+	queue, filters
 
 	There's one context for each view. Common is a special context on which
 	bound keys work in every view.
 
 	You can override specific keys in common context for a view. For example
-	*i* selects the current track in views 1-3 but in browser it is
-	overridden to toggle showing of hidden files.
+	*i* selects the current track in library/playlist views.
 
 	When setting custom bindings in `$XDG_CONFIG_HOME/termus/rc`, it is
 	recommended to use the -f option, or else bind may fail due to an
@@ -406,15 +380,6 @@ bind [-f] <context> <key> <command>
 
 	Hint: You can press *tab* from command mode to expand contexts, keys,
 	and commands.
-
-browser-up (*backspace*)
-	Navigates the browser view to the parent directory (5). This command
-	only makes sense to be bound to the *browser* key context although it's
-	possible to use this even if browser view is not active.
-
-cd [directory]
-	Changes the current working directory. Also changes the directory
-	displayed in the browser view.
 
 clear [-l] [-p] [-q]
 	Removes all tracks from a single view.
@@ -470,9 +435,9 @@ load [-l] <playlist>
 	Loads a playlist to a view.
 
 	@li -l
-	load to library views
+	load to library
 
-	If a view is not specified, the current view is used, which must be 1-2.
+	If a view is not specified, the current view is used.
 
 lqueue [NUM]
 	Queues NUM (default 1) random albums from the library. Also see
@@ -498,8 +463,7 @@ pl-export <filename>
 	it exists.
 
 pl-import [filename]
-	Imports a playlist into the playlist view. The argument can be omitted in
-	the file browser view.
+	Imports a playlist into the playlist view.
 
 pl-rename <name>
 	Renames the selected playlist.
@@ -535,13 +499,13 @@ prev-view
 	Goes to the previously used view.
 
 left-view [-n]
-	Goes to the to view to the left of current one (e.g. view 4 -> view 3)
+	Goes to the to view to the left of current one.
 
 	@li -n
 	no cycle back to end when reaching the first view
 
 right-view [-n]
-	Goes to view to the right of current one (e.g. view 3 -> view 4).
+	Goes to view to the right of current one.
 
 	@li -n
 	no cycle back to start when reaching the last view
@@ -586,7 +550,7 @@ run <command>
 	By default file names are appended to the command. If the command
 	contains *{}* it is replaced with list of filenames.
 
-	Note: In view 1 you can run a command for all files in the selected
+	Note: In library view you can run a command for all files in the selected
 	album or artist.
 
 save [-e]  [-l] [-L] [-p] [-q]  [file]
@@ -594,16 +558,16 @@ save [-e]  [-l] [-L] [-p] [-q]  [file]
 	also saves track metadata.
 
 	@li -l
-	save library views
+	save library
 
 	@li -L
-	save filtered library views
+	save filtered library
 
 	@li -p
-	save playlist view
+	save playlist
 
 	@li -q
-	save queue view
+	save queue
 
 	If no view is specified, the current one is used.
 
@@ -717,13 +681,12 @@ w
 	See *quit*. Intended for use while in command mode.
 
 win-activate (*enter*)
-	In views, 1-3 plays the selected track. In view 5 starts, the selected
-	file or changes to the selected directory. In view 6, activates the
-	selected filters. In settings view (7), changes a binding or variable.
+	In library/playlist views, plays the selected track. In filters view,
+	activates the selected filters.
 
 win-add-l [-n] (*a*)
-	Adds the currently marked or selected track(s) (views 3-4), or the
-	currently selected file/directory (view 5), to the library.
+	Adds the currently marked or selected track(s) from playlist/queue
+	views to the library.
 
 	Analogous to *:add -l*
 
@@ -731,8 +694,8 @@ win-add-l [-n] (*a*)
 		Don't move the selection to the next item.
 
 win-add-p [-n] (*y*)
-	Adds the currently marked or selected track(s) (views 1-2, 4), or the
-	currently selected file or directory (view 5), to the marked playlist.
+	Adds the currently marked or selected track(s) from library/queue
+	views to the marked playlist.
 
 	Analogous to *:add -p*
 
@@ -740,8 +703,8 @@ win-add-p [-n] (*y*)
 		Don't move the selection to the next item.
 
 win-add-Q [-n] (*E*)
-	Prepends the currently marked or selected track(s) (views 1-3), or the
-	currently selected file or directory (view 5), to the play queue.
+	Prepends the currently marked or selected track(s) from library/playlist
+	views to the play queue.
 
 	Analogous to *:add -Q*
 
@@ -749,8 +712,8 @@ win-add-Q [-n] (*E*)
 		Don't move the selection to the next item.
 
 win-add-q [-n] (*e*)
-	Adds the currently marked or selected track(s) (views 1-3), or the
-	currently selected file or directory (view 5), to the play queue.
+	Adds the currently marked or selected track(s) from library/playlist
+	views to the play queue.
 
 	Analogous to *:add -q*
 
@@ -782,7 +745,7 @@ win-mv-before (*P*)
 	views.
 
 win-next (*tab*)
-	Activates the next window (i.e. tree/list). Only relevant in view 1.
+	Activates the next window. Only relevant in playlist view.
 
 win-page-bottom
 	Goes to the bottom of the visible part of the current window.
@@ -801,8 +764,7 @@ win-page-up (*^B*, *page_up*)
 
 win-remove (*D*, *delete*)
 	Removes the selected entry. For tracks, no confirmation is required. For
-	playlists (view 3), files (view 5), filters (view 6) and bindings (view
-	7) user must confirm the action.
+	playlists and filters, the user must confirm the action.
 
 win-scroll-down (*^E*)
 	Scrolls the current window one row downwards.
@@ -812,13 +774,12 @@ win-scroll-up (*^Y*)
 
 win-sel-cur (*i*)
 	Selects the current track (position in library or playlist, not
-	necessarily same as the currently playing track). Works only in views
-	1-3, does nothing in other views.
+	necessarily same as the currently playing track).
 
 win-toggle (*space*)
-	Expands albums in library view (1), marks tracks in views 2-4, sets the
-	marked playlist in view 3, toggles selection of a filter in view 6,
-	or toggles a variable's value in view 7.
+	Marks tracks in library, playlist and queue views, sets the
+	marked playlist in playlist view, or toggles selection of a filter in
+	filters view.
 
 win-top (*home*)
 	Goes to top of the current window.
@@ -830,13 +791,9 @@ win-update (*u*)
 	Checks the modification time of the files in the library, and updates
 	metadata for changed files. Removes non-existent files from the library.
 
-	Reloads contents of directory in the browser view.
-
-	Only works in views 1-2 and 5, does nothing in other views.
-
 win-update-cache [-f]
 	Same as *update-cache*, but only for marked / selected tracks.
-	Only works in views 1-2, does nothing in other views.
+	Only works in library view.
 
 wq
 	See *quit*. Intended for use from command mode.
@@ -848,17 +805,6 @@ This section describes configuration options used by termus.
 
 These options can be changed using the *set* and *toggle* commands. Default
 values are (parenthesized), and the possible values are in [brackets].
-
-auto_expand_albums_follow, auto_expand_albums_search, auto_expand_albums_selcur (true)
-	Always expand an artist and select the album when following the
-	currently played track or performing actions such as "search" or "go to
-	current track". This option is tightly coupled to the show_all_tracks
-	option. Any "auto_expand_albums_\* = false" implies "show_all_tracks =
-	true".
-
-auto_hide_playlists_panel (false)
-	Hide the left panel in playlist view. The panel will show as needed when
-	activated with win-next (*tab*).
 
 auto_reshuffle (true)
 	Reshuffle a playlist when the end of a shuffled list is reached.
@@ -1273,7 +1219,7 @@ speed (1.00) [0.1-4.0]
 	case termus keeps the previous speed and reports an error instead of
 	stopping playback.
 
-start_view (tree) [tree, sorted, playlist, queue, browser, filters, settings]
+start_view (library) [library, playlist, queue, filters]
 	Specify the view that gets shown when termus starts.
 
 status_display_program () [command]
@@ -1286,40 +1232,6 @@ stop_after_queue (false)
 
 time_show_leading_zero (true)
 	Pad durations of less than 10 minutes with a leading 0.
-
-tree_width_percent (33) [1-100]
-	Percentage of the window width to use for left pane.
-
-tree_width_max (0) [0-9999]
-	Restrict the size calculated from tree_width_percent. 0 disables this
-	option.
-
-	This affects the tree in the library view and the playlist list in the
-	playlist view.
-
-	Note that this value will be further constrained by the window width
-	and/or the minimum tree size.
-
-	For example, to set a fixed size of 60 columns:
-
-		@pre
-		set tree_width_percent=100
-		set tree_width_max=60
-		@endpre
-
-	Or, to be 33% wide, but at most 60 columns
-
-		@pre
-		set tree_width_percent=33
-		set tree_width_max=60
-		@endpre
-
-	Or, to always be 33% wide where possible (the default behavior):
-
-		@pre
-		set tree_width_percent=33
-		set tree_width_max=0
-		@endpre
 
 wrap_search (true)
 	Controls whether the search wraps around the end.
@@ -1686,7 +1598,7 @@ Filter ogg and mp3 files from the 90s. Note the use of user defined filter
 
 @h2 Activating Filters
 
-*factivate* changes the visible contents of the library (views 1-2).
+*factivate* changes the visible contents of the library.
 
 Activate user defined filters *ogg* and *missing-tags*
 	:factivate ogg missing-tags
@@ -1694,13 +1606,13 @@ Activate user defined filters *ogg* and *missing-tags*
 Like above but negate value of *ogg* filter.
 	:factivate !ogg missing-tags
 
-Alternatively, you can filters by pressing *space* in view 6, then activate them
-by pressing *enter*.
+Alternatively, you can filters by pressing *space* in the filters view, then
+activate them by pressing *enter*.
 
 @h2 Throw-away Filters
 
 The *live-filter* and *filter* commands are useful when you want to use a filter
-without saving it. It changes the visible contents of the library (views 1-2).
+without saving it. It changes the visible contents of the library.
 *filter* unactivates all filters in the filters view, while *live-filter* is
 applied in addition to all currently activated filters. It persists even after
 leaving command mode.
@@ -1721,7 +1633,7 @@ Mark (select) all tracks with duration less than 2 minutes
 Mark (select) all tracks which have been played at least once
 	:mark play_count>=1
 
-These commands work in views 2-4.
+These commands work in playlist and queue views.
 
 
 @h1 FILES
@@ -1876,7 +1788,7 @@ Feature requests and bug reports should go to the GitHub issue tracker:
 
 @h1 SEE ALSO
 
-*termus-tutorial*(7), *termus-remote*(1)
+*termus-tutorial*(7), *termusc*(1)
 
 
 @h1 AUTHORS

@@ -51,7 +51,7 @@ void fifo_mutex_lock(struct fifo_mutex *fifo)
 {
 	struct fifo_waiter self = {
 	    .cond = PTHREAD_COND_INITIALIZER,
-	    .next = ATOMIC_VAR_INIT(NULL),
+	    .next = NULL,
 	};
 
 	struct fifo_waiter *old_tail =

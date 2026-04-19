@@ -46,6 +46,5 @@ set color_win_sel_fg=166
 set color_win_inactive_sel_bg=default
 set color_win_inactive_sel_fg=125
 
-##### file browser view colors #################################################
 # directory listing color
 set color_win_dir=33

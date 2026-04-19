@@ -1,14 +1,9 @@
 #include "ui/options_ui.h"
 #include "common/xmalloc.h"
+#include "ui/curses_compat.h"
 
 #include <stdlib.h>
 #include <string.h>
-
-#if defined(__sun__)
-#include <ncurses.h>
-#else
-#include <curses.h>
-#endif
 
 /*
  * Fallback palette used only when the packaged startup theme could not be

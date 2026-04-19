@@ -72,7 +72,7 @@ It stores:
 - Current option values (including `resume` state).
 - Current key bindings.
 - Current filters and active filter state.
-- Playlist and browser selection state.
+- Playlist selection state.
 
 Load order:
 
@@ -87,7 +87,7 @@ Practical rule:
 
 ## Socket and IPC
 
-termus exposes a local control socket used by `termus-remote` and similar tools.
+termus exposes a local control socket used by `termusc` and similar tools.
 
 Default socket resolution:
 
@@ -100,7 +100,7 @@ This is a Unix domain socket for local IPC. That is still a good fit for termus:
 - It is local-only by default.
 - It works well for one long-running player instance plus external control.
 - It fits desktop automation and headless or SSH-driven workflows equally well.
-- It keeps automation separate from the ncurses UI itself.
+- It keeps automation separate from the ncursesw UI itself.
 
 In short, the socket is the control channel, not part of the user-facing
 configuration.
@@ -111,18 +111,18 @@ configuration.
 
 - Run termus directly in a terminal emulator.
 - Keep your normal `rc` and optional theme files under the config directory.
-- Use the full ncurses interface for browsing, queueing, and playback control.
+- Use the full ncursesw interface for browsing, queueing, and playback control.
 
 ### Desktop Automation
 
 - Keep one running termus instance.
-- Use `termus-remote` through the socket from media keys, hotkeys, bars, launchers, notifications, or other desktop helpers.
+- Use `termusc` through the socket from media keys, hotkeys, bars, launchers, notifications, or other desktop helpers.
 - Use MPRIS integration where available.
 
 ### Remote or Headless Systems
 
 - Run termus in tmux, screen, or a plain SSH session.
-- Control it later with `termus-remote` without attaching to the full UI.
+- Control it later with `termusc` without attaching to the full UI.
 - This is one reason the local socket model remains useful.
 
 ### Development and Testing

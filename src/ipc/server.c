@@ -240,7 +240,7 @@ static void read_commands(struct client *client)
 				free(cmd);
 				free(arg);
 			} else {
-				// don't hang termus-remote
+				// don't hang termusc
 				ret = write_all(client->fd, "\n", 1);
 			}
 			if (ret < 0) {
@@ -285,7 +285,7 @@ void server_serve(struct client *client)
 	run_only_safe_commands = 0;
 }
 
-void server_init(char *address)
+void server_init(const char *address)
 {
 	const char *port = STRINGIZE(DEFAULT_PORT);
 	size_t addrlen;
@@ -299,7 +299,8 @@ void server_init(char *address)
 	} else {
 		const struct addrinfo hints = {.ai_socktype = SOCK_STREAM};
 		struct addrinfo *result;
-		char *s = strrchr(address, ':');
+		char *host = xstrdup(address);
+		char *s = strrchr(host, ':');
 		int rc;
 
 		if (s) {
@@ -307,7 +308,8 @@ void server_init(char *address)
 			port = s;
 		}
 
-		rc = getaddrinfo(address, port, &hints, &result);
+		rc = getaddrinfo(host, port, &hints, &result);
+		free(host);
 		if (rc != 0)
 			die("getaddrinfo: %s\n", gai_strerror(rc));
 		memcpy(&addr.sa, result->ai_addr, result->ai_addrlen);

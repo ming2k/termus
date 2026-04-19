@@ -24,11 +24,12 @@ AC_DEFINE_UNQUOTED([VERSION], ["$PACKAGE_VERSION"], [Package version])
 AC_DEFINE([DEFAULT_PORT], [3000], [Default termus server port])
 
 # -----------------------------------------------------------------------
-# C23 preferred, C11 with atomics fallback
+# C23 required
 # -----------------------------------------------------------------------
-AC_MSG_CHECKING([for a C standard with atomics (prefer C23)])
+AC_MSG_CHECKING([for a C23 compiler mode])
 c_std_ok=no
-for flag in "-std=gnu2x" "-std=c2x" "-std=gnu23" "-std=c23" "-std=gnu11" "-std=c11" ""; do
+c_std_flag=
+for flag in "-std=gnu2x" "-std=c2x" "-std=gnu23" "-std=c23"; do
   save_CFLAGS="$CFLAGS"
   test -n "$flag" && CFLAGS="$CFLAGS $flag"
   AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
@@ -36,12 +37,12 @@ for flag in "-std=gnu2x" "-std=c2x" "-std=gnu23" "-std=c23" "-std=gnu11" "-std=c
 #ifdef __STDC_NO_ATOMICS__
 # error no atomics
 #endif
-int main(void) { _Atomic int r = ATOMIC_VAR_INIT(0); return r; }
-  ]])], [c_std_ok=yes], [CFLAGS="$save_CFLAGS"])
+int main(void) { _Atomic int r = 0; return r; }
+  ]])], [c_std_ok=yes; c_std_flag=$flag], [CFLAGS="$save_CFLAGS"])
   test "$c_std_ok" = yes && break
 done
-AC_MSG_RESULT([$c_std_ok])
-test "$c_std_ok" = no && AC_MSG_ERROR([C11 or newer with atomics required])
+test "$c_std_ok" = yes && AC_MSG_RESULT([$c_std_flag])
+test "$c_std_ok" = no && AC_MSG_ERROR([C23 compiler mode with atomics required])
 
 # -----------------------------------------------------------------------
 # Project-wide developer flags
@@ -175,21 +176,16 @@ int main(void) {
 CFLAGS="$save_CFLAGS"; LIBS="$save_LIBS"
 
 # -----------------------------------------------------------------------
-# ncurses (prefer wide-char)
+# ncursesw
 # -----------------------------------------------------------------------
-PKG_CHECK_MODULES([NCURSES],[ncursesw],[have_ncursesw=yes],[have_ncursesw=no])
-if test "$have_ncursesw" = no; then
-  PKG_CHECK_MODULES([NCURSES],[ncurses],,
-    [PKG_CHECK_MODULES([NCURSES],[curses],,
-      [AC_MSG_ERROR([ncurses not found])])])
-  AC_MSG_WARN([ncurses without wide character support])
-fi
+PKG_CHECK_MODULES([NCURSES],[ncursesw],,
+  [AC_MSG_ERROR([ncursesw not found])])
 
 # Probe for working include path
 save_CFLAGS="$CFLAGS"; save_LIBS="$LIBS"
 CFLAGS="$CFLAGS $NCURSES_CFLAGS"; LIBS="$LIBS $NCURSES_LIBS"
 ncurses_ok=no
-for nflag in "" "-I/usr/include/ncurses" "-I/usr/include/ncursesw"; do
+for nflag in "" "-I/usr/include/ncursesw"; do
   CFLAGS="$save_CFLAGS $NCURSES_CFLAGS $nflag"
   AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
 #if defined(__sun__)||defined(__CYGWIN__)

@@ -39,7 +39,8 @@ static char *get_full_dir_name(const char *dir)
 	if (dir[0] == 0) {
 		full = xstrdup("./");
 	} else if (dir[0] == '~') {
-		char *first_slash, *tmp, *home;
+		const char *first_slash;
+		char *tmp, *home;
 
 		first_slash = strchr(dir, '/');
 		tmp = xstrndup(dir, first_slash - dir);
@@ -158,7 +159,7 @@ static void tabexp_load_env_path(const char *env_path, const char *start,
 void expand_files_and_dirs(const char *src, int (*filter)(const char *name,
 							  const struct stat *s))
 {
-	char *slash;
+	const char *slash;
 
 	/* split src to dir and file */
 	slash = strrchr(src, '/');

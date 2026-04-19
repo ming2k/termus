@@ -19,9 +19,16 @@ locally. It covers:
 - Maintain `configure.ac` and `Makefile.am`.
 - Do not hand-edit generated `configure`, `Makefile.in`, or `Makefile`.
 - Prefer out-of-tree builds.
+- Treat C23 as the language baseline for new code and refactors.
 - Keep style consistent with surrounding C code.
 - Use hard tabs.
 - Add new tests under `tests/` and wire them into `make check`.
+- Prefer standard facilities such as `static_assert` over project-local
+  compatibility macros when the code already assumes C23.
+- In `src/ui/`, include `ui/curses_compat.h` for ncursesw access instead of
+  adding new per-file curses include branches.
+- Do not cast away `const` just to satisfy a writable API; copy the buffer
+  locally when mutation is actually required.
 
 ## Where Changes Should Go
 

@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-int cur_view = TREE_VIEW;
+int cur_view = LIBRARY_VIEW;
 char *status_display_program = NULL;
 char *status_display_file = NULL;
 int confirm_run = 1;
@@ -16,18 +16,15 @@ int skip_track_info = 0;
 int ignore_duplicates = 0;
 int mouse = 0;
 int mpris = 1;
-int start_view = TREE_VIEW;
-int tree_width_percent = 33;
-int tree_width_max = 0;
+int start_view = LIBRARY_VIEW;
 int pause_on_output_change = 0;
 int block_key_paste = 1;
 int progress_bar = 1;
 int search_resets_position = 1;
 char *colorscheme = NULL;
 
-const char *const view_names[NR_VIEWS + 1] = {"tree",	  "sorted",  "playlist",
-					      "queue",	  "browser", "filters",
-					      "settings", NULL};
+const char *const view_names[NR_VIEWS + 1] = {"library",  "playlist",
+					      "queue",    "filters", NULL};
 
 const char *const progress_bar_names[NR_PROGRESS_BAR_MODES + 1] = {
     "disabled", "line", "shuttle", "color", "color-shuttle", NULL};
@@ -37,17 +34,6 @@ int options_get_resume_termus(void) { return resume_termus; }
 int options_get_start_view(void) { return start_view; }
 
 void options_set_start_view(int view) { start_view = view; }
-
-int options_get_tree_width_percent(void) { return tree_width_percent; }
-
-void options_set_tree_width_percent(int percent)
-{
-	tree_width_percent = percent;
-}
-
-int options_get_tree_width_max(void) { return tree_width_max; }
-
-void options_set_tree_width_max(int cols) { tree_width_max = cols; }
 
 int options_get_progress_bar(void) { return progress_bar; }
 

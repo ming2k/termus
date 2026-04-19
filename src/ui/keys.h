@@ -2,25 +2,16 @@
 #define TERMUS_KEYS_H
 
 #include "common/uchar.h"
-
-#if defined(__sun__) || defined(__CYGWIN__)
-/* TIOCGWINSZ */
-#include <ncurses.h>
-#include <termios.h>
-#else
-#include <curses.h>
-#endif
+#include "ui/curses_compat.h"
 
 enum key_context {
-	CTX_BROWSER,
 	CTX_COMMON,
 	CTX_FILTERS,
 	CTX_LIBRARY,
 	CTX_PLAYLIST,
 	CTX_QUEUE,
-	CTX_SETTINGS,
 };
-#define NR_CTXS (CTX_SETTINGS + 1)
+#define NR_CTXS (CTX_QUEUE + 1)
 
 #if NCURSES_MOUSE_VERSION <= 1
 #define BUTTON5_PRESSED ((REPORT_MOUSE_POSITION) | (BUTTON2_PRESSED))

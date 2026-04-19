@@ -19,7 +19,7 @@ communicate through a shared ring buffer and condition variables.
 │                                                         │
 │  Main thread          Producer thread   Consumer thread │
 │  ┌───────────┐        ┌─────────────┐  ┌─────────────┐  │
-│  │ UI/ncurses│        │Input plugin │  │Output plugin│  │
+│  │UI/ncursesw│        │Input plugin │  │Output plugin│  │
 │  │  server   │──cmds─▶│  (decoder)  │─▶│  (playback) │  │
 │  │  (select) │        │             │  │             │  │
 │  └───────────┘        └──────┬──────┘  └──────▲──────┘  │
@@ -39,8 +39,8 @@ communicate through a shared ring buffer and condition variables.
 
 Runs the event loop (`select(2)`). Handles:
 
-- ncurses input and display refresh
-- Unix/TCP socket (`server_socket`) for `termus-remote`
+- ncursesw input and display refresh
+- Unix/TCP socket (`server_socket`) for `termusc`
 - dispatching commands from both the TUI and remote clients via
   `src/ui/command_mode.c`
 
@@ -184,13 +184,13 @@ const unsigned op_abi_version;
 | OSS | FreeBSD | Native kernel audio |
 | sndio | OpenBSD | Native audio server |
 
-## IPC — termus-remote
+## IPC — termusc
 
 `src/ipc/server.c` opens a listening socket. On Linux and macOS it is usually a
 Unix domain socket at `$XDG_RUNTIME_DIR/termus-socket` or the config-directory
 fallback. A TCP fallback on port 3000 also exists.
 
-`termus-remote` in `src/app/main.c` connects, sends newline-terminated command
+`termusc` in `src/app/main.c` connects, sends newline-terminated command
 strings, and reads back responses. Unix connections are trusted; TCP
 connections are restricted to safe commands unless a password is set.
 
@@ -210,7 +210,7 @@ reference-counted and cached to disk through `src/library/cache.c`.
 
 | Source | Description |
 |--------|-------------|
-| Library | All tracks organised in artist and album trees |
+| Library | All tracks in the library |
 | Playlist | User-editable ordered lists |
 | Play queue | Temporary FIFO override |
 
@@ -222,7 +222,7 @@ All three share the `struct editable` abstraction from
 ### Commands (`src/ui/command_mode.c`)
 
 The `commands[]` table maps command strings to `cmd_*` handlers. The same table
-is used for `:command` input in the TUI, `termus-remote --raw`, and keybinding
+is used for `:command` input in the TUI, `termusc --raw`, and keybinding
 dispatch.
 
 ### Options (`src/ui/options.c` plus `src/app/options_*.c`)

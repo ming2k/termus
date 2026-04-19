@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Auto-resume support enabled by default: program remembers view, position, and track selection
-- Persistent playlist and browser selection support
+- Persistent playlist selection support
 - Improved startup behavior: automatically pauses playback if it was playing/paused previously
 
 ## [1.0.3] - 2026-04-12
@@ -61,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   install` to attempt installing generated man pages twice, resulting in an
   "install: will not overwrite just-created" error (exit code 2 in stage
   'staging')
-- Drop `termus-tutorial.7` man page; only `termus.1` and `termus-remote.1`
+- Drop `termus-tutorial.7` man page; only `termus.1` and `termusc.1`
   are installed
 
 ## [1.0.0] - 2026-04-12
@@ -70,13 +70,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Multi-threaded audio pipeline with separate UI, decoder, and output threads
   communicating via a lock-free ring buffer
-- ncurses TUI with numbered views, command mode, and remote-control socket
+- ncurses TUI with semantic views, command mode, and remote-control socket
 - Input plugin support: AAC, FLAC, MP3 (libmad/mpg123/nomad), Ogg Vorbis,
   Opus, WAV, WavPack, MP4/AAC, Musepack, MOD/MikMod/ModPlug, VTX, BASS, CDDA
 - Output plugin support: ALSA, PipeWire, JACK, OSS, sndio, ao, RoarAudio,
   AAudio, CoreAudio, Sun audio, WaveOut
 - MPRIS2 D-Bus integration for desktop media controls
-- Unix and TCP socket IPC via `termus-remote`
+- Unix and TCP socket IPC via `termusc`
 - Library management with playlist, filter, and search support
 - Metadata scanning with background worker thread and on-disk cache
 - Autoconf/Automake build system with `--enable`/`--disable` plugin flags

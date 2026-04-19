@@ -7,14 +7,8 @@
 #include "core/player.h"
 #include "ipc/mpris.h"
 #include "library/lib.h"
-#include "ui/browser.h"
+#include "ui/curses_compat.h"
 #include "ui/ui.h"
-
-#if defined(__sun__)
-#include <ncurses.h>
-#else
-#include <curses.h>
-#endif
 
 void update_mouse(void)
 {
@@ -40,10 +34,6 @@ void update_mouse(void)
 	}
 }
 
-void options_hooks_reload_browser(void) { browser_reload(); }
-
-void options_hooks_mark_library_tree_changed(void) { tree_win()->changed = 1; }
-
 void options_hooks_refresh_statusline(void) { update_statusline(); }
 
 void options_hooks_refresh_colors_full(void)
@@ -62,8 +52,6 @@ void options_hooks_notify_loop_status_changed(void)
 }
 
 void options_hooks_notify_shuffle_changed(void) { mpris_shuffle_changed(); }
-
-void options_hooks_update_tree_selection(void) { tree_sel_update(0); }
 
 void options_hooks_switch_output_plugin(const char *name)
 {

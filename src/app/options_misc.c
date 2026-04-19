@@ -113,8 +113,6 @@ static void toggle_progress_bar(void *data)
 
 void options_add_misc_options(void)
 {
-	option_add_bool("auto_hide_playlists_panel", &auto_hide_playlists_panel,
-			0);
 	option_add_bool("auto_reshuffle", &auto_reshuffle, 0);
 	option_add_bool("block_key_paste", &block_key_paste, 0);
 	option_add_bool("confirm_run", &confirm_run, 0);

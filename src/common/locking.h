@@ -19,7 +19,7 @@ extern pthread_t main_thread;
 #define FIFO_MUTEX_INITIALIZER                                                 \
 	{                                                                      \
 	    .mutex = PTHREAD_MUTEX_INITIALIZER,                                \
-	    .tail = ATOMIC_VAR_INIT(NULL),                                     \
+	    .tail = NULL,                                                      \
 	}
 
 void termus_mutex_lock(pthread_mutex_t *mutex);

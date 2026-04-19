@@ -635,8 +635,6 @@ void pl_track_attach_view(void *view_data,
 
 void pl_init_options(void)
 {
-	if (options_get_auto_hide_playlists_panel())
-		pl_cursor_in_track_window = 1;
 }
 
 void pl_exit(void) { pl_save_all(); }
@@ -927,8 +925,7 @@ void pl_set_nr_rows(int h)
 
 bool pl_show_panel(void)
 {
-	return !options_get_auto_hide_playlists_panel() ||
-	       !pl_cursor_in_track_window;
+	return true;
 }
 
 char *pl_visible_get_name(void) { return pl_visible->name; }

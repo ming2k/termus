@@ -56,8 +56,8 @@ struct cache_entry {
 };
 
 // make sure our mmap/sizeof-based code works
-STATIC_ASSERT(CACHE_ENTRY_TOTAL_SIZE == sizeof(struct cache_entry));
-STATIC_ASSERT(CACHE_ENTRY_TOTAL_SIZE == offsetof(struct cache_entry, strings));
+static_assert(CACHE_ENTRY_TOTAL_SIZE == sizeof(struct cache_entry));
+static_assert(CACHE_ENTRY_TOTAL_SIZE == offsetof(struct cache_entry, strings));
 
 #define ALIGN(size) (((size) + sizeof(long) - 1) & ~(sizeof(long) - 1))
 #define HASH_SIZE 1023

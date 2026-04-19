@@ -339,7 +339,7 @@ static char *get_home_dir(const char *username)
 char *expand_filename(const char *name)
 {
 	if (name[0] == '~') {
-		char *slash;
+		const char *slash;
 
 		slash = strchr(name, '/');
 		if (slash) {

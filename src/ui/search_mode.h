@@ -3,12 +3,7 @@
 
 #include "app/search_state.h"
 #include "common/uchar.h"
-
-#if defined(__sun__)
-#include <ncurses.h>
-#else
-#include <curses.h>
-#endif
+#include "ui/curses_compat.h"
 
 void search_mode_ch(uchar ch);
 void search_mode_escape(int c);

@@ -58,7 +58,6 @@ set color_win_sel_fg=black
 set color_win_inactive_sel_bg=20
 set color_win_inactive_sel_fg=black
 
-##### File Browser View Colors #################################################
 # Directory listing color
 set color_win_dir=lightgreen
 

@@ -3,15 +3,7 @@
 
 #include <stddef.h>
 
-/*
- * GCC 2.96 or compatible required
- */
-#if defined(__GNUC__)
-
-#if __GNUC__ > 3
-#undef offsetof
-#define offsetof(type, member) __builtin_offsetof(type, member)
-#endif
+#if defined(__GNUC__) || defined(__clang__)
 
 /* Optimization: Condition @x is likely */
 #define likely(x) __builtin_expect(!!(x), 1)
@@ -19,15 +11,10 @@
 /* Optimization: Condition @x is unlikely */
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
-#ifndef UNUSED
-#define UNUSED __attribute__((unused))
-#endif
-
 #else
 
 #define likely(x) (x)
 #define unlikely(x) (x)
-#define UNUSED
 
 #endif
 
@@ -39,7 +26,7 @@
 #define TERMUS_FORMAT(fmt_idx, first_idx)                                      \
 	__attribute__((format(printf, (fmt_idx), (first_idx))))
 
-#if defined(__GNUC__) && (__GNUC__ >= 3)
+#if defined(__GNUC__) || defined(__clang__)
 
 /* Optimization: Pointer returned can't alias other pointers */
 #define TERMUS_MALLOC __attribute__((__malloc__))

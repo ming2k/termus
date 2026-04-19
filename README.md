@@ -14,7 +14,7 @@ Start here if you are trying to understand or work on this repository:
 - [docs/architecture.md](docs/architecture.md): runtime architecture, threads, plugins, and subsystem boundaries
 - [docs/development.md](docs/development.md): build, test, and development workflow
 - [docs/runtime.md](docs/runtime.md): config directory, autosave, socket, and runtime state
-- [docs/tui.md](docs/tui.md): ncurses screen layout, views, input modes, and UI implementation map
+- [docs/tui.md](docs/tui.md): ncursesw screen layout, views, input modes, and UI implementation map
 
 ## Repository Shape
 
@@ -27,7 +27,7 @@ src/core       playback pipeline, metadata, codecs, transport
 src/ipc        remote control and desktop integration
 src/library    library, playlists, filters, search
 src/plugins    runtime-loaded input/output plugins
-src/ui         ncurses UI and presentation logic
+src/ui         ncursesw UI and presentation logic
 docs/          contributor-facing project documentation
 tests/         low-level regression tests run by make check
 ```
@@ -89,9 +89,9 @@ make install DESTDIR=/tmp/termus-pkg
 
 Required:
 
-- C compiler (C11 or newer)
+- C23-capable C compiler
 - GNU make, autotools, pkg-config
-- ncurses, iconv, pthreads
+- ncursesw, iconv, pthreads
 
 Primary audio format libraries (required by default, disable with `--disable-*`):
 
@@ -134,4 +134,3 @@ man termus-tutorial
 - Do not hand-edit generated files such as `configure`, `Makefile.in`, or `Makefile`.
 - Prefer out-of-tree builds.
 - Follow the existing C style and use hard tabs.
-

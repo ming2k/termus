@@ -14,7 +14,6 @@
 #include "library/filters.h"
 #include "library/lib.h"
 #include "library/pl.h"
-#include "ui/browser.h"
 #include "ui/ui.h"
 
 #include <errno.h>
@@ -28,8 +27,6 @@ struct resume {
 	char *lib_filename;
 	int view;
 	char *live_filter;
-	char *browser_dir;
-	char *browser_sel;
 	char *marked_pl;
 };
 
@@ -59,12 +56,6 @@ static int handle_resume_line(void *data, const char *line)
 	} else if (strcmp(cmd, "live-filter") == 0) {
 		free(resume->live_filter);
 		resume->live_filter = xstrdup(unescape(arg));
-	} else if (strcmp(cmd, "browser-dir") == 0) {
-		free(resume->browser_dir);
-		resume->browser_dir = xstrdup(unescape(arg));
-	} else if (strcmp(cmd, "browser-sel") == 0) {
-		free(resume->browser_sel);
-		resume->browser_sel = xstrdup(unescape(arg));
 	} else if (strcmp(cmd, "active-pl") == 0) {
 		free(pl_resume_name);
 		pl_resume_name = xstrdup(unescape(arg));
@@ -114,8 +105,6 @@ void resume_load(void)
 			if (ti) {
 				BUG_ON(ti != old);
 				track_info_unref(ti);
-				tree_sel_current(
-				    options_get_auto_expand_albums_follow());
 				sorted_sel_current();
 			}
 		}
@@ -139,13 +128,6 @@ void resume_load(void)
 		update_filterline();
 	}
 
-	if (resume.browser_dir) {
-		browser_chdir(resume.browser_dir);
-		if (resume.browser_sel) {
-			browser_set_sel_name(resume.browser_sel);
-		}
-	}
-
 	if (resume.marked_pl) {
 		pl_set_marked_pl_by_name(resume.marked_pl);
 	}
@@ -153,8 +135,6 @@ void resume_load(void)
 	free(resume.filename);
 	free(resume.lib_filename);
 	free(resume.live_filter);
-	free(resume.browser_dir);
-	free(resume.browser_sel);
 	free(resume.marked_pl);
 }
 
@@ -190,12 +170,6 @@ void resume_exit(void)
 	fprintf(f, "view %s\n", view_names[cur_view]);
 	if (lib_live_filter)
 		fprintf(f, "live-filter %s\n", escape(lib_live_filter));
-	fprintf(f, "browser-dir %s\n", escape(browser_dir));
-	char *browser_sel = browser_get_sel_name();
-	if (browser_sel) {
-		fprintf(f, "browser-sel %s\n", escape(browser_sel));
-		free(browser_sel);
-	}
 
 	if ((pl_name = pl_playing_pl_name())) {
 		fprintf(f, "active-pl %s\n", escape(pl_name));

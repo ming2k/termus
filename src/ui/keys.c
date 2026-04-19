@@ -1,7 +1,7 @@
 #include "ui/keys.h"
+#include "common/utils.h"
 #include "common/xmalloc.h"
 #include "ui/command_mode.h"
-#include "ui/help.h"
 #include "ui/ui_curses.h"
 
 #include "app/options_ui_state.h"
@@ -11,17 +11,18 @@
 #include "ui/window.h"
 
 const char *const key_context_names[NR_CTXS + 1] = {
-    "browser",	"common", "filters",  "library",
-    "playlist", "queue",  "settings", NULL};
+    "common", "filters",  "library",
+    "playlist", "queue",  NULL};
 
 struct binding *key_bindings[NR_CTXS] = {
     NULL,
 };
 
 static const enum key_context view_to_context[] = {
-    CTX_LIBRARY, CTX_LIBRARY, CTX_PLAYLIST, CTX_QUEUE,
-    CTX_BROWSER, CTX_FILTERS, CTX_SETTINGS,
+    CTX_LIBRARY, CTX_PLAYLIST, CTX_QUEUE,
+    CTX_FILTERS,
 };
+static_assert(N_ELEMENTS(view_to_context) == NR_VIEWS);
 
 #define KEY_IS_CHAR -255
 
@@ -533,9 +534,9 @@ int key_bind(const char *context, const char *key, const char *cmd, int force)
 		key_bindings[c] = b;
 	}
 	command = get_command(cmd);
-	if (command && !command->bc++)
-		help_remove_unbound(command);
-	help_add_bound(b);
+	if (command && !command->bc++) {
+		// command count incremented
+	}
 	return 0;
 bound:
 	error_msg("key %s already bound in context %s", key,
@@ -568,9 +569,9 @@ int key_unbind(const char *context, const char *key, int force)
 				key_bindings[c] = b->next;
 			}
 			command = get_command(b->cmd);
-			if (command && !--command->bc)
-				help_add_unbound(command);
-			help_remove_bound(b);
+			if (command && !--command->bc) {
+				// command count decremented
+			}
 			free(b);
 			return 0;
 		}
@@ -711,7 +712,7 @@ void normal_mode_key(int key)
 
 static const struct key *normal_mode_mouse_handle(MEVENT *event)
 {
-	int track_win_x = get_track_win_x(), i = event->y - 1, need_sel, type;
+	int i = event->y - 1, need_sel, type;
 	struct window *win = NULL;
 	struct iter it, sel;
 
@@ -723,22 +724,11 @@ static const struct key *normal_mode_mouse_handle(MEVENT *event)
 		type = event->x >= (COLS - COLS / 3) ? KEY_M_TYPE_BAR_R
 						     : KEY_M_TYPE_BAR;
 	} else {
-		if (cur_view == TREE_VIEW) {
-			if (event->x >= track_win_x)
-				win = tree_track_win();
-			else if (event->x < track_win_x - 1)
-				win = tree_win();
-			else
-				return NULL;
-			type = (tree_current_win() == win) ? KEY_M_TYPE_SEL
-							   : KEY_M_TYPE_NONE;
-		} else if (cur_view == PLAYLIST_VIEW) {
-			if (event->x >= track_win_x)
+		if (cur_view == PLAYLIST_VIEW && pl_show_panel()) {
+			if (event->x >= COLS / 3)
 				win = pl_track_win();
-			else if (event->x < track_win_x)
-				win = pl_list_win;
 			else
-				return NULL;
+				win = pl_list_win;
 			type = (pl_cursor_win() == win) ? KEY_M_TYPE_SEL
 							: KEY_M_TYPE_NONE;
 		} else {
@@ -752,16 +742,12 @@ static const struct key *normal_mode_mouse_handle(MEVENT *event)
 			type = KEY_M_TYPE_NONE;
 			if (event->y < 1 || event->y >= LINES - 3)
 				return NULL;
-			if (cur_view == TREE_VIEW && tree_current_win() != win)
-				tree_toggle_active_window();
-			if (cur_view == PLAYLIST_VIEW && pl_cursor_win() != win)
+			if (cur_view == PLAYLIST_VIEW && pl_show_panel() && pl_cursor_win() != win)
 				pl_win_next();
 		} else {
 			if (event->y < 1 || event->y > window_get_nr_rows(win))
 				return NULL;
-			if (cur_view == TREE_VIEW && tree_current_win() != win)
-				tree_toggle_active_window();
-			if (cur_view == PLAYLIST_VIEW && pl_cursor_win() != win)
+			if (cur_view == PLAYLIST_VIEW && pl_show_panel() && pl_cursor_win() != win)
 				pl_win_next();
 			if (!window_get_top(win, &it) ||
 			    !window_get_sel(win, &sel))

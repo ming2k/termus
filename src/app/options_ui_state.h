@@ -2,13 +2,10 @@
 #define TERMUS_OPTIONS_UI_STATE_H
 
 enum {
-	TREE_VIEW,
-	SORTED_VIEW,
+	LIBRARY_VIEW,
 	PLAYLIST_VIEW,
 	QUEUE_VIEW,
-	BROWSER_VIEW,
 	FILTERS_VIEW,
-	HELP_VIEW,
 	NR_VIEWS
 };
 
@@ -36,8 +33,6 @@ extern int ignore_duplicates;
 extern int mouse;
 extern int mpris;
 extern int start_view;
-extern int tree_width_percent;
-extern int tree_width_max;
 extern int pause_on_output_change;
 extern int block_key_paste;
 extern int progress_bar;
@@ -48,12 +43,6 @@ int options_get_resume_termus(void);
 
 int options_get_start_view(void);
 void options_set_start_view(int view);
-
-int options_get_tree_width_percent(void);
-void options_set_tree_width_percent(int percent);
-
-int options_get_tree_width_max(void);
-void options_set_tree_width_max(int cols);
 
 int options_get_progress_bar(void);
 

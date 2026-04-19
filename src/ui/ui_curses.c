@@ -33,15 +33,14 @@
 #include "library/pl.h"
 #include "library/pl_env.h"
 #include "library/play_queue.h"
-#include "ui/browser.h"
 #include "ui/command_mode.h"
 #include "ui/editable_view.h"
-#include "ui/help.h"
 #include "ui/job.h"
 #include "ui/keys.h"
 #include "ui/options_hooks.h"
 #include "ui/options_ui.h"
 #include "ui/search_mode.h"
+#include "ui/curses_compat.h"
 #include "ui/ui_utils.h"
 #include "ui/window.h"
 #ifdef HAVE_CONFIG_H
@@ -66,14 +65,6 @@
 #include <signal.h>
 #include <stdarg.h>
 #include <sys/time.h>
-
-#if defined(__sun__) || defined(__CYGWIN__)
-/* TIOCGWINSZ */
-#include <ncurses.h>
-#include <termios.h>
-#else
-#include <curses.h>
-#endif
 
 /* defined in <term.h> but without const */
 char *tgetstr(const char *id, char **area);
@@ -123,8 +114,6 @@ static int track_win_w = 0;
 static struct editable_view *lib_sorted_view;
 static struct editable_view *pl_track_view;
 static struct editable_view *queue_view;
-static struct window *tree_view;
-static struct window *track_view;
 
 static int win_x = 0;
 static int win_w = 0;
@@ -653,30 +642,6 @@ static int get_artist_length(struct artist *artist)
 	return duration;
 }
 
-static void fill_track_fopts_album(struct album *album)
-{
-	fopt_set_int(&track_fopts[TF_YEAR], album->min_date / 10000,
-		     album->min_date <= 0);
-	fopt_set_int(&track_fopts[TF_MAX_YEAR], album->date / 10000,
-		     album->date <= 0);
-	fopt_set_str(&track_fopts[TF_ALBUMARTIST], album->artist->name);
-	fopt_set_str(&track_fopts[TF_ARTIST], album->artist->name);
-	fopt_set_str(&track_fopts[TF_ALBUM], album->name);
-	int duration = get_album_length(album);
-	fopt_set_time(&track_fopts[TF_DURATION], duration, 0);
-	fopt_set_time(&track_fopts[TF_ALBUMDURATION], duration, 0);
-}
-
-static void fill_track_fopts_artist(struct artist *artist)
-{
-	const char *name = options_get_display_artist_sort_name()
-			       ? artist_sort_name(artist)
-			       : artist->name;
-	fopt_set_str(&track_fopts[TF_ARTIST], name);
-	fopt_set_str(&track_fopts[TF_ALBUMARTIST], name);
-	fopt_set_time(&track_fopts[TF_DURATION], get_artist_length(artist), 0);
-}
-
 const struct format_option *get_global_fopts(void)
 {
 	if (player_info.ti)
@@ -745,103 +710,6 @@ const struct format_option *get_global_fopts(void)
 	return track_fopts;
 }
 
-static void print_tree(struct window *win, int row, struct iter *iter)
-{
-	struct artist *artist;
-	struct album *album;
-	struct iter sel;
-	int current, selected, active;
-
-	artist = iter_to_artist(iter);
-	album = iter_to_album(iter);
-	current = 0;
-	if (lib_cur_track) {
-		if (album) {
-			current = CUR_ALBUM == album;
-		} else {
-			current = CUR_ARTIST == artist;
-		}
-	}
-	window_get_sel(win, &sel);
-	selected = iters_equal(iter, &sel);
-	active = tree_current_win() == tree_win();
-	bkgdset(pairs[(active << 2) | (selected << 1) | current]);
-
-	if (active && selected) {
-		cursor_x = 0;
-		cursor_y = 1 + row;
-	}
-
-	gbuf_add_ch(&print_buffer, ' ');
-	if (album) {
-		fill_track_fopts_album(album);
-		format_print(&print_buffer, tree_win_w - 1, tree_win_format,
-			     track_fopts);
-	} else {
-		fill_track_fopts_artist(artist);
-		format_print(&print_buffer, tree_win_w - 1,
-			     tree_win_artist_format, track_fopts);
-	}
-	dump_print_buffer(row + 1, tree_win_x);
-}
-
-static void print_track(struct window *win, int row, struct iter *iter)
-{
-	struct tree_track *track;
-	struct album *album;
-	struct track_info *ti;
-	struct iter sel;
-	int current, selected, active;
-	const char *format;
-
-	track = iter_to_tree_track(iter);
-	album = iter_to_album(iter);
-
-	if (track == (struct tree_track *)album) {
-		int pos;
-		struct fp_len len;
-
-		bkgdset(pairs[CURSED_TRACKWIN_ALBUM]);
-
-		fill_track_fopts_album(album);
-
-		len = format_print(&print_buffer, track_win_w,
-				   track_win_album_format, track_fopts);
-		dump_print_buffer(row + 1, track_win_x);
-
-		bkgdset(pairs[CURSED_SEPARATOR]);
-		for (pos = track_win_x + len.llen + len.mlen;
-		     pos < win_w - len.rlen; ++pos)
-			(void)mvaddch(row + 1, pos, ACS_HLINE);
-
-		return;
-	}
-
-	current = lib_cur_track == track;
-	window_get_sel(win, &sel);
-	selected = iters_equal(iter, &sel);
-	active = tree_current_win() == tree_track_win();
-	bkgdset(pairs[(active << 2) | (selected << 1) | current]);
-
-	if (active && selected) {
-		cursor_x = track_win_x;
-		cursor_y = 1 + row;
-	}
-
-	ti = tree_track_info(track);
-	fill_track_fopts_track_info(ti);
-
-	format = track_win_format;
-	if (track_info_has_tag(ti)) {
-		if (*track_win_format_va && track_is_compilation(ti->comments))
-			format = track_win_format_va;
-	} else if (*track_win_alt_format) {
-		format = track_win_alt_format;
-	}
-	format_print(&print_buffer, track_win_w, format, track_fopts);
-	dump_print_buffer(row + 1, track_win_x);
-}
-
 /* used by print_editable only */
 static struct simple_track *current_track;
 
@@ -882,36 +750,6 @@ static void print_editable(struct window *win, int row, struct iter *iter)
 	}
 	format_print(&print_buffer, win_w, format, track_fopts);
 	dump_print_buffer(row + 1, win_x);
-}
-
-static void print_browser(struct window *win, int row, struct iter *iter)
-{
-	struct browser_entry *e;
-	struct iter sel;
-	int selected;
-
-	e = iter_to_browser_entry(iter);
-	window_get_sel(win, &sel);
-	selected = iters_equal(iter, &sel);
-	if (selected) {
-		int active = 1;
-		int current = 0;
-
-		bkgdset(pairs[(active << 2) | (selected << 1) | current]);
-	} else {
-		if (e->type == BROWSER_ENTRY_DIR) {
-			bkgdset(pairs[CURSED_DIR]);
-		} else {
-			bkgdset(pairs[CURSED_WIN]);
-		}
-	}
-
-	if (selected) {
-		cursor_x = 0;
-		cursor_y = 1 + row;
-	}
-
-	sprint(row + 1, 0, e->name, win_w);
 }
 
 static void print_filter(struct window *win, int row, struct iter *iter)
@@ -959,48 +797,6 @@ static void print_filter(struct window *win, int row, struct iter *iter)
 	dump_print_buffer(row + 1, 0);
 }
 
-static void print_help(struct window *win, int row, struct iter *iter)
-{
-	struct iter sel;
-	int selected;
-	int active = 1;
-	char buf[OPTION_MAX_SIZE];
-	const struct help_entry *e = iter_to_help_entry(iter);
-	const struct termus_opt *opt;
-
-	window_get_sel(win, &sel);
-	selected = iters_equal(iter, &sel);
-	bkgdset(pairs[(active << 2) | (selected << 1)]);
-
-	if (selected) {
-		cursor_x = 0;
-		cursor_y = 1 + row;
-	}
-
-	switch (e->type) {
-	case HE_TEXT:
-		snprintf(buf, sizeof(buf), " %s", e->text);
-		break;
-	case HE_BOUND:
-		snprintf(buf, sizeof(buf), " %-8s %-23s %s",
-			 key_context_names[e->binding->ctx],
-			 e->binding->key->name, e->binding->cmd);
-		break;
-	case HE_UNBOUND:
-		snprintf(buf, sizeof(buf), " %s", e->command->name);
-		break;
-	case HE_OPTION:
-		opt = e->option;
-		snprintf(buf, sizeof(buf), " %-29s ", opt->name);
-		size_t len = strlen(buf);
-		opt->get(opt->data, buf + len, sizeof(buf) - len);
-		break;
-	}
-	format_str(&print_buffer, buf, win_w - 1);
-	gbuf_add_ch(&print_buffer, ' ');
-	dump_print_buffer(row + 1, 0);
-}
-
 static void update_window(struct window *win, int x, int y, int w,
 			  const char *title,
 			  void (*print)(struct window *, int, struct iter *))
@@ -1032,43 +828,6 @@ static void update_window(struct window *win, int x, int y, int w,
 		i++;
 	}
 	gbuf_clear(&print_buffer);
-}
-
-static void update_tree_window(void)
-{
-	static GBUF(buf);
-	gbuf_clear(&buf);
-
-	gbuf_add_str(&buf, "Library");
-	if (worker_has_job())
-		gbuf_addf(&buf, " - %d tracks", lib_editable.nr_tracks);
-	update_window(tree_win(), tree_win_x, 0, tree_win_w + 1, buf.buffer,
-		      print_tree);
-}
-
-static void update_track_window(void)
-{
-	static GBUF(title);
-	gbuf_clear(&title);
-
-	struct iter iter;
-	struct album *album;
-	struct artist *artist;
-
-	const char *format_str = "Empty (use :add)";
-
-	if (window_get_sel(tree_win(), &iter)) {
-		if ((album = iter_to_album(&iter))) {
-			fill_track_fopts_album(album);
-			format_str = heading_album_format;
-		} else if ((artist = iter_to_artist(&iter))) {
-			fill_track_fopts_artist(artist);
-			format_str = heading_artist_format;
-		}
-	}
-	format_print(&title, track_win_w - 2, format_str, track_fopts);
-	update_window(tree_track_win(), track_win_x, 0, track_win_w,
-		      title.buffer, print_track);
 }
 
 static void print_pl_list(struct window *win, int row, struct iter *iter)
@@ -1205,33 +964,10 @@ static void update_play_queue_window(void)
 			       NULL, 1, 1);
 }
 
-static void update_browser_window(void)
-{
-	static GBUF(title);
-	gbuf_clear(&title);
-	char *dirname;
-
-	if (using_utf8) {
-		/* already UTF-8 */
-		dirname = browser_dir;
-	} else {
-		utf8_encode_to_buf(browser_dir);
-		dirname = conv_buffer;
-	}
-	gbuf_add_str(&title, "Browser - ");
-	gbuf_add_str(&title, dirname);
-	update_window(browser_win, 0, 0, win_w, title.buffer, print_browser);
-}
-
 static void update_filters_window(void)
 {
 	update_window(filters_get_window(), 0, 0, win_w, "Library Filters",
 		      print_filter);
-}
-
-static void update_help_window(void)
-{
-	update_window(help_win, 0, 0, win_w, "Settings", print_help);
 }
 
 static void update_pl_view(int full)
@@ -1249,15 +985,7 @@ static void do_update_view(int full)
 	cursor_y = -1;
 
 	switch (cur_view) {
-	case TREE_VIEW:
-		if (full || tree_win()->changed)
-			update_tree_window();
-		if (full || tree_track_win()->changed)
-			update_track_window();
-		draw_separator();
-		update_filterline();
-		break;
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		update_sorted_window();
 		update_filterline();
 		break;
@@ -1267,14 +995,8 @@ static void do_update_view(int full)
 	case QUEUE_VIEW:
 		update_play_queue_window();
 		break;
-	case BROWSER_VIEW:
-		update_browser_window();
-		break;
 	case FILTERS_VIEW:
 		update_filters_window();
-		break;
-	case HELP_VIEW:
-		update_help_window();
 		break;
 	}
 }
@@ -1590,7 +1312,7 @@ void update_statusline(void)
 
 void update_filterline(void)
 {
-	if (cur_view != TREE_VIEW && cur_view != SORTED_VIEW)
+	if (cur_view != LIBRARY_VIEW)
 		return;
 	if (lib_live_filter) {
 		static GBUF(buf);
@@ -1703,40 +1425,24 @@ void search_not_found(void)
 
 	if (search_restricted) {
 		switch (cur_view) {
-		case TREE_VIEW:
-			what = "Artist/album";
-			break;
-		case SORTED_VIEW:
+		case LIBRARY_VIEW:
 		case PLAYLIST_VIEW:
 		case QUEUE_VIEW:
 			what = "Title";
 			break;
-		case BROWSER_VIEW:
-			what = "File/Directory";
-			break;
 		case FILTERS_VIEW:
 			what = "Filter";
-			break;
-		case HELP_VIEW:
-			what = "Binding/command/option";
 			break;
 		}
 	} else {
 		switch (cur_view) {
-		case TREE_VIEW:
-		case SORTED_VIEW:
+		case LIBRARY_VIEW:
 		case PLAYLIST_VIEW:
 		case QUEUE_VIEW:
 			what = "Track";
 			break;
-		case BROWSER_VIEW:
-			what = "File/Directory";
-			break;
 		case FILTERS_VIEW:
 			what = "Filter";
-			break;
-		case HELP_VIEW:
-			what = "Binding/command/option";
 			break;
 		}
 	}
@@ -1751,10 +1457,7 @@ void set_view(int view)
 	prev_view = cur_view;
 	cur_view = view;
 	switch (cur_view) {
-	case TREE_VIEW:
-		searchable = tree_searchable;
-		break;
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		searchable = lib_editable.shared->searchable;
 		break;
 	case PLAYLIST_VIEW:
@@ -1763,15 +1466,8 @@ void set_view(int view)
 	case QUEUE_VIEW:
 		searchable = pq_editable.shared->searchable;
 		break;
-	case BROWSER_VIEW:
-		searchable = browser_searchable;
-		break;
 	case FILTERS_VIEW:
 		searchable = filters_searchable;
-		break;
-	case HELP_VIEW:
-		searchable = help_searchable;
-		update_help_window();
 		break;
 	}
 
@@ -2027,10 +1723,10 @@ static int get_window_size(int *lines, int *columns)
 
 static void resize_tree_view(int w, int h)
 {
-	tree_win_w = w * ((float)options_get_tree_width_percent() / 100.0f);
-	if (options_get_tree_width_max() &&
-	    tree_win_w > options_get_tree_width_max())
-		tree_win_w = options_get_tree_width_max();
+	/* The tree width options were removed with the old library tree view.
+	 * Keep the split layout used by playlist panels stable at 1/3 : 2/3.
+	 */
+	tree_win_w = w / 3;
 	/* at least one character of formatted text and one space either side */
 	if (tree_win_w < 3)
 		tree_win_w = 3;
@@ -2040,10 +1736,6 @@ static void resize_tree_view(int w, int h)
 
 	tree_win_x = 0;
 	track_win_x = tree_win_w + 1;
-
-	h--;
-	window_set_nr_rows(tree_win(), h);
-	window_set_nr_rows(tree_track_win(), h);
 }
 
 static void update_window_size(void)
@@ -2068,8 +1760,6 @@ static void update_window_size(void)
 		pl_set_nr_rows(h - 1);
 		play_queue_set_nr_rows(h - 1);
 		window_set_nr_rows(filters_get_window(), h - 1);
-		window_set_nr_rows(help_win, h - 1);
-		window_set_nr_rows(browser_win, h - 1);
 	}
 	clearok(curscr, TRUE);
 	refresh();
@@ -2118,11 +1808,7 @@ static void update(void)
 	    player_info.speed_changed)
 		needs_status_update = 1;
 	switch (cur_view) {
-	case TREE_VIEW:
-		needs_view_update +=
-		    tree_win()->changed || tree_track_win()->changed;
-		break;
-	case SORTED_VIEW:
+	case LIBRARY_VIEW:
 		needs_view_update += lib_sorted_needs_redraw();
 		break;
 	case PLAYLIST_VIEW:
@@ -2131,14 +1817,8 @@ static void update(void)
 	case QUEUE_VIEW:
 		needs_view_update += queue_needs_redraw();
 		break;
-	case BROWSER_VIEW:
-		needs_view_update += browser_win->changed;
-		break;
 	case FILTERS_VIEW:
 		needs_view_update += filters_get_window()->changed;
-		break;
-	case HELP_VIEW:
-		needs_view_update += help_win->changed;
 		break;
 	}
 
@@ -2591,17 +2271,13 @@ static void init_all(void)
 	pl_env_init();
 
 	lib_init();
-	tree_view = window_new(tree_view_get_prev, tree_view_get_next);
-	track_view =
-	    window_new(tree_track_view_get_prev, tree_track_view_get_next);
-	tree_attach_views(tree_view, track_view);
-	searchable = tree_searchable;
 	termus_init();
 	pl_init();
 	lib_sorted_view =
 	    editable_view_new(simple_track_get_prev, simple_track_get_next);
 	lib_sorted_attach_view(lib_sorted_view, editable_view_get_ops(),
 			       editable_view_window(lib_sorted_view));
+	searchable = lib_editable.shared->searchable;
 	pl_track_view =
 	    editable_view_new(simple_track_get_prev, simple_track_get_next);
 	pl_track_attach_view(pl_track_view, editable_view_get_ops(),
@@ -2610,14 +2286,12 @@ static void init_all(void)
 	    editable_view_new(simple_track_get_prev, simple_track_get_next);
 	play_queue_attach_view(queue_view, editable_view_get_ops(),
 			       editable_view_window(queue_view));
-	browser_init();
 	filters_init();
 	struct window *filters_win =
 	    window_new(filters_get_prev, filters_get_next);
 	window_set_contents(filters_win, &filters_head);
 	window_changed(filters_win);
 	filters_set_view(filters_win, &ui_filters_view_ops);
-	help_init();
 	cmdline_init();
 	commands_init();
 	search_mode_init();
@@ -2646,7 +2320,6 @@ static void init_all(void)
 		ret = fgets(buf, sizeof(buf), stdin);
 		BUG_ON(ret == NULL);
 	}
-	help_add_all_unbound();
 
 	init_curses();
 
@@ -2696,14 +2369,10 @@ static void exit_all(void)
 	editable_view_free(pl_track_view);
 	editable_view_free(lib_sorted_view);
 	window_free(pl_list_win);
-	window_free(track_view);
-	window_free(tree_view);
 	player_exit();
 	op_exit_plugins();
 	window_free(filters_get_window());
 	filters_exit();
-	help_exit();
-	browser_exit();
 	mpris_free();
 }
 

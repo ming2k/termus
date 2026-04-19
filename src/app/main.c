@@ -99,7 +99,8 @@ static int remote_connect(const char *address)
 		const struct addrinfo hints = {.ai_socktype = SOCK_STREAM};
 		const char *port = STRINGIZE(DEFAULT_PORT);
 		struct addrinfo *result;
-		char *s = strrchr(address, ':');
+		char *host = xstrdup(address);
+		char *s = strrchr(host, ':');
 		int rc;
 
 		if (!passwd)
@@ -110,7 +111,8 @@ static int remote_connect(const char *address)
 			port = s;
 		}
 
-		rc = getaddrinfo(address, port, &hints, &result);
+		rc = getaddrinfo(host, port, &hints, &result);
+		free(host);
 		if (rc != 0)
 			die("getaddrinfo: %s\n", gai_strerror(rc));
 		memcpy(&addr.sa, result->ai_addr, result->ai_addrlen);
@@ -123,16 +125,15 @@ static int remote_connect(const char *address)
 		die_errno("socket");
 
 	if (connect(sock, &addr.sa, addrlen)) {
-		if (errno == ENOENT || errno == ECONNREFUSED) {
-			/* "termus-remote -C" can be used to check if termus is
-			 * running */
-			if (!raw_args)
-				warn("termus is not running\n");
-			exit(1);
-		}
-		die_errno("connect");
+	if (errno == ENOENT || errno == ECONNREFUSED) {
+		/* "termusc -C" can be used to check if termus is
+		 * running */
+		if (!raw_args)
+			warn("termus is not running\n");
+		exit(1);
 	}
-
+	die_errno("connect");
+	}
 	if (passwd)
 		return send_cmd("passwd %s\n", passwd) == 1;
 	return 1;
@@ -236,7 +237,7 @@ static const char *usage =
     "  -C, --raw            treat arguments (instead of stdin) as raw "
     "commands\n"
     "\n"
-    "  By default termus-remote reads raw commands from stdin (one command per "
+    "  By default termusc reads raw commands from stdin (one command per "
     "line).\n"
     "\n"
     "Report bugs to <termus-devel@lists.sourceforge.net>.\n";

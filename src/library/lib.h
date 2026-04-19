@@ -91,16 +91,6 @@ void lib_init(void);
 void lib_sorted_attach_view(void *view_data,
 			    const struct editable_view_ops *view_ops,
 			    struct window *win);
-void tree_init(void);
-void tree_attach_views(struct window *tree_win, struct window *track_win);
-int tree_view_get_prev(struct iter *iter);
-int tree_view_get_next(struct iter *iter);
-int tree_track_view_get_prev(struct iter *iter);
-int tree_track_view_get_next(struct iter *iter);
-struct window *tree_win(void);
-struct window *tree_track_win(void);
-struct window *tree_current_win(void);
-void tree_set_current_window(struct window *win);
 struct track_info *lib_goto_next(void);
 struct track_info *lib_goto_prev(void);
 struct track_info *lib_goto_next_album(void);

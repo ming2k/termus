@@ -2,7 +2,7 @@ AM_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir)/src
 AM_CFLAGS = $(DEV_WARN_CFLAGS) $(WERROR_CFLAGS) $(SANITIZER_CFLAGS)
 AM_LDFLAGS = $(SANITIZER_LDFLAGS)
 
-bin_PROGRAMS = termus termus-remote
+bin_PROGRAMS = termus termusc
 
 # ------------------------------------------------------------
 # Convenience library: files shared by both binaries
@@ -92,12 +92,9 @@ termus_SOURCES = \
 	library/pl_env.c library/pl_env.h \
 	library/play_queue.c library/play_queue.h \
 	library/search.c library/search.h \
-	library/tree.c \
-	ui/browser.c ui/browser.h \
 	ui/command_mode.c ui/command_mode.h \
 	ui/editable_view.c ui/editable_view.h \
 	ui/format_print.c ui/format_print.h \
-	ui/help.c ui/help.h \
 	ui/job.c ui/job.h \
 	ui/keys.c ui/keys.h \
 	ui/options_display.c ui/options_display.h \
@@ -107,6 +104,7 @@ termus_SOURCES = \
 	ui/search_mode.c ui/search_mode.h \
 	ui/tabexp.c ui/tabexp.h \
 	ui/tabexp_file.c ui/tabexp_file.h \
+	ui/curses_compat.h \
 	ui/ui_curses.c ui/ui_curses.h \
 	ui/ui_utils.c ui/ui_utils.h \
 	ui/window.c ui/window.h
@@ -137,8 +135,8 @@ termus_LDADD = \
 	$(LIBSYSTEMD_LIBS)
 
 # ------------------------------------------------------------
-# termus-remote
+# termusc
 # ------------------------------------------------------------
-termus_remote_SOURCES = app/main.c
+termusc_SOURCES = app/main.c
 
-termus_remote_LDADD = libcommon.la $(COMPAT_LIBS)
+termusc_LDADD = libcommon.la $(COMPAT_LIBS)
